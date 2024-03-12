@@ -21,7 +21,7 @@ model Token {
 
 model Users {
   id               String @id @default(auto()) @map("_id") @db.ObjectId
-  phoneNumber      String
+  phoneNumber      String @unique
   languageDetected String
   sessions Sessions[]
 }
@@ -32,15 +32,15 @@ model Sessions {
   user                     Users                @relation(fields: [userId], references: [id])
   ticketRaised             Boolean              @default(false)
   ticketId                 String?
-  ticketRaisedTime         DateTime
+  ticketRaisedTime         DateTime?
   state                    Int                  @default(0)
   ratings                  Int?
   bankAccountNumber        String
-  startDate                DateTime
-  endDate                  DateTime
-  complaintCategory        String
-  complaintSubcategory     String
-  complaintCategorySubType String
+  startDate                DateTime?
+  endDate                  DateTime?
+  complaintCategory        String?
+  complaintSubcategory     String?
+  complaintCategorySubType String?
   initialQuery             String
   transactions             TransactionDetails[]
 }

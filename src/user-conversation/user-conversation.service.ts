@@ -46,29 +46,7 @@ export class UserConversationService {
 
   async preprocess (headers, req) {
     try {
-      //2.call state
-    // const finalState = await this.states(intialState)
-    const r = {
-      "message": {
-        "text": "string",
-        "audio": ".wav" //optional
-      },
-      "session_id": "string", // session id is tracking a particular conversation
-      "metadata":{}
-    }
-
-    //3.reframe response through ai
-      const res =  await this.chatStateManager.states(1)
-      this.logger.info(`res ${res}`)
-      const fres = {
-        "status": "enum",
-        "session_id": "string",
-        "message": "string",
-        "options": [],
-        "end_connection": false,
-        "prompt": "enum",
-        "metadata":{}
-      }
+      const fres = await this.chatStateManager.preprocessData(headers, req)
       return fres
     } catch (error) {
       this.logger.error('error occured in state manager ', error)
