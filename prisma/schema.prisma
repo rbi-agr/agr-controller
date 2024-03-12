@@ -13,11 +13,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Token {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  token  String
+  bankId String
+}
+
 model Users {
-  id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  id               String @id @default(auto()) @map("_id") @db.ObjectId
   phoneNumber      String
   languageDetected String
-  sessions         Sessions[]
+  sessions Sessions[]
 }
 
 model Sessions {
@@ -25,12 +31,17 @@ model Sessions {
   userId                   String               @db.ObjectId
   user                     Users                @relation(fields: [userId], references: [id])
   ticketRaised             Boolean              @default(false)
+  ticketId                 String?
+  ticketRaisedTime         DateTime
   state                    Int                  @default(0)
   ratings                  Int?
   bankAccountNumber        String
+  startDate                DateTime
+  endDate                  DateTime
   complaintCategory        String
   complaintSubcategory     String
   complaintCategorySubType String
+  initialQuery             String
   transactions             TransactionDetails[]
 }
 
@@ -42,22 +53,22 @@ model Messages {
   sender             String
   message            String
   messageTranslation String
-  audioFile          String
-  options            String[]
+  audioFile          String?
+  promptType         String //enum
+  options            String[] //optional
   timeStamp          DateTime
 }
 
 model TransactionDetails {
-  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
-  sessionId              String   @db.ObjectId
-  session                Sessions @relation(fields: [sessionId], references: [id])
-  complaintId            String
-  transactionId          String
-  startDate              DateTime
-  endDate                DateTime
-  amount                 Int
-  transactionType        String
-  transactionTimeBank    DateTime
-  transactionDescription String
-  helperText             String
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId            String   @db.ObjectId
+  session              Sessions @relation(fields: [sessionId], references: [id])
+  transactionId        String
+  amount               Int
+  transactionType      String
+  transactionTimeBank  DateTime
+  transactionNarration String
 }
+
+//naration-educative text
+//helperText             String
