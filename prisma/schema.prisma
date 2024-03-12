@@ -14,24 +14,24 @@ datasource db {
 }
 
 model Users {
-  id             String           @id @default(auto()) @map("_id") @db.ObjectId
-  clientId       String
-  token          String
-  phoneNumber    String
-  sessions       Sessions[]
-  accountDetails AccountDetails[]
+  id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  phoneNumber      String
+  languageDetected String
+  sessions         Sessions[]
 }
 
 model Sessions {
-  id             String          @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String          @db.ObjectId
-  user           Users           @relation(fields: [userId], references: [id])
-  ticketRaised   Boolean         @default(false)
-  state          Int             @default(0)
-  ratings        Int?
-  inputsNeeded   String[]
-  inputsGiven    String[]
-  accountDetails AccountDetails?
+  id                       String               @id @default(auto()) @map("_id") @db.ObjectId
+  userId                   String               @db.ObjectId
+  user                     Users                @relation(fields: [userId], references: [id])
+  ticketRaised             Boolean              @default(false)
+  state                    Int                  @default(0)
+  ratings                  Int?
+  bankAccountNumber        String
+  complaintCategory        String
+  complaintSubcategory     String
+  complaintCategorySubType String
+  transactions             TransactionDetails[]
 }
 
 model Messages {
@@ -48,8 +48,9 @@ model Messages {
 }
 
 model TransactionDetails {
-  id                     String         @id @default(auto()) @map("_id") @db.ObjectId
-  accountDetails         AccountDetails @relation(fields: [accountDetailsId], references: [id])
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId              String   @db.ObjectId
+  session                Sessions @relation(fields: [sessionId], references: [id])
   complaintId            String
   transactionId          String
   startDate              DateTime
@@ -59,26 +60,4 @@ model TransactionDetails {
   transactionTimeBank    DateTime
   transactionDescription String
   helperText             String
-  accountDetailsId       String         @db.ObjectId
-}
-
-model AccountDetails {
-  id                 String               @id @default(auto()) @map("_id") @db.ObjectId
-  userId             String               @unique @db.ObjectId
-  user               Users                @relation(fields: [userId], references: [id])
-  sessionId          String               @unique @db.ObjectId
-  session            Sessions             @relation(fields: [sessionId], references: [id])
-  accountName        String
-  accountNumber      String
-  customerId         String
-  transacitonDetails TransactionDetails[]
-  bankDetails        BankDetails?         @relation(fields: [bankDetailsId], references: [id])
-  bankDetailsId      String?              @db.ObjectId
-}
-
-model BankDetails {
-  id             String           @id @default(auto()) @map("_id") @db.ObjectId
-  BankName       String
-  secretKey      String
-  AccountDetails AccountDetails[]
 }
