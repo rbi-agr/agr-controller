@@ -62,7 +62,7 @@ export class ChatStateManager {
                 case 0:
                     // user posts query, make socket connection
                     this.logger.info('inside case 0')
-                    const message = reqData.message
+                    const message = reqData.message.text
                     const metaData = reqData.metadata
                     const phoneNumber = String(metaData.phoneNumber)
                     const accountNumber = metaData.accountNumber
@@ -81,19 +81,37 @@ export class ChatStateManager {
                         })
                     }
     
-                    // const createdSession = await this.prisma.sessions.create({
-                    //     data: {
-                    //         user: user,
-                    //         state: 0,
-                    //         bankAccountNumber: accountNumber,
-                    //         initialQuery: message
-                    //     }
-                    // })
-                    msg = 'In state 0'
+                    const createdSession = await this.prisma.sessions.create({
+                        data: {
+                            user: {
+                                connect: { id: user.id } // Use the actual user ID here
+                            },
+                            state: 0,
+                            bankAccountNumber: accountNumber,
+                            initialQuery: message
+                        }
+                    })
+                    if(createdSession) {
+                        await this.states(reqData, languageDetected, 1)
+                    }
                     break;
                 case 1:
                     //language detection
                     this.logger.info('inside case 1')
+                    //get the intial query and check for intent which will give us category, subcategory, subtype stored in db
+                    const messageForIntent = reqData.message
+                    //call intent api
+                    const intentResponse = {
+                        category: 'category',
+                        subCategory: 'subCategory',
+                        subType: 'subType'
+                    }
+
+                    if (!intentResponse.category || !intentResponse.subCategory || !intentResponse.subType) {
+                        //intent did not classify
+                        return 'Please ask you query again'
+                    }
+                    await this.states(reqData, languageDetected, 3)
                     msg = 'Detect Langauge'
                     break;
                 case 2:
@@ -144,7 +162,7 @@ export class ChatStateManager {
                     msg = 'Check for all the fields of fetching the transactions'
                     break;
                 case 3:
-                    //authenticate the user
+                    //Call the NER bot to check for information completness
                     this.logger.info('inside case 3')
                     msg = 'User authentication'
                     break;

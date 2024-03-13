@@ -7,6 +7,7 @@ import { LoggerModule } from './logger/logger.module';
 import { AiProcessingModule } from './ai-processing/ai-processing.module';
 import { UserConversationModule } from './user-conversation/user-conversation.module';
 import { BanksModule } from './banks/banks.module';
+import { PrismaService } from './prisma/prisma.service';
 
 @Module({
   imports: [
@@ -20,6 +21,6 @@ import { BanksModule } from './banks/banks.module';
     BanksModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, PrismaService],
 })
 export class AppModule {}
