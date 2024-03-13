@@ -22,11 +22,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Token {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  token  String
+  bankId String
+}
+
 model Users {
-  id               String     @id @default(auto()) @map("_id") @db.ObjectId
-  phoneNumber      String
+  id               String @id @default(auto()) @map("_id") @db.ObjectId
+  phoneNumber      String @unique
   languageDetected String
-  sessions         Sessions[]
+  sessions Sessions[]
 }
 
 model Sessions {
@@ -34,12 +40,17 @@ model Sessions {
   userId                   String               @db.ObjectId
   user                     Users                @relation(fields: [userId], references: [id])
   ticketRaised             Boolean              @default(false)
+  ticketId                 String?
+  ticketRaisedTime         DateTime?
   state                    Int                  @default(0)
   ratings                  Int?
   bankAccountNumber        String
-  complaintCategory        String
-  complaintSubcategory     String
-  complaintCategorySubType String
+  startDate                DateTime?
+  endDate                  DateTime?
+  complaintCategory        String?
+  complaintSubcategory     String?
+  complaintCategorySubType String?
+  initialQuery             String
   bankInteractions         BankInteractions[]
   transactions             TransactionDetails[]
 }
@@ -52,8 +63,9 @@ model Messages {
   sender             String
   message            String
   messageTranslation String
-  audioFile          String
-  options            String[]
+  audioFile          String?
+  promptType         String //enum
+  options            String[] //optional
   timeStamp          DateTime
 }
 
@@ -67,8 +79,7 @@ model TransactionDetails {
   amount                 Int
   transactionType        String
   transactionTimeBank    DateTime
-  transactionDescription String
-  helperText             String
+  transactionNarration   String
 }
 
 model BankInteractions {
@@ -80,3 +91,7 @@ model BankInteractions {
   timestamp       DateTime        @default(now())
   metadata        Json?
 }
+
+
+//naration-educative text
+//helperText             String

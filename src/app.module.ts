@@ -3,7 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
-import { UserModule } from './user/user.module';
 import { LoggerModule } from './logger/logger.module';
 import { AiProcessingModule } from './ai-processing/ai-processing.module';
 import { UserConversationModule } from './user-conversation/user-conversation.module';
@@ -15,7 +14,6 @@ import { BanksModule } from './banks/banks.module';
       isGlobal: true,
     }),
     PrismaModule,
-    UserModule,
     LoggerModule,
     AiProcessingModule,
     UserConversationModule,
