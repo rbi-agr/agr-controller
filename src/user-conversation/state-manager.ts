@@ -1,12 +1,14 @@
-import { Injectable } from "@nestjs/common";
+
+import { Injectable} from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
+import axios from "axios";
 
 @Injectable()
 export class ChatStateManager {
     constructor(
         private readonly logger: LoggerService,
-        private prisma: PrismaService,
+        private prisma: PrismaService
     ) { }
 
 
@@ -14,6 +16,7 @@ export class ChatStateManager {
         try {
             //check if session exists
             const sessionId = reqData.session_id
+            
             let session = await this.prisma.sessions.findUnique({
                 where: {
                     id: sessionId,
@@ -89,14 +92,56 @@ export class ChatStateManager {
                     msg = 'In state 0'
                     break;
                 case 1:
-                    //check for intent
+                    //language detection
                     this.logger.info('inside case 1')
-                    msg = 'Intent Checking'
+                    msg = 'Detect Langauge'
                     break;
                 case 2:
-                    //intent classifies
+                    //intent check
                     this.logger.info('inside case 2')
-                    msg = 'Intent classifies'
+                    if(!this.validstate(st, 2)){
+                        //Invalid state
+                        return
+                    }
+                    //check for the required fields: transactionstartdate, enddate and bankaccount
+                    
+                    const session = await this.prisma.sessions.findUnique({
+                        where:{
+                            id:reqData.session_id
+                        }
+                    })
+                    //If bank account number exists
+                    if(session?.bankAccountNumber){
+                        //Check for start and enddate of transaction
+                        if(!session?.startDate)
+                        {
+                            //Return response to ask for start date
+                            //Updating the state to 6
+                            await this.prisma.sessions.update({
+                                where:{id:reqData.session_id},
+                                data:{
+                                    state:6
+                                }
+                            })
+                        }
+                        else
+                        {
+                            //Call for fetch transactions
+                            //Update the state to 3
+                            await this.prisma.sessions.update({
+                                where:{id:reqData.session_id},
+                                data:{
+                                    state:3
+                                }
+                            })
+                        }
+                    }
+                    else
+                    {
+                        //No bank account details found, Terminate the session
+                    }
+                    
+                    msg = 'Check for all the fields of fetching the transactions'
                     break;
                 case 3:
                     //authenticate the user
@@ -214,6 +259,21 @@ export class ChatStateManager {
 
             }
             return { statusCode: 404, message: 'States not provided. Please provide valid state' }
+        } catch (error) {
+            this.logger.error('Error in checking this move ', error)
+            return { statusCode: 400, message: 'Error in this move', error: error }
+        }
+    }
+
+    async IntentCheck(message: String) :Promise<any> {
+        try {
+            const apiUrl="URL"
+            const requestBody = {
+                message: message,
+              };
+            this.logger.info('API for Intent check')
+            const response = await axios.post(apiUrl,requestBody)
+            return response.data
         } catch (error) {
             this.logger.error('Error in checking this move ', error)
             return { statusCode: 400, message: 'Error in this move', error: error }
