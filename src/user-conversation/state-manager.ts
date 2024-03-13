@@ -96,7 +96,7 @@ export class ChatStateManager {
                     }
                     break;
                 case 1:
-                    //language detection
+                    
                     this.logger.info('inside case 1')
                     //get the intial query and check for intent which will give us category, subcategory, subtype stored in db
                     const messageForIntent = reqData.message
@@ -111,15 +111,15 @@ export class ChatStateManager {
                         //intent did not classify
                         return 'Please ask you query again'
                     }
-                    await this.states(reqData, languageDetected, 3)
-                    msg = 'Detect Langauge'
+                    await this.states(reqData, languageDetected, 2)
+                    
                     break;
                 case 2:
                     //intent check
                     this.logger.info('inside case 2')
                     if(!this.validstate(st, 2)){
                         //Invalid state
-                        return
+                        return 'Invalid State'
                     }
                     //check for the required fields: transactionstartdate, enddate and bankaccount
                     
@@ -141,6 +141,8 @@ export class ChatStateManager {
                                     state:6
                                 }
                             })
+                            await this.states(reqData, languageDetected,6)
+                            break;
                         }
                         else
                         {
@@ -162,39 +164,41 @@ export class ChatStateManager {
                     msg = 'Check for all the fields of fetching the transactions'
                     break;
                 case 3:
-                    //Call the NER bot to check for information completness
+                    //Call for Fetch transactions
                     this.logger.info('inside case 3')
-                    msg = 'User authentication'
+                    msg = 'All transaction fetched'
                     break;
                 case 4:
-                    //ask for bank account confirmaion
+                    //ask user to confirm transaction
                     this.logger.info('inside case 4')
-                    msg = 'Bank Account confirmation'
+                    msg = 'User Transaction confirmation'
                     break;
                 case 5:
-                    //check for information completness
+                    //If not transaction, ask for different date range
                     this.logger.info('inside case 5')
-                    msg = 'Information Completness check'
+                    msg = 'Ask for different date range'
                     break;
                 case 6:
-                    //fetch all transactions
+                    
                     this.logger.info('inside case 6')
-                    msg = 'Fetch all transactions'
-                    break;
+                    
+                    msg = 'Ask for date of transaction'
+                    return "Please enter startdate and enddate for the transaction"
+                    
                 case 7:
-                    //Ask for pending info
+                    //Educate the user on how to prevent it
                     this.logger.info('inside case 7')
-                    msg = 'Ask for pending info'
+                    msg = 'Educating the user for prevention'
                     break;
                 case 8:
-                    //Ask the user to confirm transactions
+                    //Ask the user to get transaction Id
                     this.logger.info('inside case 8')
-                    msg = 'Ask the user to confirm transactions'
+                    msg = 'Ask the user to get transaction Id'
                     break;
                 case 9:
-                    //Educate the user about deductions
+                    //NER BOT date check
                     this.logger.info('inside case 9')
-                    msg = 'Educate the user about deductions'
+                    msg = 'Check for dates from NERBOT'
                     break;
                 case 10:
                     //ask if the user is ok with the info
