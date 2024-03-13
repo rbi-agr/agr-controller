@@ -154,11 +154,13 @@ export class ChatStateManager {
                                     state:3
                                 }
                             })
+                            await this.states(reqData, languageDetected,3)
+                            break;
                         }
                     }
                     else
                     {
-                        //No bank account details found, Terminate the session
+                        return "No bank account details available"
                     }
                     
                     msg = 'Check for all the fields of fetching the transactions'
@@ -166,8 +168,32 @@ export class ChatStateManager {
                 case 3:
                     //Call for Fetch transactions
                     this.logger.info('inside case 3')
-                    msg = 'All transaction fetched'
-                    break;
+                    const fetchtransactionResponse = {
+                        transactionDate: '12/11/24',
+                        transactionType: 'excess charge',
+                        transactionNarration: 'This is due to sms',
+                        metadata:{}
+                    }
+                    //Update transaction details in db
+                    if(fetchtransactionResponse){
+                        await this.prisma.transactionDetails.update({
+                            where:{id:reqData.session_id},
+                            data:{
+                                transactionTimeBank: fetchtransactionResponse.transactionDate,
+                                transactionNarration: fetchtransactionResponse.transactionNarration,
+                                transactionType: fetchtransactionResponse.transactionType
+                            }
+                        })
+                        msg = 'All transaction fetched'
+                        await this.states(reqData, languageDetected, 4)
+                        break;
+                    }
+                    else
+                    {
+                        return "Error in fetching transactions from bank"
+                    }
+                    
+                    
                 case 4:
                     //ask user to confirm transaction
                     this.logger.info('inside case 4')
@@ -177,12 +203,26 @@ export class ChatStateManager {
                     //If not transaction, ask for different date range
                     this.logger.info('inside case 5')
                     msg = 'Ask for different date range'
-                    break;
+                    //Updating the state to 9
+                    await this.prisma.sessions.update({
+                        where:{id:reqData.session_id},
+                        data:{
+                            state:9
+                        }
+                    })
+                    return "No transactions found. Please select a different range"
+                    
                 case 6:
                     
                     this.logger.info('inside case 6')
-                    
+                    await this.prisma.sessions.update({
+                        where:{id:reqData.session_id},
+                        data:{
+                            state:9
+                        }
+                    })
                     msg = 'Ask for date of transaction'
+                    //Updating the state to 9
                     return "Please enter startdate and enddate for the transaction"
                     
                 case 7:
@@ -199,7 +239,34 @@ export class ChatStateManager {
                     //NER BOT date check
                     this.logger.info('inside case 9')
                     msg = 'Check for dates from NERBOT'
-                    break;
+                    const exsession = await this.prisma.sessions.findUnique({
+                        where:{
+                            id:reqData.session_id
+                        }
+                    })
+                    //Data from MistralAI
+                    const datesResponse = {
+                        startdate: '13/03/2024',
+                        enddate: '14/03/2024'
+                    }
+                    //Store it in db
+                    if (datesResponse){
+                        await this.prisma.sessions.update({
+                            where:{id:reqData.session_id},
+                            data:{
+                                startDate:datesResponse.startdate,
+                                endDate:datesResponse.enddate
+                            }
+                        })
+                        await this.states(reqData, languageDetected,2)
+                        break;
+                    }
+                    else
+                    {
+                        return "NER BOT API not sending response"
+                    }
+                    
+                    
                 case 10:
                     //ask if the user is ok with the info
                     this.logger.info('inside case 10')
