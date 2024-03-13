@@ -4,6 +4,15 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
+enum BankName {
+  INDIAN_BANK
+}
+
+enum InteractionType {
+  TRANSACTIONS
+  COMPLAINT_REGISTRATION
+}
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -31,6 +40,7 @@ model Sessions {
   complaintCategory        String
   complaintSubcategory     String
   complaintCategorySubType String
+  bankInteractions         BankInteractions[]
   transactions             TransactionDetails[]
 }
 
@@ -51,8 +61,7 @@ model TransactionDetails {
   id                     String   @id @default(auto()) @map("_id") @db.ObjectId
   sessionId              String   @db.ObjectId
   session                Sessions @relation(fields: [sessionId], references: [id])
-  complaintId            String
-  transactionId          String
+  transactionId          String?
   startDate              DateTime
   endDate                DateTime
   amount                 Int
@@ -60,4 +69,14 @@ model TransactionDetails {
   transactionTimeBank    DateTime
   transactionDescription String
   helperText             String
+}
+
+model BankInteractions {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId       String          @db.ObjectId
+  session         Sessions        @relation(fields: [sessionId], references: [id])
+  bankName        BankName
+  interactionType InteractionType
+  timestamp       DateTime        @default(now())
+  metadata        Json?
 }

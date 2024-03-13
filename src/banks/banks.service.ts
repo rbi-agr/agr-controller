@@ -1,26 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { CreateBankDto } from './dto/create-bank.dto';
-import { UpdateBankDto } from './dto/update-bank.dto';
+import { IndianBankService } from './services/indianBank.service';
+import { BankName } from '@prisma/client';
+import { TransactionsDto } from './dto/transactions.dto';
+import { ComplaintDto } from './dto/complaint.dto';
 
 @Injectable()
 export class BanksService {
-  create(createBankDto: CreateBankDto) {
-    return 'This action adds a new bank';
-  }
+    constructor(
+        private indianBankService: IndianBankService
+    ) {}
 
-  findAll() {
-    return `This action returns all banks`;
-  }
+    async fetchTransactions(sessionId: string, data: TransactionsDto, bankName: BankName) {
 
-  findOne(id: number) {
-    return `This action returns a #${id} bank`;
-  }
+        switch(bankName) {
+            case BankName.INDIAN_BANK:
+                return this.indianBankService.fetchTransactions(sessionId, data);
+        }
+    }
 
-  update(id: number, updateBankDto: UpdateBankDto) {
-    return `This action updates a #${id} bank`;
-  }
+    async registerComplaint(sessionId: string, data: ComplaintDto, bankName: BankName) {
 
-  remove(id: number) {
-    return `This action removes a #${id} bank`;
-  }
+        switch(bankName) {
+            case BankName.INDIAN_BANK:
+                return this.indianBankService.registerComplaint(sessionId, data);
+        }
+    }
 }
