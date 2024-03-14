@@ -78,10 +78,10 @@ model TransactionDetails {
   transactionId          String?
   startDate              DateTime
   endDate                DateTime
-  amount                 Int
-  transactionType        String
-  transactionTimeBank    DateTime
-  transactionNarration   String
+  amount                 Int?
+  transactionType        String?
+  transactionTimeBank    DateTime?
+  transactionNarration   String?
 }
 
 model BankInteractions {
