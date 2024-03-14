@@ -9,23 +9,68 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
-
-model User {
-  id    Int     @default(autoincrement()) @id
-  email String  @unique
-  name  String?
-  posts Post[]
+model Token {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  token  String
+  bankId String
 }
 
-model Post {
-  id        Int      @default(autoincrement()) @id
-  title     String
-  content   String?
-  published Boolean? @default(false)
-  author    User?    @relation(fields: [authorId], references: [id])
-  authorId  Int?
+model Users {
+  id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  phoneNumber      String     @unique
+  languageDetected String
+  sessions         Sessions[]
 }
+
+model Sessions {
+  id                       String               @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId                String               @unique
+  userId                   String               @db.ObjectId
+  user                     Users                @relation(fields: [userId], references: [id])
+  ticketRaised             Boolean              @default(false)
+  ticketId                 String?
+  ticketRaisedTime         DateTime?
+  state                    Int                  @default(0)
+  retriesLeft              Int?
+  ratings                  Int?
+  bankAccountNumber        String
+  startDate                DateTime?
+  endDate                  DateTime?
+  complaintCategory        String?
+  complaintSubcategory     String?
+  complaintCategorySubType String?
+  initialQuery             String
+  transactions             TransactionDetails[]
+}
+
+model Messages {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String   @db.ObjectId
+  sessionId          String   @db.ObjectId
+  languageDetected   String
+  sender             String
+  message            String
+  messageTranslation String
+  audioFile          String?
+  promptType         String //enum
+  options            String[] //optional
+  timeStamp          DateTime
+}
+
+model TransactionDetails {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId            String   @db.ObjectId
+  session              Sessions @relation(fields: [sessionId], references: [id])
+  transactionId        String
+  amount               Int
+  transactionType      String
+  transactionTimeBank  DateTime
+  transactionNarration String
+}
+
+//naration-educative text
+//helperText             String
