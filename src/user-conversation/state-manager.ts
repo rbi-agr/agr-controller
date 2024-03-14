@@ -179,13 +179,22 @@ export class ChatStateManager {
                     this.logger.info('inside case 2')
                     if(!this.validstate(st, 2)){
                         //Invalid state
-                        return 'Invalid State'
+                        const FailRes = {
+                            status: "Internal Server Error",
+                            session_id: sessionId,
+                            "message": "Invalid state",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }
+                        return FailRes
                     }
                     //check for the required fields: transactionstartdate, enddate and bankaccount
                     
                     const session = await this.prisma.sessions.findUnique({
                         where:{
-                            id:reqData.session_id
+                            sessionId:reqData.session_id
                         }
                     })
                     //If bank account number exists
@@ -196,13 +205,13 @@ export class ChatStateManager {
                             //Return response to ask for start date
                             //Updating the state to 6
                             await this.prisma.sessions.update({
-                                where:{id:reqData.session_id},
+                                where:{sessionId:reqData.session_id},
                                 data:{
                                     state:6
                                 }
                             })
-                            await this.states(reqData, languageDetected,6)
-                            break;
+                            const fail_r1= await this.states(reqData, languageDetected,6)
+                            return fail_r1
                         }
                         else
                         {
@@ -214,13 +223,22 @@ export class ChatStateManager {
                                     state:3
                                 }
                             })
-                            await this.states(reqData, languageDetected,3)
-                            break;
+                            const success_r1=await this.states(reqData, languageDetected,3)
+                            return success_r1
                         }
                     }
                     else
                     {
-                        return "No bank account details available"
+                        const failres = {
+                            status: "Success",
+                            session_id: sessionId,
+                            "message": "No bank account details available",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }
+                          return failres
                     }
                     
                     msg = 'Check for all the fields of fetching the transactions'
@@ -245,14 +263,39 @@ export class ChatStateManager {
                             }
                         })
                         msg = 'All transaction fetched'
-                        await this.states(reqData, languageDetected, 4)
-                        break;
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:4
+                            }
+                        })
+                        const transaction_success = {
+                            status: "Success",
+                            session_id: sessionId,
+                            "message": "Please confirm your transactions",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "option_selection",
+                            "metadata":{}
+                          }
+                        return transaction_success
+                        
                     }
                     else
                     {
-                        return "Error in fetching transactions from bank"
+                        const intentFailRes = {
+                            status: "Internal Server Error",
+                            session_id: sessionId,
+                            "message": "Something went wrong with Bank Servers",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }
+
+                        return intentFailRes
                     }
-                    
+                    break;
                     
                 case 4:
                     //ask user to confirm transaction
@@ -270,7 +313,16 @@ export class ChatStateManager {
                             state:9
                         }
                     })
-                    return "No transactions found. Please select a different range"
+                    const intentFailRes = {
+                        status: "Success",
+                        session_id: sessionId,
+                        "message": "No transactions found. Please select a different range",
+                        "options": [],
+                        "end_connection": false,
+                        "prompt": "date_pick",
+                        "metadata":{}
+                      }
+                    return intentFailRes
                     
                 case 6:
                     
@@ -284,7 +336,16 @@ export class ChatStateManager {
                     })
                     msg = 'Ask for date of transaction'
                     //Updating the state to 9
-                    return "Please enter startdate and enddate for the transaction"
+                    const success_r2 = {
+                        status: "Success",
+                        session_id: sessionId,
+                        "message": "Please enter startdate and enddate for the transaction",
+                        "options": [],
+                        "end_connection": false,
+                        "prompt": "date_pick",
+                        "metadata":{}
+                      }
+                    return success_r2
                     
                 case 7:
                     //Educate the user on how to prevent it
