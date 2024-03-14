@@ -95,7 +95,19 @@ export class ChatStateManager {
                         }
                     })
                     if(createdSession) {
-                        await this.states(reqData, languageDetected, 1)
+                       const stateCreationRes = await this.states(reqData, languageDetected, 1)
+                       return stateCreationRes
+                    } else {
+                        const stateFailRes = {
+                            status: "Bad Request",
+                            session_id: sessionId,
+                            "message": "Please try again.",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }
+                        return  stateFailRes
                     }
                     break;
                 case 1:
@@ -103,51 +115,67 @@ export class ChatStateManager {
                     this.logger.info('inside case 1')
                     //get the intial query and check for intent which will give us category, subcategory, subtype stored in db
                     const messageForIntent = reqData.message
-                    const session = await this.prisma.sessions.findUnique({
+                    let sessionForIntent = await this.prisma.sessions.findUnique({
                         where: {
                             sessionId: sessionId
                         }
                     })
 
                     //add a retry in the db max 3 tries
-                    if(session && session.retriesLeft<=0) {
-                        return 'You have reached maximum retries limit, Please try again later'
+                    if(sessionForIntent && sessionForIntent.retriesLeft<=0) {
+                        const intentFailRes = {
+                            "status": "Bad Request",
+                            "message": "Maximum retries limit reached. Please try again later.",
+                            "end_connection": true
+                          }
+                        return intentFailRes
                     } 
+
+                    await this.prisma.sessions.update({
+                        where:{id:reqData.session_id},
+                        data:{
+                            state:6
+                        }
+                    })
+
                     //call intent api
                     const intentResponse = {
                         category: 'category',
-                        subCategory: 'subCategory',
-                        subType: 'subType'
+                        subtype: 'subtype',
+                        type: 'type'
                     }
 
-                    if (!intentResponse.category || !intentResponse.subCategory || !intentResponse.subType) {
+                    if (!intentResponse.category || !intentResponse.subtype || !intentResponse.type) {
                         //intent did not classify
 
-                        const session = await this.prisma.sessions.findUnique({
-                            where: {
-                                sessionId: sessionId
-                            }
-                        })
-
                         //add a retry in the db max 3 tries
-                        if(session) {
+                        if(sessionForIntent) {
                             await this.prisma.sessions.update({
                                 data: {
-                                  retriesLeft: session.retriesLeft - 1,
+                                  retriesLeft: sessionForIntent.retriesLeft - 1,
                                 },
                                 where: {
                                   sessionId: sessionId,
                                 },
                               })
                         }
-                        return 'Please ask you query again'
+                        const intentFailRes = {
+                            status: "Success",
+                            session_id: sessionId,
+                            "message": "Please reframe your query.",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }
+                        return intentFailRes
                         
                     }
-                    await this.states(reqData, languageDetected, 2)
-                    
+                    const intentPassRes = await this.states(reqData, languageDetected, 2)
+                    return intentPassRes
                     break;
                 case 2:
-                    //intent check
+                    //Check for all requierd fields
                     this.logger.info('inside case 2')
                     if(!this.validstate(st, 2)){
                         //Invalid state
