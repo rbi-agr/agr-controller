@@ -185,7 +185,7 @@ export class ChatStateManager {
                         //Invalid state
                         const FailRes = {
                             status: "Internal Server Error",
-                            session_id: sessionId,
+                            session_id: reqData.session_id,
                             "message": "Invalid state",
                             "options": [],
                             "end_connection": false,
@@ -235,7 +235,7 @@ export class ChatStateManager {
                     {
                         const failres = {
                             status: "Success",
-                            session_id: sessionId,
+                            session_id: reqData.session_id,
                             "message": "No bank account details available",
                             "options": [],
                             "end_connection": false,
@@ -278,7 +278,7 @@ export class ChatStateManager {
                         })
                         const transaction_success = {
                             status: "Success",
-                            session_id: sessionId,
+                            session_id: reqData.session_id,
                             "message": "Please confirm your transactions",
                             "options": [],
                             "end_connection": false,
@@ -292,7 +292,7 @@ export class ChatStateManager {
                     {
                         const intentFailRes = {
                             status: "Internal Server Error",
-                            session_id: sessionId,
+                            session_id: reqData.session_id,
                             "message": "Something went wrong with Bank Servers",
                             "options": [],
                             "end_connection": false,
@@ -322,7 +322,7 @@ export class ChatStateManager {
                     })
                     const intentFailRes = {
                         status: "Success",
-                        session_id: sessionId,
+                        session_id: reqData.session_id,
                         "message": "No transactions found. Please select a different range",
                         "options": [],
                         "end_connection": false,
@@ -345,7 +345,7 @@ export class ChatStateManager {
                     //Updating the state to 9
                     const success_r2 = {
                         status: "Success",
-                        session_id: sessionId,
+                        session_id: reqData.session_id,
                         "message": "Please enter startdate and enddate for the transaction",
                         "options": [],
                         "end_connection": false,
@@ -407,7 +407,7 @@ export class ChatStateManager {
                     {
                         const intentFailRes = {
                             status: "Internal Server Error",
-                            session_id: sessionId,
+                            session_id: reqData.session_id,
                             "message": "No Response from Mistral.AI",
                             "options": [],
                             "end_connection": false,
