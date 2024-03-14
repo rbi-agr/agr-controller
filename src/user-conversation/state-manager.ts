@@ -31,7 +31,7 @@ export class ChatStateManager {
                 if(languageDetected === 'hi' || languageDetected === 'od'){
                     //convert the message to english
                 }else {
-                    //throw error stating to change the message language
+                    //throw error stating to change the message language (User to enter the query)
                     const msg = 'Please enter you query in english, hindi or odia'
                     return msg
                 }
@@ -111,7 +111,6 @@ export class ChatStateManager {
                             "options": [],
                             "end_connection": false,
                             "prompt": "text_message",
-                            "metadata":{}
                           }
                         return  stateFailRes
                     }
@@ -223,7 +222,7 @@ export class ChatStateManager {
                             //Call for fetch transactions
                             //Update the state to 3
                             await this.prisma.sessions.update({
-                                where:{id:reqData.session_id},
+                                where:{sessionId:reqData.session_id},
                                 data:{
                                     state:3
                                 }
@@ -258,11 +257,14 @@ export class ChatStateManager {
                         metadata:{}
                     }
                     //Update transaction details in db
+                    const sessionfortransaction = await this.prisma.sessions.findUnique({
+                        where:{sessionId:reqData.session_id}
+                    })
                     if(fetchtransactionResponse){
-                        await this.prisma.transactionDetails.update({
-                            where:{id:reqData.session_id},
+                        await this.prisma.transactionDetails.create({
                             data:{
-                                transactionTimeBank: fetchtransactionResponse.transactionDate,
+                                sessionId:sessionfortransaction.sessionId,
+                                transactionTimeBank: new Date(fetchtransactionResponse.transactionDate),
                                 transactionNarration: fetchtransactionResponse.transactionNarration,
                                 transactionType: fetchtransactionResponse.transactionType
                             }
@@ -313,7 +315,7 @@ export class ChatStateManager {
                     msg = 'Ask for different date range'
                     //Updating the state to 9
                     await this.prisma.sessions.update({
-                        where:{id:reqData.session_id},
+                        where:{sessionId:reqData.session_id},
                         data:{
                             state:9
                         }
@@ -334,7 +336,7 @@ export class ChatStateManager {
                     this.logger.info('inside case 6')
                     //after fetching insert all transactions into the db, (bulk create)
                     await this.prisma.sessions.update({
-                        where:{id:reqData.session_id},
+                        where:{sessionId:reqData.session_id},
                         data:{
                             state:9
                         }
@@ -358,6 +360,7 @@ export class ChatStateManager {
                     msg = 'Educating the user for prevention'
                     break;
                 case 8:
+                    //vidisha
                     //Ask the user to get transaction Id
                     this.logger.info('inside case 8')
                     //get all transactions for a session
@@ -371,7 +374,7 @@ export class ChatStateManager {
                     msg = 'Check for dates from NERBOT'
                     const exsession = await this.prisma.sessions.findUnique({
                         where:{
-                            id:reqData.session_id
+                            sessionId:reqData.session_id
                         }
                     })
                     //Data from MistralAI
@@ -380,20 +383,38 @@ export class ChatStateManager {
                         enddate: '14/03/2024'
                     }
                     //Store it in db
+                    const startDateParts = datesResponse.startdate.split('/');
+                    const endDateParts = datesResponse.enddate.split('/');
+                    const startDate = new Date(`${startDateParts[2]}-${startDateParts[1]}-${startDateParts[0]}`);
+                    const endDate = new Date(`${endDateParts[2]}-${endDateParts[1]}-${endDateParts[0]}`);
+
+                    // Convert to ISO 8601 format
+                    const isoStartDate = startDate.toISOString();
+                    const isoEndDate = endDate.toISOString();
                     if (datesResponse){
                         await this.prisma.sessions.update({
-                            where:{id:reqData.session_id},
+                            where:{sessionId:reqData.session_id},
                             data:{
-                                startDate:datesResponse.startdate,
-                                endDate:datesResponse.enddate
+                                startDate:isoStartDate,
+                                endDate:isoEndDate
                             }
                         })
-                        await this.states(reqData, languageDetected,2)
-                        break;
+                        const success_resp= this.states(reqData, languageDetected,2)
+                        return success_resp
+                        
                     }
                     else
                     {
-                        return "NER BOT API not sending response"
+                        const intentFailRes = {
+                            status: "Internal Server Error",
+                            session_id: sessionId,
+                            "message": "No Response from Mistral.AI",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }
+                        return intentFailRes
                     }
                     
                     
@@ -404,6 +425,7 @@ export class ChatStateManager {
                     break;
                 case 11:
                     //ask the user for a rating
+                    //vidisha
                     this.logger.info('inside case 11')
                     msg = 'Ask the user for a rating'
                     break;
