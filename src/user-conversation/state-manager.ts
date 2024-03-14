@@ -19,7 +19,7 @@ export class ChatStateManager {
             
             let session = await this.prisma.sessions.findUnique({
                 where: {
-                    id: sessionId,
+                    sessionId: sessionId,
                 },
             })
 
@@ -67,7 +67,7 @@ export class ChatStateManager {
                     const metaData = reqData.metadata
                     const phoneNumber = String(metaData.phoneNumber)
                     const accountNumber = metaData.accountNumber
-                    const dob = metaData.accountNumber
+                    const dob = metaData.dob
                     let user = await this.prisma.users.findUnique({
                         where: {
                             phoneNumber: phoneNumber
@@ -95,6 +95,12 @@ export class ChatStateManager {
                         }
                     })
                     if(createdSession) {
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:1
+                            }
+                        })
                        const stateCreationRes = await this.states(reqData, languageDetected, 1)
                        return stateCreationRes
                     } else {
@@ -117,7 +123,7 @@ export class ChatStateManager {
                     const messageForIntent = reqData.message
                     let sessionForIntent = await this.prisma.sessions.findUnique({
                         where: {
-                            sessionId: sessionId
+                            sessionId: reqData.session_id
                         }
                     })
 
@@ -130,13 +136,6 @@ export class ChatStateManager {
                           }
                         return intentFailRes
                     } 
-
-                    await this.prisma.sessions.update({
-                        where:{id:reqData.session_id},
-                        data:{
-                            state:6
-                        }
-                    })
 
                     //call intent api
                     const intentResponse = {
@@ -171,6 +170,12 @@ export class ChatStateManager {
                         return intentFailRes
                         
                     }
+                    await this.prisma.sessions.update({
+                        where:{sessionId:reqData.session_id},
+                        data:{
+                            state:2
+                        }
+                    })
                     const intentPassRes = await this.states(reqData, languageDetected, 2)
                     return intentPassRes
                     break;
