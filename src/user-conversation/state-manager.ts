@@ -63,6 +63,7 @@ export class ChatStateManager {
                     // user posts query, make socket connection
                     this.logger.info('inside case 0')
                     const message = reqData.message.text
+                    const sessionId = reqData.session_id
                     const metaData = reqData.metadata
                     const phoneNumber = String(metaData.phoneNumber)
                     const accountNumber = metaData.accountNumber
@@ -86,9 +87,11 @@ export class ChatStateManager {
                             user: {
                                 connect: { id: user.id } // Use the actual user ID here
                             },
+                            sessionId: sessionId,
                             state: 0,
                             bankAccountNumber: accountNumber,
-                            initialQuery: message
+                            initialQuery: message,
+                            retriesLeft: 3
                         }
                     })
                     if(createdSession) {
@@ -100,6 +103,16 @@ export class ChatStateManager {
                     this.logger.info('inside case 1')
                     //get the intial query and check for intent which will give us category, subcategory, subtype stored in db
                     const messageForIntent = reqData.message
+                    const session = await this.prisma.sessions.findUnique({
+                        where: {
+                            sessionId: sessionId
+                        }
+                    })
+
+                    //add a retry in the db max 3 tries
+                    if(session && session.retriesLeft<=0) {
+                        return 'You have reached maximum retries limit, Please try again later'
+                    } 
                     //call intent api
                     const intentResponse = {
                         category: 'category',
@@ -109,7 +122,26 @@ export class ChatStateManager {
 
                     if (!intentResponse.category || !intentResponse.subCategory || !intentResponse.subType) {
                         //intent did not classify
+
+                        const session = await this.prisma.sessions.findUnique({
+                            where: {
+                                sessionId: sessionId
+                            }
+                        })
+
+                        //add a retry in the db max 3 tries
+                        if(session) {
+                            await this.prisma.sessions.update({
+                                data: {
+                                  retriesLeft: session.retriesLeft - 1,
+                                },
+                                where: {
+                                  sessionId: sessionId,
+                                },
+                              })
+                        }
                         return 'Please ask you query again'
+                        
                     }
                     await this.states(reqData, languageDetected, 2)
                     
@@ -215,6 +247,7 @@ export class ChatStateManager {
                 case 6:
                     
                     this.logger.info('inside case 6')
+                    //after fetching insert all transactions into the db, (bulk create)
                     await this.prisma.sessions.update({
                         where:{id:reqData.session_id},
                         data:{
@@ -233,6 +266,9 @@ export class ChatStateManager {
                 case 8:
                     //Ask the user to get transaction Id
                     this.logger.info('inside case 8')
+                    //get all transactions for a session
+
+                    //after getting all the transactions ask for a 
                     msg = 'Ask the user to get transaction Id'
                     break;
                 case 9:
