@@ -1,4 +1,4 @@
-export interface ComplaintDto {
+export interface ComplaintRequestDto {
     accountNumber: string;
     mobileNumber: string;
     complaintCategory: string;
@@ -7,4 +7,8 @@ export interface ComplaintDto {
     amount: string;
     transactionDate: string;
     complaintDetails: string;
+}
+
+export interface ComplaintResponseDto {
+    ticketNumber: string
 }

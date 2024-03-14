@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { BankName, InteractionType } from '@prisma/client';
 import axios from 'axios';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { TransactionsDto } from '../dto/transactions.dto';
-import { ComplaintDto } from '../dto/complaint.dto';
+import { TransactionsRequestDto, TransactionsResponseDto } from '../dto/transactions.dto';
+import { ComplaintRequestDto, ComplaintResponseDto } from '../dto/complaint.dto';
 
 @Injectable()
 export class IndianBankService {
@@ -11,7 +11,7 @@ export class IndianBankService {
     private prisma: PrismaService,
   ) {}
 
-  async fetchTransactions(sessionId: string, transactionsDto: TransactionsDto) {
+  async fetchTransactions(sessionId: string, transactionsDto: TransactionsRequestDto): Promise<TransactionsResponseDto> {
 
     const bankUrl = process.env.INDIAN_BANK_URL;
     if (!bankUrl) {
@@ -56,7 +56,7 @@ export class IndianBankService {
           }
         }
       });
-      const formattedTransactions = transactions.map(transaction => {
+      const formattedTransactions: TransactionsResponseDto = transactions.map(transaction => {
         return {
           transactionDate: transaction.Valid_Date,
           transactionType: transaction.Transaction_Type,
@@ -71,7 +71,7 @@ export class IndianBankService {
     }
   }
 
-  async registerComplaint(sessionId: string, complaintDto: ComplaintDto) {
+  async registerComplaint(sessionId: string, complaintDto: ComplaintRequestDto): Promise<ComplaintResponseDto> {
 
     const bankUrl = process.env.INDIAN_BANK_URL;
     if (!bankUrl) {
