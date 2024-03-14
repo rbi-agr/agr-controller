@@ -3,6 +3,7 @@ import { Injectable} from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import axios from "axios";
+import { getEduMsg } from "./utils/utils";
 
 @Injectable()
 export class ChatStateManager {
@@ -307,8 +308,27 @@ export class ChatStateManager {
                 case 4:
                     //ask user to confirm transaction
                     this.logger.info('inside case 4')
-                    msg = 'User Transaction confirmation'
-                    break;
+
+                    const selectedTransaction = reqData.metadata;
+
+                    if(selectedTransaction.transactionNarration) {
+                        //Update the state to 7
+                        await this.prisma.sessions.update({
+                            where: {
+                                sessionId:reqData.session_id
+                            },
+                            data: {
+                                state: 7
+                            }
+                        })
+
+                        const successRes = await this.states(reqData, languageDetected, 7)
+                        return successRes
+                    } else {
+                        //Update the state to 8
+                        const failres = await this.states(reqData, languageDetected, 8)
+                        return failres
+                    }
                 case 5:
                     //If not transaction, ask for different date range
                     this.logger.info('inside case 5')
@@ -357,8 +377,59 @@ export class ChatStateManager {
                 case 7:
                     //Educate the user on how to prevent it
                     this.logger.info('inside case 7')
-                    msg = 'Educating the user for prevention'
-                    break;
+
+                    const transaction = reqData.metadata;
+
+                    if(transaction.transactionNarration) {
+                        //Update the state to 10
+                        await this.prisma.sessions.update({
+                            where: {
+                                sessionId:reqData.session_id
+                            },
+                            data: {
+                                state: 10
+                            }
+                        })
+                        const educatingMessage = getEduMsg(selectedTransaction.transactionNarration)
+
+                        if(educatingMessage) {
+                            const educatingRes = {
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                message: educatingMessage,
+                                options: [],
+                                end_connection: false,
+                                prompt: "text_message",
+                                metadata: {}
+                            }
+                            await this.states(reqData, languageDetected, 10)
+                            return educatingRes
+                        } else {
+                            const educatingFailRes = {
+                                status: "Internal Server Error",
+                                session_id: reqData.session_id,
+                                message: "Internal Server Error",
+                                options: [],
+                                end_connection: false,
+                                prompt: "text_message",
+                                metadata: {}
+                            }
+                            return educatingFailRes
+                            }
+                    } else {
+                        //Update the state to 8
+                        this.logger.info("Selected transaction not found")
+                        const failRes = {
+                            status: "Internal Server Error",
+                            session_id: reqData.session_id,
+                            message: "Internal Server Error",
+                            options: [],
+                            end_connection: false,
+                            prompt: "text_message",
+                            metadata: {}
+                        }
+                        return failRes
+                    }
                 case 8:
                     //vidisha
                     //Ask the user to get transaction Id
@@ -428,7 +499,49 @@ export class ChatStateManager {
                     //vidisha
                     this.logger.info('inside case 11')
                     msg = 'Ask the user for a rating'
-                    break;
+                case 12:
+                    //Raise a ticket
+                    this.logger.info('inside case 12')
+
+                    try {
+                        // Call register complaint API
+                        
+                        const ticketResponse = {
+                            ticketNumber: '1234'
+                        }
+                        await this.prisma.sessions.update({
+                            where: {
+                                sessionId: reqData.session_id
+                            },
+                            data: {
+                                ticketId: ticketResponse.ticketNumber,
+                                ticketRaised: true,
+                                ticketRaisedTime: new Date()
+                            }
+                        })
+                        const successRes = {
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "Ticket raised successfully with ticket number " + ticketResponse.ticketNumber,
+                            options: [],
+                            end_connection: true,
+                            prompt: "text_message",
+                            metadata: {}
+                        }
+                        return successRes
+                    } catch (error) {
+                        this.logger.error('Error in raising ticket: ', error)
+                        const failRes = {
+                            status: "Internal Server Error",
+                            session_id: reqData.session_id,
+                            message: "Error in raising ticket",
+                            options: [],
+                            end_connection: true,
+                            prompt: "text_message",
+                            metadata: {}
+                        }
+                        return failRes
+                    }
                 case 21:
                     //Notify that the intent did not classify
                     this.logger.info('inside case 21')
