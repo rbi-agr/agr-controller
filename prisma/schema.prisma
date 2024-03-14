@@ -20,20 +20,22 @@ model Token {
 }
 
 model Users {
-  id               String @id @default(auto()) @map("_id") @db.ObjectId
-  phoneNumber      String @unique
+  id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  phoneNumber      String     @unique
   languageDetected String
-  sessions Sessions[]
+  sessions         Sessions[]
 }
 
 model Sessions {
   id                       String               @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId                String               @unique
   userId                   String               @db.ObjectId
   user                     Users                @relation(fields: [userId], references: [id])
   ticketRaised             Boolean              @default(false)
   ticketId                 String?
   ticketRaisedTime         DateTime?
   state                    Int                  @default(0)
+  retriesLeft              Int?
   ratings                  Int?
   bankAccountNumber        String
   startDate                DateTime?
