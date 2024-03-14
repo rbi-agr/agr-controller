@@ -1,12 +1,14 @@
-import { Injectable } from "@nestjs/common";
+
+import { Injectable} from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
+import axios from "axios";
 
 @Injectable()
 export class ChatStateManager {
     constructor(
         private readonly logger: LoggerService,
-        private prisma: PrismaService,
+        private prisma: PrismaService
     ) { }
 
 
@@ -14,6 +16,7 @@ export class ChatStateManager {
         try {
             //check if session exists
             const sessionId = reqData.session_id
+            
             let session = await this.prisma.sessions.findUnique({
                 where: {
                     id: sessionId,
@@ -60,6 +63,7 @@ export class ChatStateManager {
                     // user posts query, make socket connection
                     this.logger.info('inside case 0')
                     const message = reqData.message.text
+                    const sessionId = reqData.session_id
                     const metaData = reqData.metadata
                     const phoneNumber = String(metaData.phoneNumber)
                     const accountNumber = metaData.accountNumber
@@ -83,9 +87,11 @@ export class ChatStateManager {
                             user: {
                                 connect: { id: user.id } // Use the actual user ID here
                             },
+                            sessionId: sessionId,
                             state: 0,
                             bankAccountNumber: accountNumber,
-                            initialQuery: message
+                            initialQuery: message,
+                            retriesLeft: 3
                         }
                     })
                     if(createdSession) {
@@ -93,10 +99,20 @@ export class ChatStateManager {
                     }
                     break;
                 case 1:
-                    //check for intent
+                    
                     this.logger.info('inside case 1')
                     //get the intial query and check for intent which will give us category, subcategory, subtype stored in db
                     const messageForIntent = reqData.message
+                    const session = await this.prisma.sessions.findUnique({
+                        where: {
+                            sessionId: sessionId
+                        }
+                    })
+
+                    //add a retry in the db max 3 tries
+                    if(session && session.retriesLeft<=0) {
+                        return 'You have reached maximum retries limit, Please try again later'
+                    } 
                     //call intent api
                     const intentResponse = {
                         category: 'category',
@@ -106,50 +122,187 @@ export class ChatStateManager {
 
                     if (!intentResponse.category || !intentResponse.subCategory || !intentResponse.subType) {
                         //intent did not classify
+
+                        const session = await this.prisma.sessions.findUnique({
+                            where: {
+                                sessionId: sessionId
+                            }
+                        })
+
+                        //add a retry in the db max 3 tries
+                        if(session) {
+                            await this.prisma.sessions.update({
+                                data: {
+                                  retriesLeft: session.retriesLeft - 1,
+                                },
+                                where: {
+                                  sessionId: sessionId,
+                                },
+                              })
+                        }
                         return 'Please ask you query again'
+                        
                     }
-                    await this.states(reqData, languageDetected, 3)
+                    await this.states(reqData, languageDetected, 2)
+                    
                     break;
                 case 2:
-                    //intent classifies
+                    //intent check
                     this.logger.info('inside case 2')
-                    msg = 'Intent classifies'
+                    if(!this.validstate(st, 2)){
+                        //Invalid state
+                        return 'Invalid State'
+                    }
+                    //check for the required fields: transactionstartdate, enddate and bankaccount
+                    
+                    const session = await this.prisma.sessions.findUnique({
+                        where:{
+                            id:reqData.session_id
+                        }
+                    })
+                    //If bank account number exists
+                    if(session?.bankAccountNumber){
+                        //Check for start and enddate of transaction
+                        if(!session?.startDate)
+                        {
+                            //Return response to ask for start date
+                            //Updating the state to 6
+                            await this.prisma.sessions.update({
+                                where:{id:reqData.session_id},
+                                data:{
+                                    state:6
+                                }
+                            })
+                            await this.states(reqData, languageDetected,6)
+                            break;
+                        }
+                        else
+                        {
+                            //Call for fetch transactions
+                            //Update the state to 3
+                            await this.prisma.sessions.update({
+                                where:{id:reqData.session_id},
+                                data:{
+                                    state:3
+                                }
+                            })
+                            await this.states(reqData, languageDetected,3)
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        return "No bank account details available"
+                    }
+                    
+                    msg = 'Check for all the fields of fetching the transactions'
                     break;
                 case 3:
-                    //Call the NER bot to check for information completness
+                    //Call for Fetch transactions
                     this.logger.info('inside case 3')
-                    msg = 'User authentication'
-                    break;
+                    const fetchtransactionResponse = {
+                        transactionDate: '12/11/24',
+                        transactionType: 'excess charge',
+                        transactionNarration: 'This is due to sms',
+                        metadata:{}
+                    }
+                    //Update transaction details in db
+                    if(fetchtransactionResponse){
+                        await this.prisma.transactionDetails.update({
+                            where:{id:reqData.session_id},
+                            data:{
+                                transactionTimeBank: fetchtransactionResponse.transactionDate,
+                                transactionNarration: fetchtransactionResponse.transactionNarration,
+                                transactionType: fetchtransactionResponse.transactionType
+                            }
+                        })
+                        msg = 'All transaction fetched'
+                        await this.states(reqData, languageDetected, 4)
+                        break;
+                    }
+                    else
+                    {
+                        return "Error in fetching transactions from bank"
+                    }
+                    
+                    
                 case 4:
-                    //ask for bank account confirmaion
+                    //ask user to confirm transaction
                     this.logger.info('inside case 4')
-                    msg = 'Bank Account confirmation'
+                    msg = 'User Transaction confirmation'
                     break;
                 case 5:
-                    //check for information completness
+                    //If not transaction, ask for different date range
                     this.logger.info('inside case 5')
-                    msg = 'Information Completness check'
-                    break;
+                    msg = 'Ask for different date range'
+                    //Updating the state to 9
+                    await this.prisma.sessions.update({
+                        where:{id:reqData.session_id},
+                        data:{
+                            state:9
+                        }
+                    })
+                    return "No transactions found. Please select a different range"
+                    
                 case 6:
-                    //fetch all transactions
+                    
                     this.logger.info('inside case 6')
-                    msg = 'Fetch all transactions'
-                    break;
+                    //after fetching insert all transactions into the db, (bulk create)
+                    await this.prisma.sessions.update({
+                        where:{id:reqData.session_id},
+                        data:{
+                            state:9
+                        }
+                    })
+                    msg = 'Ask for date of transaction'
+                    //Updating the state to 9
+                    return "Please enter startdate and enddate for the transaction"
+                    
                 case 7:
-                    //Ask for pending info
+                    //Educate the user on how to prevent it
                     this.logger.info('inside case 7')
-                    msg = 'Ask for pending info'
+                    msg = 'Educating the user for prevention'
                     break;
                 case 8:
-                    //Ask the user to confirm transactions
+                    //Ask the user to get transaction Id
                     this.logger.info('inside case 8')
-                    msg = 'Ask the user to confirm transactions'
+                    //get all transactions for a session
+
+                    //after getting all the transactions ask for a 
+                    msg = 'Ask the user to get transaction Id'
                     break;
                 case 9:
-                    //Educate the user about deductions
+                    //NER BOT date check
                     this.logger.info('inside case 9')
-                    msg = 'Educate the user about deductions'
-                    break;
+                    msg = 'Check for dates from NERBOT'
+                    const exsession = await this.prisma.sessions.findUnique({
+                        where:{
+                            id:reqData.session_id
+                        }
+                    })
+                    //Data from MistralAI
+                    const datesResponse = {
+                        startdate: '13/03/2024',
+                        enddate: '14/03/2024'
+                    }
+                    //Store it in db
+                    if (datesResponse){
+                        await this.prisma.sessions.update({
+                            where:{id:reqData.session_id},
+                            data:{
+                                startDate:datesResponse.startdate,
+                                endDate:datesResponse.enddate
+                            }
+                        })
+                        await this.states(reqData, languageDetected,2)
+                        break;
+                    }
+                    else
+                    {
+                        return "NER BOT API not sending response"
+                    }
+                    
+                    
                 case 10:
                     //ask if the user is ok with the info
                     this.logger.info('inside case 10')
@@ -231,6 +384,21 @@ export class ChatStateManager {
 
             }
             return { statusCode: 404, message: 'States not provided. Please provide valid state' }
+        } catch (error) {
+            this.logger.error('Error in checking this move ', error)
+            return { statusCode: 400, message: 'Error in this move', error: error }
+        }
+    }
+
+    async IntentCheck(message: String) :Promise<any> {
+        try {
+            const apiUrl="URL"
+            const requestBody = {
+                message: message,
+              };
+            this.logger.info('API for Intent check')
+            const response = await axios.post(apiUrl,requestBody)
+            return response.data
         } catch (error) {
             this.logger.error('Error in checking this move ', error)
             return { statusCode: 400, message: 'Error in this move', error: error }
