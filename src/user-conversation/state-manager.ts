@@ -5,8 +5,8 @@ import { PrismaService } from "src/prisma/prisma.service";
 import axios from "axios";
 import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
 import { BankName } from "@prisma/client";
-import { BanksService } from "src/banks/banks.service";
 import { response } from "express";
+import { BanksService } from "src/banks/banks.service";
 
 @Injectable()
 export class ChatStateManager {
@@ -370,6 +370,13 @@ export class ChatStateManager {
 
                     //after getting all the transactions ask for a 
                     msg = 'Ask the user to get transaction Id'
+                    //Update the state to 99
+                    await this.prisma.sessions.update({
+                        where:{sessionId:reqData.session_id},
+                        data:{
+                            state:99
+                        }
+                    })
                     const success_r3 = {
                         status: "Success",
                         session_id: reqData.session_id,
@@ -410,6 +417,12 @@ export class ChatStateManager {
                             data:{
                                 startDate:isoStartDate,
                                 endDate:isoEndDate
+                            }
+                        })
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:2
                             }
                         })
                         const success_resp= this.states(reqData, languageDetected,2)
@@ -470,15 +483,40 @@ export class ChatStateManager {
                     else
                     {
                         //If the user is educated for all transactions
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:13
+                            }
+                        })
                         const res = await this.states(reqData, languageDetected, 13)
                         return res
                     }
                     msg = 'Ask the user for other transaction'
                     break;
                 case 14:
-                    //Notify that the intent did not classify
+                    //Select the transaction from the list
                     this.logger.info('inside case 14')
-                    msg = 'Notify that the intent did not classify'
+                    //Updating the transaction iseducated value to true
+                    await this.prisma.transactionDetails.update({
+                        where:{
+                            sessionId: reqData.session_id,
+                            transactionId: metaData.transactionId
+                        },
+                        data:{
+                            isEducated:true
+                        }
+                    })
+                    //Send the user to state 7 for educating him
+                    const educresp = await this.states(reqData,languageDetected,7)
+                    await this.prisma.sessions.update({
+                        where:{sessionId:reqData.session_id},
+                        data:{
+                            state:7
+                        }
+                    })
+                    return educresp
+                    msg = 'Select the transaction from the list'
                     break;
                 case 16:
                     //Waiting for user response to educate him about other trasnactions
@@ -487,7 +525,7 @@ export class ChatStateManager {
                     if(userresponse==="Yes")
                     {
                         //Pass the remaining transaction list data
-                        const undecated_transaction = await this.prisma.transactionDetails.findMany({
+                        const uneducated_transaction = await this.prisma.transactionDetails.findMany({
                             where:{
                                 sessionId:reqData.session_id,
                                 isEducated:false
@@ -498,7 +536,7 @@ export class ChatStateManager {
                             status: "Success",
                             session_id: reqData.session_id,
                             "message": null,
-                            "options": undecated_transaction,
+                            "options": uneducated_transaction,
                             "end_connection": false,
                             "prompt": "option_selection",
                             "metadata":{}
@@ -512,6 +550,16 @@ export class ChatStateManager {
                             }
                         })
                         return success_r4
+                    }
+                    else{
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:13
+                            }
+                        })
+                        const res = await this.states(reqData, languageDetected, 13)
+                        return res
                     }
 
                     msg = 'User response for educating him'
