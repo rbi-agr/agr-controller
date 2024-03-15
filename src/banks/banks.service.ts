@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { IndianBankService } from './services/indianBank.service';
 import { BankName } from '@prisma/client';
-import { TransactionsRequestDto } from './dto/transactions.dto';
-import { ComplaintRequestDto } from './dto/complaint.dto';
+import { TransactionsRequestDto, TransactionsResponseDto } from './dto/transactions.dto';
+import { ComplaintRequestDto, ComplaintResponseDto } from './dto/complaint.dto';
 
 @Injectable()
 export class BanksService {
@@ -10,7 +10,7 @@ export class BanksService {
         private indianBankService: IndianBankService
     ) {}
 
-    async fetchTransactions(sessionId: string, data: TransactionsRequestDto, bankName: BankName) {
+    async fetchTransactions(sessionId: string, data: TransactionsRequestDto, bankName: BankName): Promise<TransactionsResponseDto[]> {
 
         switch(bankName) {
             case BankName.INDIAN_BANK:
@@ -18,7 +18,7 @@ export class BanksService {
         }
     }
 
-    async registerComplaint(sessionId: string, data: ComplaintRequestDto, bankName: BankName) {
+    async registerComplaint(sessionId: string, data: ComplaintRequestDto, bankName: BankName): Promise<ComplaintResponseDto> {
 
         switch(bankName) {
             case BankName.INDIAN_BANK:
