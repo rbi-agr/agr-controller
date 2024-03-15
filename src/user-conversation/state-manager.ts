@@ -398,7 +398,7 @@ export class ChatStateManager {
                         const educatingMessage = getEduMsg(selectedTransaction.transactionNarration)
 
                         if(educatingMessage) {
-                            const educatingRes = {
+                            const educatingRes = [{
                                 status: "Success",
                                 session_id: reqData.session_id,
                                 message: educatingMessage,
@@ -406,8 +406,22 @@ export class ChatStateManager {
                                 end_connection: false,
                                 prompt: "text_message",
                                 metadata: {}
-                            }
-                            await this.states(reqData, languageDetected, 10)
+                            }]
+                            educatingRes.push({
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                message: "Are you satisfied with the resolution provided?",
+                                options: [],
+                                end_connection: false,
+                                prompt: "text_message",
+                                metadata: {}
+                            })
+                            await this.prisma.sessions.update({
+                                where: { sessionId: reqData.session_id },
+                                data: {
+                                    state: 10
+                                }
+                            })
                             return educatingRes
                         } else {
                             const educatingFailRes = {
@@ -493,12 +507,16 @@ export class ChatStateManager {
                         return intentFailRes
                     }
                     
-                    
                 case 10:
-                    //ask if the user is ok with the info
+                    //Redirect to state 11 or 12 based on answer
                     this.logger.info('inside case 10')
-                    msg = 'Ask if the user is ok with the info'
-                    break;
+
+                    const state10Message = reqData.message
+                    if(state10Message === 'yes') {
+                        return this.states(reqData, languageDetected, 11)
+                    } else {
+                        return this.states(reqData, languageDetected, 12)
+                    }
                 case 11:
                     //ask the user for a rating
                     //vidisha
