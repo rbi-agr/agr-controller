@@ -30,7 +30,7 @@ model Token {
 
 model Users {
   id               String     @id @default(auto()) @map("_id") @db.ObjectId
-  phoneNumber      String     @unique
+  phoneNumber      String     @unique //try making this as pk
   languageDetected String
   sessions         Sessions[]
 }
@@ -54,13 +54,13 @@ model Sessions {
   complaintCategorySubType String?
   initialQuery             String
   bankInteractions         BankInteractions[]
-  transactions             TransactionDetails[]
+  // transactions             TransactionDetails[]
 }
 
 model Messages {
   id                 String   @id @default(auto()) @map("_id") @db.ObjectId
   userId             String   @db.ObjectId
-  sessionId          String   @db.ObjectId
+  sessionId          String   @unique
   languageDetected   String
   sender             String
   message            String
@@ -72,16 +72,14 @@ model Messages {
 }
 
 model TransactionDetails {
-  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
-  sessionId              String   @db.ObjectId
-  session                Sessions @relation(fields: [sessionId], references: [id])
-  transactionId          String?
-  startDate              DateTime
-  endDate                DateTime
-  amount                 Int?
-  transactionType        String?
-  transactionTimeBank    DateTime?
-  transactionNarration   String?
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId            String   @unique
+  // session              Sessions @relation(fields: [sessionId], references: [sessionId])
+  transactionId        String?
+  amount               Int?
+  transactionType      String
+  transactionTimeBank  DateTime
+  transactionNarration String
 }
 
 model BankInteractions {
