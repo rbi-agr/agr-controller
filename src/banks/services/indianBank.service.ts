@@ -11,7 +11,7 @@ export class IndianBankService {
     private prisma: PrismaService,
   ) {}
 
-  async fetchTransactions(sessionId: string, transactionsDto: TransactionsRequestDto): Promise<TransactionsResponseDto> {
+  async fetchTransactions(sessionId: string, transactionsDto: TransactionsRequestDto): Promise<TransactionsResponseDto[]> {
 
     const bankUrl = process.env.INDIAN_BANK_URL;
     if (!bankUrl) {
@@ -56,7 +56,7 @@ export class IndianBankService {
           }
         }
       });
-      const formattedTransactions: TransactionsResponseDto = transactions.map(transaction => {
+      const formattedTransactions: TransactionsResponseDto[] = transactions.map(transaction => {
         return {
           transactionDate: transaction.Valid_Date,
           transactionType: transaction.Transaction_Type,

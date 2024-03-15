@@ -270,14 +270,16 @@ export class ChatStateManager {
                     }
                     try {
                         const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
-                        await this.prisma.transactionDetails.create({
-                            data:{
-                                sessionId: sessionId,
-                                transactionTimeBank: transactions.transactionDate,
-                                transactionNarration: transactions.transactionNarration,
-                                transactionType: transactions.transactionType
-                            }
-                        })
+                        transactions.forEach(async (transaction) => {
+                            await this.prisma.transactionDetails.create({
+                                data:{
+                                    sessionId: sessionId,
+                                    transactionTimeBank: transaction.transactionDate,
+                                    transactionNarration: transaction.transactionNarration,
+                                    transactionType: transaction.transactionType
+                                }
+                            })
+                        });
                         msg = 'All transaction fetched'
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
