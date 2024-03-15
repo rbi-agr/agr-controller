@@ -4,12 +4,16 @@ import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import axios from "axios";
 import { getEduMsg } from "./utils/utils";
+import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
+import { BankName } from "@prisma/client";
+import { BanksService } from "src/banks/banks.service";
 
 @Injectable()
 export class ChatStateManager {
     constructor(
         private readonly logger: LoggerService,
-        private prisma: PrismaService
+        private prisma: PrismaService,
+        private banksService: BanksService
     ) { }
 
 
@@ -59,12 +63,14 @@ export class ChatStateManager {
         try {
             this.logger.info('inside state manager')
             let msg = ''
+            let session;
+            let sessionId: string;
             switch (st) {
                 case 0:
                     // user posts query, make socket connection
                     this.logger.info('inside case 0')
                     const message = reqData.message.text
-                    const sessionId = reqData.session_id
+                    sessionId = reqData.session_id
                     const metaData = reqData.metadata
                     const phoneNumber = String(metaData.phoneNumber)
                     const accountNumber = metaData.accountNumber
@@ -197,7 +203,7 @@ export class ChatStateManager {
                     }
                     //check for the required fields: transactionstartdate, enddate and bankaccount
                     
-                    const session = await this.prisma.sessions.findUnique({
+                    session = await this.prisma.sessions.findUnique({
                         where:{
                             sessionId:reqData.session_id
                         }
@@ -251,25 +257,29 @@ export class ChatStateManager {
                 case 3:
                     //Call for Fetch transactions
                     this.logger.info('inside case 3')
-                    const fetchtransactionResponse = {
-                        transactionDate: '12/11/24',
-                        transactionType: 'excess charge',
-                        transactionNarration: 'This is due to sms',
-                        metadata:{}
+
+                    sessionId = reqData.session_id
+                    if(session.startDate == undefined || session.endDate == undefined) {
+                        throw new Error('Start date and end date are required')
                     }
-                    //Update transaction details in db
-                    const sessionfortransaction = await this.prisma.sessions.findUnique({
-                        where:{sessionId:reqData.session_id}
-                    })
-                    if(fetchtransactionResponse){
-                        await this.prisma.transactionDetails.create({
-                            data:{
-                                sessionId:sessionfortransaction.sessionId,
-                                transactionTimeBank: new Date(fetchtransactionResponse.transactionDate),
-                                transactionNarration: fetchtransactionResponse.transactionNarration,
-                                transactionType: fetchtransactionResponse.transactionType
-                            }
-                        })
+
+                    const transactionsData: TransactionsRequestDto = {
+                        accountNumber: session.bankAccountNumber,
+                        fromDate: session.startDate.toISOString(),
+                        toDate: session.endDate.toISOString()
+                    }
+                    try {
+                        const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
+                        transactions.forEach(async (transaction) => {
+                            await this.prisma.transactionDetails.create({
+                                data:{
+                                    sessionId: sessionId,
+                                    transactionTimeBank: transaction.transactionDate,
+                                    transactionNarration: transaction.transactionNarration,
+                                    transactionType: transaction.transactionType
+                                }
+                            })
+                        });
                         msg = 'All transaction fetched'
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
@@ -281,16 +291,14 @@ export class ChatStateManager {
                             status: "Success",
                             session_id: reqData.session_id,
                             "message": "Please confirm your transactions",
-                            "options": [],
+                            "options": transactions,
                             "end_connection": false,
                             "prompt": "option_selection",
-                            "metadata":{}
-                          }
+                            "metadata": {}
+                        }
                         return transaction_success
-                        
-                    }
-                    else
-                    {
+                    } catch(error) {
+                        this.logger.error('error occured in state manager ', error)
                         const intentFailRes = {
                             status: "Internal Server Error",
                             session_id: reqData.session_id,
@@ -299,12 +307,9 @@ export class ChatStateManager {
                             "end_connection": false,
                             "prompt": "text_message",
                             "metadata":{}
-                          }
-
+                        }
                         return intentFailRes
                     }
-                    break;
-                    
                 case 4:
                     //ask user to confirm transaction
                     this.logger.info('inside case 4')
