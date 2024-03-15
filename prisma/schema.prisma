@@ -43,8 +43,8 @@ model Sessions {
   complaintCategory        String?
   complaintSubcategory     String?
   complaintCategorySubType String?
-  initialQuery             String
-  // transactions             TransactionDetails[]
+  initialQuery             String 
+  transactions             TransactionDetails[]
 }
 
 model Messages {
@@ -64,12 +64,13 @@ model Messages {
 model TransactionDetails {
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId
   sessionId            String   @unique
-  // session              Sessions @relation(fields: [sessionId], references: [sessionId])
+  session              Sessions @relation(fields: [sessionId], references: [sessionId])
   transactionId        String?
   amount               Int?
   transactionType      String
   transactionTimeBank  DateTime
   transactionNarration String
+  isEducated           Boolean  @default(false)
 }
 
 //naration-educative text

@@ -3,6 +3,7 @@ import { Injectable} from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import axios from "axios";
+import { response } from "express";
 
 @Injectable()
 export class ChatStateManager {
@@ -360,13 +361,22 @@ export class ChatStateManager {
                     msg = 'Educating the user for prevention'
                     break;
                 case 8:
-                    //vidisha
                     //Ask the user to get transaction Id
                     this.logger.info('inside case 8')
                     //get all transactions for a session
 
                     //after getting all the transactions ask for a 
                     msg = 'Ask the user to get transaction Id'
+                    const success_r3 = {
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        "message": "Could you please restart the process from the beginning?",
+                        "options": [],
+                        "end_connection": true,
+                        "prompt": "date_pick",
+                        "metadata":{}
+                      }
+                    return success_r3
                     break;
                 case 9:
                     //NER BOT date check
@@ -419,15 +429,89 @@ export class ChatStateManager {
                     
                     
                 case 10:
-                    //ask if the user is ok with the info
+                    //ask if the user is ok with the resolution
                     this.logger.info('inside case 10')
-                    msg = 'Ask if the user is ok with the info'
+                    msg = 'Ask if the user is ok with the resolution'
                     break;
                 case 11:
-                    //ask the user for a rating
-                    //vidisha
+                    //If transactions are fetched more than 1, ask user about the other transaction too
+                    
                     this.logger.info('inside case 11')
-                    msg = 'Ask the user for a rating'
+                    const uneducatedTransactioncount = await this.prisma.transactionDetails.count({
+                        where:{
+                            sessionId: reqData.session_id,
+                            isEducated:false
+                        }
+                    })
+                    if(uneducatedTransactioncount > 0)
+                    {
+                        const success_resp = {
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": "Do you want to know about the other transactions too?",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }
+                          //Add another response for choices
+                          await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:16
+                            }
+                        })
+                        //Asking user to respond yes/no for other transactions
+                        return success_resp
+                    }
+                    else
+                    {
+                        //If the user is educated for all transactions
+                        const res = await this.states(reqData, languageDetected, 13)
+                        return res
+                    }
+                    msg = 'Ask the user for other transaction'
+                    break;
+                case 14:
+                    //Notify that the intent did not classify
+                    this.logger.info('inside case 14')
+                    msg = 'Notify that the intent did not classify'
+                    break;
+                case 16:
+                    //Waiting for user response to educate him about other trasnactions
+                    this.logger.info('inside case 16')
+                    const userresponse = reqData.message.text
+                    if(userresponse==="Yes")
+                    {
+                        //Pass the remaining transaction list data
+                        const undecated_transaction = await this.prisma.transactionDetails.findMany({
+                            where:{
+                                sessionId:reqData.session_id,
+                                isEducated:false
+                            }
+                        })
+                        
+                        const success_r4= {
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": null,
+                            "options": undecated_transaction,
+                            "end_connection": false,
+                            "prompt": "option_selection",
+                            "metadata":{}
+                          }
+                        
+                        //Update the state to 14
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:14
+                            }
+                        })
+                        return success_r4
+                    }
+
+                    msg = 'User response for educating him'
                     break;
                 case 21:
                     //Notify that the intent did not classify
