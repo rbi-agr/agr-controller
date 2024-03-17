@@ -33,6 +33,7 @@ export class ChatStateManager {
                 }else {
                     //throw error stating to change the message language
                     const msg = 'Please enter you query in english, hindi or odia'
+                    //return proper formatted response
                     return msg
                 }
                 
@@ -107,11 +108,10 @@ export class ChatStateManager {
                         const stateFailRes = {
                             status: "Bad Request",
                             session_id: sessionId,
-                            "message": "Please try again.",
-                            "options": [],
-                            "end_connection": false,
-                            "prompt": "text_message",
-                            "metadata":{}
+                            message: "Please try again.",
+                            options: [],
+                            end_connection: false,
+                            prompt: "text_message",
                           }
                         return  stateFailRes
                     }
@@ -131,15 +131,15 @@ export class ChatStateManager {
                     if(sessionForIntent && sessionForIntent.retriesLeft<=0) {
                         const intentFailRes = {
                             "status": "Bad Request",
-                            "message": "Maximum retries limit reached. Please try again later.",
-                            "end_connection": true
+                            message: "Maximum retries limit reached. Please try again later.",
+                            end_connection: true
                           }
                         return intentFailRes
                     } 
 
                     //call intent api
                     const intentResponse = {
-                        category: 'category',
+                        category: '',
                         subtype: 'subtype',
                         type: 'type'
                     }
@@ -161,11 +161,10 @@ export class ChatStateManager {
                         const intentFailRes = {
                             status: "Success",
                             session_id: sessionId,
-                            "message": "Please reframe your query.",
-                            "options": [],
-                            "end_connection": false,
-                            "prompt": "text_message",
-                            "metadata":{}
+                            message: "Please reframe your query.",
+                            options: [],
+                            end_connection: false,
+                            prompt: "text_message",
                           }
                         return intentFailRes
                         
@@ -346,30 +345,66 @@ export class ChatStateManager {
                     this.logger.info('inside case 11')
                     msg = 'Ask the user for a rating'
                     break;
-                case 21:
+                case 12:
                     //Notify that the intent did not classify
                     this.logger.info('inside case 21')
                     msg = 'Notify that the intent did not classify'
                     break;
-                case 22:
-                    //Notify bank chatbot reference relation the authentication failed
-                    this.logger.info('inside case 22')
-                    msg = 'Notify bank chatbot reference relation the authentication failed'
+                case 13:
+                    //Ask the user for a rating
+                    this.logger.info('inside case 13')
+                    const askRatingRes = {
+                        status: "Success",
+                        session_id: sessionId,
+                        message: "Please give a rating on a scale of 1 to 5",
+                        options: [],
+                        end_connection: false,
+                        prompt: "text_message"
+                    }
+                    await this.prisma.sessions.update({
+                        where:{id:reqData.session_id},
+                        data:{
+                            state:15
+                        }
+                    })
+                    return askRatingRes
                     break;
-                case 23:
-                    //Ask the user to get the transactionId and start the process again
-                    this.logger.info('inside case 23')
+                case 14:
+                    //take t
+                    this.logger.info('inside case 14')
                     msg = 'Ask the user to get the transactionId and start the process again'
                     break;
-                case 24:
-                    //Raise a ticket
-                    this.logger.info('inside case 24')
-                    msg = 'Raise a ticket'
-                    break;
+                case 15:
+                    //take the rating, store it and close the connection
+                    this.logger.info('inside case 14')
+                    const storeRatingRes = {
+                        status: "Success",
+                        session_id: sessionId,
+                        message: "Thanks for your feedback. Happy to serve you.",
+                        options: [],
+                        end_connection: false,
+                        prompt: "text_message"
+                    }
+                    await this.prisma.sessions.update({
+                        where:{id:reqData.session_id},
+                        data:{
+                            state:99
+                        }
+                    })
+                    return storeRatingRes
+                    break
                 case 99:
                     //End connection
                     this.logger.info('inside case 99')
-                    msg = 'End connection'
+                    const closeConnectionRes = {
+                        status: "Success",
+                        session_id: sessionId,
+                        message: "You have reached you maximum retries limit. Please try again after some time. Thank You!",
+                        options: [],
+                        end_connection: true,
+                        prompt: "text_message"
+                      }
+                    return closeConnectionRes
                     break;
             }
             return msg
@@ -437,4 +472,8 @@ export class ChatStateManager {
             return { statusCode: 400, message: 'Error in this move', error: error }
         }
     }
+
+    // close socket connection code
+    // case to rate a session and close socket connections
+    //make sure to return response in the same language as of users query
 }
