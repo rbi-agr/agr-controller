@@ -8,6 +8,7 @@ import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
 import { BankName } from "@prisma/client";
 import { response } from "express";
 import { BanksService } from "src/banks/banks.service";
+import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 
 @Injectable()
 export class ChatStateManager {
@@ -260,6 +261,11 @@ export class ChatStateManager {
                     this.logger.info('inside case 3')
 
                     sessionId = reqData.session_id
+                    session = await this.prisma.sessions.findUnique({
+                        where:{
+                            sessionId
+                        }
+                    })
                     if(session.startDate == undefined || session.endDate == undefined) {
                         throw new Error('Start date and end date are required')
                     }
@@ -535,7 +541,7 @@ export class ChatStateManager {
                     this.logger.info('inside case 10')
 
                     const state10Message = reqData.message
-                    if(state10Message === 'yes') {
+                    if(state10Message === 'Yes') {
                         return this.states(reqData, languageDetected, 11)
                     } else {
                         return this.states(reqData, languageDetected, 12)
@@ -588,13 +594,40 @@ export class ChatStateManager {
                 case 12:
                     //Raise a ticket
                     this.logger.info('inside case 12')
-
                     try {
-                        // Call register complaint API
-                        
-                        const ticketResponse = {
-                            ticketNumber: '1234'
+                        sessionId = reqData.session_id
+                        session = await this.prisma.sessions.findUnique({
+                            where:{
+                                sessionId
+                            }
+                        });
+                        const user = await this.prisma.users.findUnique({
+                            where:{
+                                id:session.userId
+                            }
+                        })
+                        if(session.complaintCategory == undefined 
+                            || session.complaintCategoryType == undefined
+                            || session.complaintCategorySubtype == undefined) {
+                            throw new Error('Start date and end date are required')
                         }
+                        const transactionForTicket = reqData.metadata; 
+
+                        // generate complaint details
+
+                        // Call register complaint API
+                        const complaintRequestData: ComplaintRequestDto = {
+                            accountNumber: session.bankAccountNumber,
+                            mobileNumber: user.phoneNumber,
+                            complaintCategory: session.complaintCategory,
+                            complaintCategoryType: session.complaintCategoryType,
+                            complaintCategorySubtype: session.complaintCategorySubtype,
+                            amount: transactionForTicket.amount,
+                            transactionDate: transactionForTicket.transactionDate,
+                            complaintDetails: ''
+                        }
+                        const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
+
                         await this.prisma.sessions.update({
                             where: {
                                 sessionId: reqData.session_id
