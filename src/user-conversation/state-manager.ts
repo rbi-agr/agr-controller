@@ -54,14 +54,12 @@ export class ChatStateManager {
                 state = session.state
             }
             if(state == 99) {
-                const exitResponse =  {
+                const exitResponse =  [{
                     status: "Bad Request",
                     message: "This session has already ended please start a new session if you have a query!",
                     end_connection: true
-                }
-                const exitArray = []
-                exitArray.push(exitResponse)
-                return exitArray
+                }]
+                return exitResponse
             }
             const response = await this.states(reqData, languageDetected, state)
             // Check if the language detected is "en"
@@ -184,12 +182,9 @@ export class ChatStateManager {
                     } else {
                         const stateFailRes = [{
                             status: "Bad Request",
-                            session_id: sessionId,
-                            "message": "Please try again.",
-                            "options": [],
-                            "end_connection": false,
-                            "prompt": "text_message",
-                          }]
+                            message: "Please try again.",
+                            end_connection: false
+                        }]
                         return  stateFailRes
                     }
                     break;
@@ -206,11 +201,11 @@ export class ChatStateManager {
 
                     //add a retry in the db max 3 tries
                     if(sessionForIntent && sessionForIntent.retriesLeft<=0) {
-                        const intentFailRes = {
+                        const intentFailRes = [{
                             "status": "Bad Request",
                             message: "Maximum retries limit reached. Please try again later.",
                             end_connection: true
-                          }
+                        }]
                         return intentFailRes
                     } 
 
@@ -307,20 +302,13 @@ export class ChatStateManager {
                     }
                     else
                     {
-                        
                         const failres = [{
-                            status: "Success",
-                            session_id: reqData.session_id,
+                            status: "Bad Request",
                             "message": "No bank account details available",
-                            "options": [],
                             "end_connection": false,
-                            "prompt": "text_message",
-                            "metadata":{}
-                          }]
-                          return failres
+                        }]
+                        return failres
                     }
-                    
-                    msg = 'Check for all the fields of fetching the transactions'
                     break;
                 case 3:
                     //Call for Fetch transactions
@@ -347,15 +335,22 @@ export class ChatStateManager {
                     }
                     try {
                         // const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
-                        const transactions=[{
-                            "transactionDate":new Date(),
-                            "transactionNarration":"Extra charges due to sms",
-                            "transactionType":"Extra_charges"
-                        },{
-                            "transactionDate":new Date(),
-                            "transactionNarration":"Extra charges due to credit card",
-                            "transactionType":"Extra_charges"
+                        const transactions = [{
+                            transactionDate: '2024-03-13T00:00:00.000Z',
+                            transactionNarration: 'Excess wdl charges',
+                            transactionType: 'DR',
+                            amount: 1000
+                            
                         }]
+                        if(transactions.length === 0) {
+                            await this.prisma.sessions.update({
+                                where:{ sessionId: reqData.session_id },
+                                data:{
+                                    state: 5
+                                }
+                            })
+                            return this.states(reqData, languageDetected, 5)
+                        }
                         transactions.forEach(async (transaction) => {
                             await this.prisma.transactionDetails.create({
                                 data:{
@@ -430,11 +425,10 @@ export class ChatStateManager {
                         "end_connection": false,
                         "prompt": "date_pick",
                         "metadata":{}
-                      }]
+                    }]
                     return intentFailRes
                     
                 case 6:
-                    
                     this.logger.info('inside case 6')
                     //after fetching insert all transactions into the db, (bulk create)
                     await this.prisma.sessions.update({
@@ -453,7 +447,7 @@ export class ChatStateManager {
                         "end_connection": false,
                         "prompt": "date_pick",
                         "metadata":{}
-                      }]
+                    }]
                     return success_r2
                     
                 case 7:
@@ -540,7 +534,7 @@ export class ChatStateManager {
                         "end_connection": true,
                         "prompt": "date_pick",
                         "metadata":{}
-                      }]
+                    }]
                     return success_r3
                     break;
                 case 9:
@@ -635,7 +629,7 @@ export class ChatStateManager {
                             "metadata":{}
                           })
                           //Add another response for choices
-                          await this.prisma.sessions.update({
+                        await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
                             data:{
                                 state:16
@@ -697,8 +691,10 @@ export class ChatStateManager {
                         complaintDetails: ''
                     }
                     try {
-                        const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
-
+                        // const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
+                        const ticketResponse = {
+                            ticketNumber: '123456'
+                        }
                         await this.prisma.sessions.update({
                             where: {
                                 sessionId: reqData.session_id
@@ -805,14 +801,14 @@ export class ChatStateManager {
                 case 13:
                     //Ask the user for a rating
                     this.logger.info('inside case 13')
-                    const askRatingRes = {
+                    const askRatingRes = [{
                         status: "Success",
                         session_id: sessionId,
                         message: "Please give a rating on a scale of 1 to 5",
                         options: [],
                         end_connection: false,
                         prompt: "text_message"
-                    }
+                    }]
                     await this.prisma.sessions.update({
                         where:{id:reqData.session_id},
                         data:{
@@ -829,14 +825,14 @@ export class ChatStateManager {
                 case 15:
                     //take the rating, store it and close the connection
                     this.logger.info('inside case 14')
-                    const storeRatingRes = {
+                    const storeRatingRes = [{
                         status: "Success",
                         session_id: sessionId,
                         message: "Thanks for your feedback. Happy to serve you.",
                         options: [],
                         end_connection: false,
                         prompt: "text_message"
-                    }
+                    }]
                     await this.prisma.sessions.update({
                         where:{id:reqData.session_id},
                         data:{
@@ -849,18 +845,17 @@ export class ChatStateManager {
                     const closeResponse = await this.states(reqData, languageDetected, 99)
                     resArray.push(closeResponse)
                     return resArray
-                    break;
                 case 99:
                     //End connection
                     this.logger.info('inside case 99')
-                    const closeConnectionRes = {
+                    const closeConnectionRes = [{
                         status: "Success",
                         session_id: sessionId,
                         message: "You have reached you maximum retries limit. Please try again after some time. Thank You!",
                         options: [],
                         end_connection: true,
                         prompt: "text_message"
-                      }
+                    }]
                     return closeConnectionRes
                     break;
             }
