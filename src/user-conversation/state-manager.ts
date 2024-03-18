@@ -46,6 +46,16 @@ export class ChatStateManager {
             } else {
                 state = session.state
             }
+            if(state == 99) {
+                const exitResponse =  {
+                    status: "Bad Request",
+                    message: "This session has already ended please start a new session if you have a query!",
+                    end_connection: true
+                }
+                const exitArray = []
+                exitArray.push(exitResponse)
+                return exitArray
+            }
             const response = await this.states(reqData, languageDetected, state)
 
             return response
@@ -391,8 +401,13 @@ export class ChatStateManager {
                             state:99
                         }
                     })
-                    return storeRatingRes
-                    break
+                    const resArray = []
+                    resArray.push(storeRatingRes)
+
+                    const closeResponse = await this.states(reqData, languageDetected, 99)
+                    resArray.push(closeResponse)
+                    return resArray
+                    break;
                 case 99:
                     //End connection
                     this.logger.info('inside case 99')
