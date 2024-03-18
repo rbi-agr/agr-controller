@@ -3,10 +3,12 @@ import { Injectable} from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import axios from "axios";
+import { getEduMsg } from "./utils/utils";
 import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
 import { BankName } from "@prisma/client";
 import { response } from "express";
 import { BanksService } from "src/banks/banks.service";
+import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 
 @Injectable()
 export class ChatStateManager {
@@ -269,8 +271,17 @@ export class ChatStateManager {
                     this.logger.info('inside case 3')
 
                     sessionId = reqData.session_id
+                    session = await this.prisma.sessions.findUnique({
+                        where:{
+                            sessionId
+                        }
+                    })
                     if(session.startDate == undefined || session.endDate == undefined) {
-                        throw new Error('Start date and end date are required')
+                        return [{
+                            status: "Internal Server Error",
+                            message: "Transaction start date and end date are required for state 3",
+                            end_connection: true
+                        }]
                     }
 
                     const transactionsData: TransactionsRequestDto = {
@@ -297,7 +308,7 @@ export class ChatStateManager {
                                 state:4
                             }
                         })
-                        const transaction_success = {
+                        const transaction_success = [{
                             status: "Success",
                             session_id: reqData.session_id,
                             "message": "Please confirm your transactions",
@@ -305,26 +316,36 @@ export class ChatStateManager {
                             "end_connection": false,
                             "prompt": "option_selection",
                             "metadata": {}
-                        }
+                        }]
                         return transaction_success
                     } catch(error) {
                         this.logger.error('error occured in state manager ', error)
-                        const intentFailRes = {
+                        const intentFailRes = [{
                             status: "Internal Server Error",
-                            session_id: reqData.session_id,
-                            "message": "Something went wrong with Bank Servers",
-                            "options": [],
-                            "end_connection": false,
-                            "prompt": "text_message",
-                            "metadata":{}
-                        }
+                            message: "Something went wrong with Bank Servers",
+                            end_connection: true
+                        }]
                         return intentFailRes
                     }
                 case 4:
                     //ask user to confirm transaction
                     this.logger.info('inside case 4')
-                    msg = 'User Transaction confirmation'
-                    break;
+
+                    const selectedTransaction = reqData.metadata;
+
+                    const nextState = selectedTransaction.transactionNarration ? 7 : 8;
+
+                    //Update the state
+                    await this.prisma.sessions.update({
+                        where: {
+                            sessionId:reqData.session_id
+                        },
+                        data: {
+                            state: nextState
+                        }
+                    })
+                    return this.states(reqData, languageDetected, nextState)
+
                 case 5:
                     //If not transaction, ask for different date range
                     this.logger.info('inside case 5')
@@ -373,8 +394,65 @@ export class ChatStateManager {
                 case 7:
                     //Educate the user on how to prevent it
                     this.logger.info('inside case 7')
-                    msg = 'Educating the user for prevention'
-                    break;
+
+                    const transaction = reqData.metadata;
+
+                    if(transaction.transactionNarration) {
+                        //Update the state to 10
+                        await this.prisma.sessions.update({
+                            where: {
+                                sessionId:reqData.session_id
+                            },
+                            data: {
+                                state: 10
+                            }
+                        })
+                        const educatingMessage = getEduMsg(selectedTransaction.transactionNarration)
+
+                        if(educatingMessage) {
+                            const educatingRes = [{
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                message: educatingMessage,
+                                options: [],
+                                end_connection: false,
+                                prompt: "text_message",
+                                metadata: {}
+                            }]
+                            educatingRes.push({
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                message: "Are you satisfied with the resolution provided?",
+                                options: [],
+                                end_connection: false,
+                                prompt: "text_message",
+                                metadata: {}
+                            })
+                            await this.prisma.sessions.update({
+                                where: { sessionId: reqData.session_id },
+                                data: {
+                                    state: 10
+                                }
+                            })
+                            return educatingRes
+                        } else {
+                            const educatingFailRes = [{
+                                status: "Internal Server Error",
+                                message: "Internal Server Error",
+                                end_connection: false
+                            }]
+                            return educatingFailRes
+                        }
+                    } else {
+                        //Update the state to 8
+                        this.logger.info("Selected transaction not found")
+                        const failRes = [{
+                            status: "Internal Server Error",
+                            message: "No transaction selected",
+                            end_connection: false
+                        }]
+                        return failRes
+                    }
                 case 8:
                     //Ask the user to get transaction Id
                     this.logger.info('inside case 8')
@@ -455,12 +533,16 @@ export class ChatStateManager {
                         return intentFailRes
                     }
                     
-                    
                 case 10:
-                    //ask if the user is ok with the resolution
+                    //Redirect to state 11 or 12 based on answer
                     this.logger.info('inside case 10')
-                    msg = 'Ask if the user is ok with the resolution'
-                    break;
+
+                    const state10Message = reqData.message
+                    if(state10Message === 'Yes') {
+                        return this.states(reqData, languageDetected, 11)
+                    } else {
+                        return this.states(reqData, languageDetected, 12)
+                    }
                 case 11:
                     //If transactions are fetched more than 1, ask user about the other transaction too
                     
@@ -506,6 +588,74 @@ export class ChatStateManager {
                     }
                     msg = 'Ask the user for other transaction'
                     break;
+                case 12:
+                    //Raise a ticket
+                    this.logger.info('inside case 12')
+                    sessionId = reqData.session_id
+                    session = await this.prisma.sessions.findUnique({
+                        where:{
+                            sessionId
+                        }
+                    });
+                    const userForTicket = await this.prisma.users.findUnique({
+                        where:{
+                            id:session.userId
+                        }
+                    })
+                    if(session.complaintCategory == undefined 
+                        || session.complaintCategoryType == undefined
+                        || session.complaintCategorySubtype == undefined) {
+                        return [{
+                            status: "Internal Server Error",
+                            message: "Complaint category, type and subtype are required for state 12",
+                            end_connection: true
+                        }]
+                    }
+                    const transactionForTicket = reqData.metadata; 
+
+                    // generate complaint details
+
+                    // Call register complaint API
+                    const complaintRequestData: ComplaintRequestDto = {
+                        accountNumber: session.bankAccountNumber,
+                        mobileNumber: userForTicket.phoneNumber,
+                        complaintCategory: session.complaintCategory,
+                        complaintCategoryType: session.complaintCategoryType,
+                        complaintCategorySubtype: session.complaintCategorySubtype,
+                        amount: transactionForTicket.amount,
+                        transactionDate: transactionForTicket.transactionDate,
+                        complaintDetails: ''
+                    }
+                    try {
+                        const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
+
+                        await this.prisma.sessions.update({
+                            where: {
+                                sessionId: reqData.session_id
+                            },
+                            data: {
+                                ticketId: ticketResponse.ticketNumber,
+                                ticketRaised: true,
+                                ticketRaisedTime: new Date()
+                            }
+                        })
+                        return [{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "Ticket raised successfully with ticket number " + ticketResponse.ticketNumber,
+                            options: [],
+                            end_connection: true,
+                            prompt: "text_message",
+                            metadata: {}
+                        }]
+                    } catch (error) {
+                        this.logger.error('Error in raising ticket: ', error)
+                        return [{
+                            status: "Internal Server Error",
+                            message: "Error in raising ticket",
+                            end_connection: true
+                        }]
+                    }
                 case 14:
                     //Select the transaction from the list
                     this.logger.info('inside case 14')

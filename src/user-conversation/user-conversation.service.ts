@@ -41,11 +41,12 @@ export class UserConversationService {
     const fres = await this.preprocess(headers, data)
 
     //4.emit the response
-    client.emit('response', fres)
-    
+    for(let resObj of fres){
+      client.emit('response', resObj)
 
-    if(fres.end_connection) {
-      await this.closeConnection(clientId)
+      if(resObj.end_connection) {
+        await this.closeConnection(clientId)
+      }
     }
   }
 
