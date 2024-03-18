@@ -39,9 +39,14 @@ export class UserConversationService {
 
     //2. preprocess
     const fres = await this.preprocess(headers, data)
-
+    console.log(fres)
+    
     //4.emit the response
-    client.emit('response', fres)
+    // client.emit('response', fres)
+    
+    for(let resObj of fres){
+      client.emit('response', resObj)
+    }
   }
 
   async preprocess (headers, req) {
