@@ -155,15 +155,15 @@ export class ChatStateManager {
                     }
                     //check for the required fields: transactionstartdate, enddate and bankaccount
                     
-                    const session = await this.prisma.sessions.findUnique({
+                    const intentSsession = await this.prisma.sessions.findUnique({
                         where:{
                             id:reqData.session_id
                         }
                     })
                     //If bank account number exists
-                    if(session?.bankAccountNumber){
+                    if(intentSsession?.bankAccountNumber){
                         //Check for start and enddate of transaction
-                        if(!session?.startDate)
+                        if(!intentSsession?.startDate)
                         {
                             //Return response to ask for start date
                             //Updating the state to 6
