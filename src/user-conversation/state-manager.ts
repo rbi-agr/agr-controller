@@ -3,12 +3,17 @@ import { Injectable} from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import axios from "axios";
+import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
+import { BankName } from "@prisma/client";
+import { response } from "express";
+import { BanksService } from "src/banks/banks.service";
 
 @Injectable()
 export class ChatStateManager {
     constructor(
         private readonly logger: LoggerService,
-        private prisma: PrismaService
+        private prisma: PrismaService,
+        private banksService: BanksService
     ) { }
 
 
@@ -31,7 +36,7 @@ export class ChatStateManager {
                 if(languageDetected === 'hi' || languageDetected === 'od'){
                     //convert the message to english
                 }else {
-                    //throw error stating to change the message language
+                    //throw error stating to change the message language (User to enter the query)
                     const msg = 'Please enter you query in english, hindi or odia'
                     //return proper formatted response
                     return msg
@@ -69,12 +74,14 @@ export class ChatStateManager {
         try {
             this.logger.info('inside state manager')
             let msg = ''
+            let session;
+            let sessionId: string;
             switch (st) {
                 case 0:
                     // user posts query, make socket connection
                     this.logger.info('inside case 0')
                     const message = reqData.message.text
-                    const sessionId = reqData.session_id
+                    sessionId = reqData.session_id
                     const metaData = reqData.metadata
                     const phoneNumber = String(metaData.phoneNumber)
                     const accountNumber = metaData.accountNumber
@@ -193,13 +200,22 @@ export class ChatStateManager {
                     this.logger.info('inside case 2')
                     if(!this.validstate(st, 2)){
                         //Invalid state
-                        return 'Invalid State'
+                        const FailRes = {
+                            status: "Internal Server Error",
+                            session_id: reqData.session_id,
+                            "message": "Invalid state",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }
+                        return FailRes
                     }
                     //check for the required fields: transactionstartdate, enddate and bankaccount
                     
-                    const session = await this.prisma.sessions.findUnique({
+                    session = await this.prisma.sessions.findUnique({
                         where:{
-                            id:reqData.session_id
+                            sessionId:reqData.session_id
                         }
                     })
                     //If bank account number exists
@@ -210,31 +226,40 @@ export class ChatStateManager {
                             //Return response to ask for start date
                             //Updating the state to 6
                             await this.prisma.sessions.update({
-                                where:{id:reqData.session_id},
+                                where:{sessionId:reqData.session_id},
                                 data:{
                                     state:6
                                 }
                             })
-                            await this.states(reqData, languageDetected,6)
-                            break;
+                            const fail_r1= await this.states(reqData, languageDetected,6)
+                            return fail_r1
                         }
                         else
                         {
                             //Call for fetch transactions
                             //Update the state to 3
                             await this.prisma.sessions.update({
-                                where:{id:reqData.session_id},
+                                where:{sessionId:reqData.session_id},
                                 data:{
                                     state:3
                                 }
                             })
-                            await this.states(reqData, languageDetected,3)
-                            break;
+                            const success_r1=await this.states(reqData, languageDetected,3)
+                            return success_r1
                         }
                     }
                     else
                     {
-                        return "No bank account details available"
+                        const failres = {
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": "No bank account details available",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }
+                          return failres
                     }
                     
                     msg = 'Check for all the fields of fetching the transactions'
@@ -242,32 +267,59 @@ export class ChatStateManager {
                 case 3:
                     //Call for Fetch transactions
                     this.logger.info('inside case 3')
-                    const fetchtransactionResponse = {
-                        transactionDate: '12/11/24',
-                        transactionType: 'excess charge',
-                        transactionNarration: 'This is due to sms',
-                        metadata:{}
+
+                    sessionId = reqData.session_id
+                    if(session.startDate == undefined || session.endDate == undefined) {
+                        throw new Error('Start date and end date are required')
                     }
-                    //Update transaction details in db
-                    if(fetchtransactionResponse){
-                        await this.prisma.transactionDetails.update({
-                            where:{id:reqData.session_id},
+
+                    const transactionsData: TransactionsRequestDto = {
+                        accountNumber: session.bankAccountNumber,
+                        fromDate: session.startDate.toISOString(),
+                        toDate: session.endDate.toISOString()
+                    }
+                    try {
+                        const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
+                        transactions.forEach(async (transaction) => {
+                            await this.prisma.transactionDetails.create({
+                                data:{
+                                    sessionId: sessionId,
+                                    transactionTimeBank: transaction.transactionDate,
+                                    transactionNarration: transaction.transactionNarration,
+                                    transactionType: transaction.transactionType
+                                }
+                            })
+                        });
+                        msg = 'All transaction fetched'
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
                             data:{
-                                transactionTimeBank: fetchtransactionResponse.transactionDate,
-                                transactionNarration: fetchtransactionResponse.transactionNarration,
-                                transactionType: fetchtransactionResponse.transactionType
+                                state:4
                             }
                         })
-                        msg = 'All transaction fetched'
-                        await this.states(reqData, languageDetected, 4)
-                        break;
+                        const transaction_success = {
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": "Please confirm your transactions",
+                            "options": transactions,
+                            "end_connection": false,
+                            "prompt": "option_selection",
+                            "metadata": {}
+                        }
+                        return transaction_success
+                    } catch(error) {
+                        this.logger.error('error occured in state manager ', error)
+                        const intentFailRes = {
+                            status: "Internal Server Error",
+                            session_id: reqData.session_id,
+                            "message": "Something went wrong with Bank Servers",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                        }
+                        return intentFailRes
                     }
-                    else
-                    {
-                        return "Error in fetching transactions from bank"
-                    }
-                    
-                    
                 case 4:
                     //ask user to confirm transaction
                     this.logger.info('inside case 4')
@@ -279,26 +331,44 @@ export class ChatStateManager {
                     msg = 'Ask for different date range'
                     //Updating the state to 9
                     await this.prisma.sessions.update({
-                        where:{id:reqData.session_id},
+                        where:{sessionId:reqData.session_id},
                         data:{
                             state:9
                         }
                     })
-                    return "No transactions found. Please select a different range"
+                    const intentFailRes = {
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        "message": "No transactions found. Please select a different range",
+                        "options": [],
+                        "end_connection": false,
+                        "prompt": "date_pick",
+                        "metadata":{}
+                      }
+                    return intentFailRes
                     
                 case 6:
                     
                     this.logger.info('inside case 6')
                     //after fetching insert all transactions into the db, (bulk create)
                     await this.prisma.sessions.update({
-                        where:{id:reqData.session_id},
+                        where:{sessionId:reqData.session_id},
                         data:{
                             state:9
                         }
                     })
                     msg = 'Ask for date of transaction'
                     //Updating the state to 9
-                    return "Please enter startdate and enddate for the transaction"
+                    const success_r2 = {
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        "message": "Please enter startdate and enddate for the transaction",
+                        "options": [],
+                        "end_connection": false,
+                        "prompt": "date_pick",
+                        "metadata":{}
+                      }
+                    return success_r2
                     
                 case 7:
                     //Educate the user on how to prevent it
@@ -312,6 +382,23 @@ export class ChatStateManager {
 
                     //after getting all the transactions ask for a 
                     msg = 'Ask the user to get transaction Id'
+                    //Update the state to 99
+                    await this.prisma.sessions.update({
+                        where:{sessionId:reqData.session_id},
+                        data:{
+                            state:99
+                        }
+                    })
+                    const success_r3 = {
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        "message": "Could you please restart the process from the beginning?",
+                        "options": [],
+                        "end_connection": true,
+                        "prompt": "date_pick",
+                        "metadata":{}
+                      }
+                    return success_r3
                     break;
                 case 9:
                     //NER BOT date check
@@ -319,7 +406,7 @@ export class ChatStateManager {
                     msg = 'Check for dates from NERBOT'
                     const exsession = await this.prisma.sessions.findUnique({
                         where:{
-                            id:reqData.session_id
+                            sessionId:reqData.session_id
                         }
                     })
                     //Data from MistralAI
@@ -328,32 +415,166 @@ export class ChatStateManager {
                         enddate: '14/03/2024'
                     }
                     //Store it in db
+                    const startDateParts = datesResponse.startdate.split('/');
+                    const endDateParts = datesResponse.enddate.split('/');
+                    const startDate = new Date(`${startDateParts[2]}-${startDateParts[1]}-${startDateParts[0]}`);
+                    const endDate = new Date(`${endDateParts[2]}-${endDateParts[1]}-${endDateParts[0]}`);
+
+                    // Convert to ISO 8601 format
+                    const isoStartDate = startDate.toISOString();
+                    const isoEndDate = endDate.toISOString();
                     if (datesResponse){
                         await this.prisma.sessions.update({
-                            where:{id:reqData.session_id},
+                            where:{sessionId:reqData.session_id},
                             data:{
-                                startDate:datesResponse.startdate,
-                                endDate:datesResponse.enddate
+                                startDate:isoStartDate,
+                                endDate:isoEndDate
                             }
                         })
-                        await this.states(reqData, languageDetected,2)
-                        break;
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:2
+                            }
+                        })
+                        const success_resp= this.states(reqData, languageDetected,2)
+                        return success_resp
+                        
                     }
                     else
                     {
-                        return "NER BOT API not sending response"
+                        const intentFailRes = {
+                            status: "Internal Server Error",
+                            session_id: reqData.session_id,
+                            "message": "No Response from Mistral.AI",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }
+                        return intentFailRes
                     }
                     
                     
                 case 10:
-                    //ask if the user is ok with the info
+                    //ask if the user is ok with the resolution
                     this.logger.info('inside case 10')
-                    msg = 'Ask if the user is ok with the info'
+                    msg = 'Ask if the user is ok with the resolution'
                     break;
                 case 11:
-                    //ask the user for a rating
+                    //If transactions are fetched more than 1, ask user about the other transaction too
+                    
                     this.logger.info('inside case 11')
-                    msg = 'Ask the user for a rating'
+                    const uneducatedTransactioncount = await this.prisma.transactionDetails.count({
+                        where:{
+                            sessionId: reqData.session_id,
+                            isEducated:false
+                        }
+                    })
+                    if(uneducatedTransactioncount > 0)
+                    {
+                        const success_resp = {
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": "Do you want to know about the other transactions too?",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }
+                          //Add another response for choices
+                          await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:16
+                            }
+                        })
+                        //Asking user to respond yes/no for other transactions
+                        return success_resp
+                    }
+                    else
+                    {
+                        //If the user is educated for all transactions
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:13
+                            }
+                        })
+                        const res = await this.states(reqData, languageDetected, 13)
+                        return res
+                    }
+                    msg = 'Ask the user for other transaction'
+                    break;
+                case 14:
+                    //Select the transaction from the list
+                    this.logger.info('inside case 14')
+                    //Updating the transaction iseducated value to true
+                    await this.prisma.transactionDetails.update({
+                        where:{
+                            sessionId: reqData.session_id,
+                            transactionId: metaData.transactionId
+                        },
+                        data:{
+                            isEducated:true
+                        }
+                    })
+                    //Send the user to state 7 for educating him
+                    const educresp = await this.states(reqData,languageDetected,7)
+                    await this.prisma.sessions.update({
+                        where:{sessionId:reqData.session_id},
+                        data:{
+                            state:7
+                        }
+                    })
+                    return educresp
+                    msg = 'Select the transaction from the list'
+                    break;
+                case 16:
+                    //Waiting for user response to educate him about other trasnactions
+                    this.logger.info('inside case 16')
+                    const userresponse = reqData.message.text
+                    if(userresponse==="Yes")
+                    {
+                        //Pass the remaining transaction list data
+                        const uneducated_transaction = await this.prisma.transactionDetails.findMany({
+                            where:{
+                                sessionId:reqData.session_id,
+                                isEducated:false
+                            }
+                        })
+                        
+                        const success_r4= {
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": null,
+                            "options": uneducated_transaction,
+                            "end_connection": false,
+                            "prompt": "option_selection",
+                            "metadata":{}
+                          }
+                        
+                        //Update the state to 14
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:14
+                            }
+                        })
+                        return success_r4
+                    }
+                    else{
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:13
+                            }
+                        })
+                        const res = await this.states(reqData, languageDetected, 13)
+                        return res
+                    }
+
+                    msg = 'User response for educating him'
                     break;
                 case 12:
                     //Notify that the intent did not classify
