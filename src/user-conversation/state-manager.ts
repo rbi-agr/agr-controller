@@ -267,7 +267,11 @@ export class ChatStateManager {
                         }
                     })
                     if(session.startDate == undefined || session.endDate == undefined) {
-                        throw new Error('Start date and end date are required')
+                        return [{
+                            status: "Internal Server Error",
+                            message: "Transaction start date and end date are required for state 3",
+                            end_connection: true
+                        }]
                     }
 
                     const transactionsData: TransactionsRequestDto = {
@@ -294,7 +298,7 @@ export class ChatStateManager {
                                 state:4
                             }
                         })
-                        const transaction_success = {
+                        const transaction_success = [{
                             status: "Success",
                             session_id: reqData.session_id,
                             "message": "Please confirm your transactions",
@@ -302,19 +306,15 @@ export class ChatStateManager {
                             "end_connection": false,
                             "prompt": "option_selection",
                             "metadata": {}
-                        }
+                        }]
                         return transaction_success
                     } catch(error) {
                         this.logger.error('error occured in state manager ', error)
-                        const intentFailRes = {
+                        const intentFailRes = [{
                             status: "Internal Server Error",
-                            session_id: reqData.session_id,
-                            "message": "Something went wrong with Bank Servers",
-                            "options": [],
-                            "end_connection": false,
-                            "prompt": "text_message",
-                            "metadata":{}
-                        }
+                            message: "Something went wrong with Bank Servers",
+                            end_connection: true
+                        }]
                         return intentFailRes
                     }
                 case 4:
@@ -323,24 +323,19 @@ export class ChatStateManager {
 
                     const selectedTransaction = reqData.metadata;
 
-                    if(selectedTransaction.transactionNarration) {
-                        //Update the state to 7
-                        await this.prisma.sessions.update({
-                            where: {
-                                sessionId:reqData.session_id
-                            },
-                            data: {
-                                state: 7
-                            }
-                        })
+                    const nextState = selectedTransaction.transactionNarration ? 7 : 8;
 
-                        const successRes = await this.states(reqData, languageDetected, 7)
-                        return successRes
-                    } else {
-                        //Update the state to 8
-                        const failres = await this.states(reqData, languageDetected, 8)
-                        return failres
-                    }
+                    //Update the state
+                    await this.prisma.sessions.update({
+                        where: {
+                            sessionId:reqData.session_id
+                        },
+                        data: {
+                            state: nextState
+                        }
+                    })
+                    return this.states(reqData, languageDetected, nextState)
+
                 case 5:
                     //If not transaction, ask for different date range
                     this.logger.info('inside case 5')
@@ -431,29 +426,21 @@ export class ChatStateManager {
                             })
                             return educatingRes
                         } else {
-                            const educatingFailRes = {
+                            const educatingFailRes = [{
                                 status: "Internal Server Error",
-                                session_id: reqData.session_id,
                                 message: "Internal Server Error",
-                                options: [],
-                                end_connection: false,
-                                prompt: "text_message",
-                                metadata: {}
-                            }
+                                end_connection: false
+                            }]
                             return educatingFailRes
-                            }
+                        }
                     } else {
                         //Update the state to 8
                         this.logger.info("Selected transaction not found")
-                        const failRes = {
+                        const failRes = [{
                             status: "Internal Server Error",
-                            session_id: reqData.session_id,
-                            message: "Internal Server Error",
-                            options: [],
-                            end_connection: false,
-                            prompt: "text_message",
-                            metadata: {}
-                        }
+                            message: "No transaction selected",
+                            end_connection: false
+                        }]
                         return failRes
                     }
                 case 8:
@@ -594,38 +581,42 @@ export class ChatStateManager {
                 case 12:
                     //Raise a ticket
                     this.logger.info('inside case 12')
+                    sessionId = reqData.session_id
+                    session = await this.prisma.sessions.findUnique({
+                        where:{
+                            sessionId
+                        }
+                    });
+                    const userForTicket = await this.prisma.users.findUnique({
+                        where:{
+                            id:session.userId
+                        }
+                    })
+                    if(session.complaintCategory == undefined 
+                        || session.complaintCategoryType == undefined
+                        || session.complaintCategorySubtype == undefined) {
+                        return [{
+                            status: "Internal Server Error",
+                            message: "Complaint category, type and subtype are required for state 12",
+                            end_connection: true
+                        }]
+                    }
+                    const transactionForTicket = reqData.metadata; 
+
+                    // generate complaint details
+
+                    // Call register complaint API
+                    const complaintRequestData: ComplaintRequestDto = {
+                        accountNumber: session.bankAccountNumber,
+                        mobileNumber: userForTicket.phoneNumber,
+                        complaintCategory: session.complaintCategory,
+                        complaintCategoryType: session.complaintCategoryType,
+                        complaintCategorySubtype: session.complaintCategorySubtype,
+                        amount: transactionForTicket.amount,
+                        transactionDate: transactionForTicket.transactionDate,
+                        complaintDetails: ''
+                    }
                     try {
-                        sessionId = reqData.session_id
-                        session = await this.prisma.sessions.findUnique({
-                            where:{
-                                sessionId
-                            }
-                        });
-                        const user = await this.prisma.users.findUnique({
-                            where:{
-                                id:session.userId
-                            }
-                        })
-                        if(session.complaintCategory == undefined 
-                            || session.complaintCategoryType == undefined
-                            || session.complaintCategorySubtype == undefined) {
-                            throw new Error('Start date and end date are required')
-                        }
-                        const transactionForTicket = reqData.metadata; 
-
-                        // generate complaint details
-
-                        // Call register complaint API
-                        const complaintRequestData: ComplaintRequestDto = {
-                            accountNumber: session.bankAccountNumber,
-                            mobileNumber: user.phoneNumber,
-                            complaintCategory: session.complaintCategory,
-                            complaintCategoryType: session.complaintCategoryType,
-                            complaintCategorySubtype: session.complaintCategorySubtype,
-                            amount: transactionForTicket.amount,
-                            transactionDate: transactionForTicket.transactionDate,
-                            complaintDetails: ''
-                        }
                         const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
 
                         await this.prisma.sessions.update({
@@ -638,7 +629,7 @@ export class ChatStateManager {
                                 ticketRaisedTime: new Date()
                             }
                         })
-                        const successRes = {
+                        return [{
                             status: "Success",
                             session_id: reqData.session_id,
                             message: "Ticket raised successfully with ticket number " + ticketResponse.ticketNumber,
@@ -646,20 +637,14 @@ export class ChatStateManager {
                             end_connection: true,
                             prompt: "text_message",
                             metadata: {}
-                        }
-                        return successRes
+                        }]
                     } catch (error) {
                         this.logger.error('Error in raising ticket: ', error)
-                        const failRes = {
+                        return [{
                             status: "Internal Server Error",
-                            session_id: reqData.session_id,
                             message: "Error in raising ticket",
-                            options: [],
-                            end_connection: true,
-                            prompt: "text_message",
-                            metadata: {}
-                        }
-                        return failRes
+                            end_connection: true
+                        }]
                     }
                 case 14:
                     //Select the transaction from the list
