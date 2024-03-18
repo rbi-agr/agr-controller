@@ -43,6 +43,10 @@ export class UserConversationService {
     //4.emit the response
     for(let resObj of fres){
       client.emit('response', resObj)
+
+      if(resObj.end_connection) {
+        await this.closeConnection(clientId)
+      }
     }
   }
 
@@ -55,4 +59,27 @@ export class UserConversationService {
       return error
     }
   }
+
+  async closeConnection(clientId: string) {
+    const client = this.clients.get(clientId);
+    if (client) {
+      client.disconnect();
+      this.clients.delete(clientId);
+      console.log(`Connection closed for client ID: ${clientId}`);
+    } else {
+      console.log(`Client ID ${clientId} not found.`);
+    }
+  }
+
+  // @OnDisconnect()
+  // handleDisconnect(client: Socket) {
+  //   console.log(`Client disconnected: ${client.id}`);
+  //   // Remove the client from the Map when it disconnects
+  //   this.clients.forEach((value, key) => {
+  //     if (value === client) {
+  //       this.clients.delete(key);
+  //       console.log(`Removed client with ID: ${key}`);
+  //     }
+  //   });
+  // }
 }
