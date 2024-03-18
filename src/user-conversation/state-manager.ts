@@ -93,19 +93,23 @@ export class ChatStateManager {
             }
             
             //2. Store the response from chatbot
-            await this.prisma.messages.create({
-                data:{
-                    sessionId: reqData.session_id,
-                    userId: '567f1f77bcf86cd799439544',
-                    sender:"chatbot",
-                    message: response?.message||"",
-                    messageTranslation:messageTranslation||"",
-                    languageDetected:languageDetected||"",
-                    promptType:response?.prompt||"",
-                    options:response?.options||[],
-                    timeStamp: new Date()
-                }
+            response?.forEach(async(e:any)=>
+            {
+                await this.prisma.messages.create({
+                    data:{
+                        sessionId: reqData.session_id,
+                        userId: '567f1f77bcf86cd799439544',
+                        sender:"chatbot",
+                        message: e?.message||"",
+                        messageTranslation:messageTranslation||"",
+                        languageDetected:languageDetected||"",
+                        promptType:e?.prompt||"",
+                        options:e?.options||[],
+                        timeStamp: new Date()
+                    }
+                })
             })
+            
             return response
         } catch (error) {
             this.logger.error('error occured in state manager ', error)
@@ -212,7 +216,7 @@ export class ChatStateManager {
 
                     //call intent api
                     const intentResponse = {
-                        category: '',
+                        category: 'category',
                         subtype: 'subtype',
                         type: 'type'
                     }
@@ -227,13 +231,13 @@ export class ChatStateManager {
                                   retriesLeft: sessionForIntent.retriesLeft - 1,
                                 },
                                 where: {
-                                  sessionId: sessionId,
+                                  sessionId: reqData.session_id,
                                 },
                               })
                         }
                         const intentFailRes = [{
                             status: "Success",
-                            session_id: sessionId,
+                            session_id: reqData.session_id,
                             "message": "Please reframe your query.",
                             "options": [],
                             "end_connection": false,
@@ -337,12 +341,21 @@ export class ChatStateManager {
                     }
 
                     const transactionsData: TransactionsRequestDto = {
-                        accountNumber: fetchTSession.bankAccountNumber,
-                        fromDate: fetchTSession.startDate.toISOString(),
-                        toDate: fetchTSession.endDate.toISOString()
+                        accountNumber: session.bankAccountNumber,
+                        fromDate: session.startDate.toISOString(),
+                        toDate: session.endDate.toISOString()
                     }
                     try {
-                        const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
+                        // const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
+                        const transactions=[{
+                            "transactionDate":new Date(),
+                            "transactionNarration":"Extra charges due to sms",
+                            "transactionType":"Extra_charges"
+                        },{
+                            "transactionDate":new Date(),
+                            "transactionNarration":"Extra charges due to credit card",
+                            "transactionType":"Extra_charges"
+                        }]
                         transactions.forEach(async (transaction) => {
                             await this.prisma.transactionDetails.create({
                                 data:{
