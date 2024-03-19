@@ -23,7 +23,7 @@ export class ChatStateManager {
         try {
             //check if session exists
             const sessionId = reqData.session_id
-            
+
             let session = await this.prisma.sessions.findUnique({
                 where: {
                     sessionId: sessionId,
@@ -33,7 +33,11 @@ export class ChatStateManager {
             const message = reqData.message
 
             //detect language here
-            const languageDetectedresponse = await this.PostRequest(reqData.message.text,"https://rbih-agr.free.beeceptor.com/languagedetection")
+            // const languageDetectedresponse = await this.PostRequest(reqData.message.text,"https://rbih-agr.free.beeceptor.com/languagedetection")
+            const languageDetectedresponse = {
+                language: 'en',
+                error: null
+            }
             if(languageDetectedresponse.error){
                 const exitResponse =  [{
                     status: "Internal Server Error",
@@ -236,12 +240,13 @@ export class ChatStateManager {
 
                     //call intent api
 
-                    // const intentResponse = {
-                    //     category: 'category',
-                    //     subtype: 'subtype',
-                    //     type: 'type'
-                    // }
-                    const intentResponse = await this.PostRequest(reqData.message.text,"https://rbih-agr.free.beeceptor.com/intentclassifier")
+                    const intentResponse = {
+                        category: 'category',
+                        subtype: 'subtype',
+                        type: 'type',
+                        error: null
+                    }
+                    // const intentResponse = await this.PostRequest(reqData.message.text,"https://rbih-agr.free.beeceptor.com/intentclassifier")
                     if(intentResponse.error){
                         const exitResponse =  [{
                             status: "Internal Server Error",
@@ -368,7 +373,13 @@ export class ChatStateManager {
                         toDate: session.endDate.toISOString()
                     }
                     try {
-                        const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
+                        // const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
+                        const transactions = [{
+                            transactionDate: '2024-03-13T00:00:00.000Z',
+                            transactionNarration: 'Excess wdl charges',
+                            transactionType: 'DR',
+                            amount: 1000
+                        }]
                         if(transactions.length === 0) {
                             await this.prisma.sessions.update({
                                 where:{ sessionId: reqData.session_id },
@@ -408,6 +419,7 @@ export class ChatStateManager {
                         }]
                         return transaction_success
                     } catch(error) {
+                        console.log('error in fetching transactions: ', error)
                         this.logger.error('error occured in state manager ', error)
                         const intentFailRes = [{
                             status: "Internal Server Error",
@@ -576,22 +588,29 @@ export class ChatStateManager {
                         }
                     })
                     //Data from MistralAI
-                    const datesResponse = await this.PostRequestforTransactionDates(reqData.message.text,"https://rbih-agr.free.beeceptor.com/transactiondates")
-                    // const datesResponse = {
-                    //     startdate: '13/03/2024',
-                    //     enddate: '14/03/2024'
-                    // }
-                    //Store it in db
-                    if(datesResponse.error){
-                        const exitResponse =  [{
-                            status: "Internal Server Error",
-                            message: "Error in Mistral AI response",
-                            end_connection: true
-                        }]
-                        return exitResponse
+                    // const datesResponse = await this.PostRequestforTransactionDates(reqData.message.text,"https://rbih-agr.free.beeceptor.com/transactiondates")
+                    const datesResponse = {
+                        transaction_startdate: '13/03/2024',
+                        transaction_enddate: '14/03/2024',
+                        error: null
                     }
-                    const startDate = new Date(datesResponse.transaction_startdate);
-                    const endDate = new Date(datesResponse.transaction_enddate);
+                    //Store it in db
+                    const startDateParts = datesResponse.transaction_startdate.split('/');
+                    const endDateParts = datesResponse.transaction_enddate.split('/');
+                    const startDate = new Date(`${startDateParts[2]}-${startDateParts[1]}-${startDateParts[0]}`);
+                    const endDate = new Date(`${endDateParts[2]}-${endDateParts[1]}-${endDateParts[0]}`);
+
+                    //Store it in db
+                    // if(datesResponse.error){
+                    //     const exitResponse =  [{
+                    //         status: "Internal Server Error",
+                    //         message: "Error in Mistral AI response",
+                    //         end_connection: true
+                    //     }]
+                    //     return exitResponse
+                    // }
+                    // const startDate = new Date(datesResponse.transaction_startdate);
+                    // const endDate = new Date(datesResponse.transaction_enddate);
 
                     // Convert to ISO 8601 format
                     const isoStartDate = startDate.toISOString();
@@ -727,7 +746,10 @@ export class ChatStateManager {
                         complaintDetails: ''
                     }
                     try {
-                        const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
+                        // const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
+                        const ticketResponse = {
+                            ticketNumber: '123456'
+                        }
                         await this.prisma.sessions.update({
                             where: {
                                 sessionId: reqData.session_id

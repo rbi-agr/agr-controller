@@ -85,8 +85,8 @@ model TransactionDetails {
 
 model BankInteractions {
   id              String          @id @default(auto()) @map("_id") @db.ObjectId
-  sessionId       String          @db.ObjectId
-  session         Sessions        @relation(fields: [sessionId], references: [id])
+  sessionId       String          @unique
+  session         Sessions        @relation(fields: [sessionId], references: [sessionId])
   bankName        BankName
   interactionType InteractionType
   timestamp       DateTime        @default(now())

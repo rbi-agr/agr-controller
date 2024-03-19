@@ -25,7 +25,7 @@ export class IndianBankService {
       From_Date: transactionsDto.fromDate,
       To_Date: transactionsDto.toDate,
     }
-
+    
     const apiInteractionId = await this.getInteractionId();
 
     const bankInteraction = await this.prisma.bankInteractions.create({
@@ -38,7 +38,7 @@ export class IndianBankService {
     const headers = this.constructRequestHeaders(apiInteractionId)
 
     try {
-      const response = await axios.post(bankUrl + endpoint, requestPayload, {
+            const response = await axios.post(bankUrl + endpoint, requestPayload, {
         headers: headers
       })
       const transactions = response.data.TXN_CHGS_RESPONSE.body.payload.collection;
@@ -67,7 +67,7 @@ export class IndianBankService {
       return formattedTransactions
 
     } catch (error) {
-      throw new Error(error.response?.data ?? error.message);
+            throw new Error(error.response?.data ?? error.message);
     }
   }
 
@@ -138,8 +138,7 @@ export class IndianBankService {
     });
     // convert to 9 digit string
     const interactionNumber = (numberOfInteractions % 1000000000 + 1).toString().padStart(9, '0');
-
-    const apiInteractionId = process.env.INDIAN_BANK_CHANNEL_VALUE + Date.now() + interactionNumber;
+    const apiInteractionId = process.env.INDIAN_BANK_CHANNEL_VALUE + Date.now().toString() + interactionNumber;
     return apiInteractionId;
   }
 
@@ -157,7 +156,7 @@ export class IndianBankService {
       'Teller-Number': process.env.INDIAN_BANK_TELLER_NUMBER,
       'Terminal-Number': process.env.INDIAN_BANK_TERMINAL_NUMBER,
     };
-    // check if these values are present
+        // check if these values are present
     for (const key in headers) {
       if (!headers[key]) {
         throw new Error(`Header ${key} not found`);
