@@ -26,14 +26,16 @@ export class UserConversationService {
     console.log('client socket ', clientSocket)
     const headers = clientSocket.handshake.headers
     console.log('headers ', headers) 
-    const clientId: string = String(headers.client_id) 
+    // const clientId: string = String(headers.client_id)
+    
+    const sessionId = data.session_id
 
-    let client = this.clients.get(clientId); // Check if a client connection exists for the user
+    let client = this.clients.get(sessionId); // Check if a client connection exists for the user
 
     if (!client) {
       // If no client exists for the user, create a new one
       client = clientSocket;
-      this.clients.set(clientId, client);
+      this.clients.set(sessionId, client);
     }
     
 
@@ -46,7 +48,7 @@ export class UserConversationService {
       client.emit('response', resObj)
 
       if(resObj.end_connection) {
-        await this.closeConnection(clientId)
+        await this.closeConnection(sessionId)
       }
     }
   }
