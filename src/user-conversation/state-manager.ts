@@ -368,14 +368,7 @@ export class ChatStateManager {
                         toDate: session.endDate.toISOString()
                     }
                     try {
-                        // const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
-                        const transactions = [{
-                            transactionDate: '2024-03-13T00:00:00.000Z',
-                            transactionNarration: 'Excess wdl charges',
-                            transactionType: 'DR',
-                            amount: 1000
-                            
-                        }]
+                        const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
                         if(transactions.length === 0) {
                             await this.prisma.sessions.update({
                                 where:{ sessionId: reqData.session_id },
@@ -395,7 +388,9 @@ export class ChatStateManager {
                                 }
                             })
                         });
-                        msg = 'All transaction fetched'
+                        const transactionOptions = transactions.map(transaction => {
+                            return transaction.transactionNarration + '-' + transaction.amount.toString()
+                        });
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
                             data:{
@@ -406,7 +401,7 @@ export class ChatStateManager {
                             status: "Success",
                             session_id: reqData.session_id,
                             "message": "Please confirm your transactions",
-                            "options": transactions,
+                            "options": transactionOptions,
                             "end_connection": false,
                             "prompt": "option_selection",
                             "metadata": {}
@@ -732,10 +727,7 @@ export class ChatStateManager {
                         complaintDetails: ''
                     }
                     try {
-                        // const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
-                        const ticketResponse = {
-                            ticketNumber: '123456'
-                        }
+                        const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
                         await this.prisma.sessions.update({
                             where: {
                                 sessionId: reqData.session_id
