@@ -50,7 +50,7 @@ model Sessions {
   startDate                DateTime?
   endDate                  DateTime?
   complaintCategory        String?
-  complaintSubcategory     String?
+  complaintCategoryType    String?
   complaintCategorySubType String?
   initialQuery             String 
   bankInteractions         BankInteractions[]

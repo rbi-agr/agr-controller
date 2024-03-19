@@ -284,7 +284,10 @@ export class ChatStateManager {
                     await this.prisma.sessions.update({
                         where:{sessionId:reqData.session_id},
                         data:{
-                            state:2
+                            state:2,
+                            complaintCategory: intentResponse.category,
+                            complaintCategoryType: intentResponse.type,
+                            complaintCategorySubType: intentResponse.subtype
                         }
                     })
                     const intentPassRes = await this.states(reqData, languageDetected, 2)
@@ -379,6 +382,11 @@ export class ChatStateManager {
                             transactionNarration: 'Excess wdl charges',
                             transactionType: 'DR',
                             amount: 1000
+                        }, {
+                            transactionDate: '2024-03-14T00:00:00.000Z',
+                            transactionNarration: 'Folio Charges -Txn',
+                            transactionType: 'DR',
+                            amount: 1000
                         }]
                         if(transactions.length === 0) {
                             await this.prisma.sessions.update({
@@ -432,10 +440,15 @@ export class ChatStateManager {
                     //ask user to confirm transaction
                     this.logger.info('inside case 4')
 
-                    const selectedTransaction = reqData.metadata;
-
-                    const nextState = selectedTransaction.transactionNarration ? 7 : 8;
-
+                    const selectedTransaction = reqData.message.text;
+                    const state4TransactionNarration = selectedTransaction.split('-')[0];
+                    
+                    let nextState;
+                    if(state4TransactionNarration.length > 0) {
+                        nextState = 7;
+                    } else {
+                        nextState = 8;
+                    }
                     //Update the state
                     await this.prisma.sessions.update({
                         where: {
@@ -495,9 +508,10 @@ export class ChatStateManager {
                     //Educate the user on how to prevent it
                     this.logger.info('inside case 7')
 
-                    const transaction = reqData.metadata;
+                    const transaction = reqData.message.text;
+                    const state7TransactionNarration = transaction.split('-')[0];
 
-                    if(transaction.transactionNarration) {
+                    if(state7TransactionNarration.length > 0) {
                         //Update the state to 10
                         await this.prisma.sessions.update({
                             where: {
@@ -507,7 +521,7 @@ export class ChatStateManager {
                                 state: 10
                             }
                         })
-                        const educatingMessage = getEduMsg(selectedTransaction.transactionNarration)
+                        const educatingMessage = getEduMsg(state7TransactionNarration)
 
                         if(educatingMessage) {
                             const educatingRes = [{
@@ -523,7 +537,7 @@ export class ChatStateManager {
                                 status: "Success",
                                 session_id: reqData.session_id,
                                 message: "Are you satisfied with the resolution provided?",
-                                options: [],
+                                options: ['Yes', 'No'],
                                 end_connection: false,
                                 prompt: "text_message",
                                 metadata: {}
@@ -532,6 +546,15 @@ export class ChatStateManager {
                                 where: { sessionId: reqData.session_id },
                                 data: {
                                     state: 10
+                                }
+                            })
+                            await this.prisma.transactionDetails.update({
+                                where:{
+                                    sessionId: reqData.session_id,
+                                    transactionNarration: state7TransactionNarration
+                                },
+                                data:{
+                                    isEducated:true
                                 }
                             })
                             return educatingRes
@@ -647,7 +670,7 @@ export class ChatStateManager {
                     //Redirect to state 11 or 12 based on answer
                     this.logger.info('inside case 10')
 
-                    const state10Message = reqData.message
+                    const state10Message = reqData.message.text;
                     if(state10Message === 'Yes') {
                         return this.states(reqData, languageDetected, 11)
                     } else {
@@ -782,14 +805,14 @@ export class ChatStateManager {
                     this.logger.info('inside case 13')
                     const askRatingRes = [{
                         status: "Success",
-                        session_id: sessionId,
+                        session_id: reqData.session_id,
                         message: "Please give a rating on a scale of 1 to 5",
                         options: [],
                         end_connection: false,
                         prompt: "text_message"
                     }]
                     await this.prisma.sessions.update({
-                        where:{id:reqData.session_id},
+                        where:{sessionId:reqData.session_id},
                         data:{
                             state:15
                         }
@@ -823,19 +846,20 @@ export class ChatStateManager {
                     break;
                 case 15:
                     //take the rating, store it and close the connection
-                    this.logger.info('inside case 14')
+                    this.logger.info('inside case 15')
                     const storeRatingRes = [{
                         status: "Success",
-                        session_id: sessionId,
+                        session_id: reqData.session_id,
                         message: "Thanks for your feedback. Happy to serve you.",
                         options: [],
                         end_connection: false,
                         prompt: "text_message"
                     }]
                     await this.prisma.sessions.update({
-                        where:{id:reqData.session_id},
+                        where:{sessionId:reqData.session_id},
                         data:{
-                            state:99
+                            state:99,
+                            ratings: parseInt(reqData.message.text)
                         }
                     })
                     const resArray = []
