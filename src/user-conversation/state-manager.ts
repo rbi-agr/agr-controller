@@ -33,15 +33,33 @@ export class ChatStateManager {
             const message = reqData.message
 
             //detect language here
-            const languageDetected = 'en'
+            const languageDetectedresponse = await this.PostRequest(reqData.message.text,"https://rbih-agr.free.beeceptor.com/languagedetection")
+            if(languageDetectedresponse.error){
+                const exitResponse =  [{
+                    status: "Internal Server Error",
+                    message: "Error in language Detection",
+                    end_connection: true
+                }]
+                return exitResponse
+            }
+            const languageDetected = languageDetectedresponse?.language
             if(languageDetected !== 'en') {
                 if(languageDetected === 'hi' || languageDetected === 'od'){
                     //convert the message to english
                 }else {
                     //throw error stating to change the message language (User to enter the query)
-                    const msg = 'Please enter you query in english, hindi or odia'
+                    const lang_detected=[{
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        "message": "Please enter you query in english, hindi or odia",
+                        "options": [],
+                        "end_connection": false,
+                        "prompt": "text_message",
+                        "metadata":{}
+                      }]
+                    // const msg = 'Please enter you query in english, hindi or odia'
                     //return proper formatted response
-                    return msg
+                    return lang_detected
                 }
                 
             }
@@ -61,14 +79,21 @@ export class ChatStateManager {
                 }]
                 return exitResponse
             }
-            const response = await this.states(reqData, languageDetected, state)
+            let response = await this.states(reqData, languageDetected, state)
             // Check if the language detected is "en"
             let messageTranslation=""
             if(languageDetected!=="en")
             {
                 //convert the message to Language detected and return
                 //Translator API
-                messageTranslation=""
+                
+                let translatedresponse=response?.map(async(e)=>
+                {
+                    let messageTranslationresp= await this.PostRequest(e?.message,"https://rbih-agr.free.beeceptor.com/languagetranslation")
+                    messageTranslation = messageTranslationresp.translated
+                    return {...e,message:messageTranslation}
+                })
+                response=translatedresponse
             }
             //Store messages in db
             //Access user
@@ -210,12 +235,21 @@ export class ChatStateManager {
                     } 
 
                     //call intent api
-                    const intentResponse = {
-                        category: 'category',
-                        subtype: 'subtype',
-                        type: 'type'
-                    }
 
+                    // const intentResponse = {
+                    //     category: 'category',
+                    //     subtype: 'subtype',
+                    //     type: 'type'
+                    // }
+                    const intentResponse = await this.PostRequest(reqData.message.text,"https://rbih-agr.free.beeceptor.com/intentclassifier")
+                    if(intentResponse.error){
+                        const exitResponse =  [{
+                            status: "Internal Server Error",
+                            message: "Error in intent response",
+                            end_connection: true
+                        }]
+                        return exitResponse
+                    }
                     if (!intentResponse.category || !intentResponse.subtype || !intentResponse.type) {
                         //intent did not classify
 
@@ -547,15 +581,22 @@ export class ChatStateManager {
                         }
                     })
                     //Data from MistralAI
-                    const datesResponse = {
-                        startdate: '13/03/2024',
-                        enddate: '14/03/2024'
-                    }
+                    const datesResponse = await this.PostRequestforTransactionDates(reqData.message.text,"https://rbih-agr.free.beeceptor.com/transactiondates")
+                    // const datesResponse = {
+                    //     startdate: '13/03/2024',
+                    //     enddate: '14/03/2024'
+                    // }
                     //Store it in db
-                    const startDateParts = datesResponse.startdate.split('/');
-                    const endDateParts = datesResponse.enddate.split('/');
-                    const startDate = new Date(`${startDateParts[2]}-${startDateParts[1]}-${startDateParts[0]}`);
-                    const endDate = new Date(`${endDateParts[2]}-${endDateParts[1]}-${endDateParts[0]}`);
+                    if(datesResponse.error){
+                        const exitResponse =  [{
+                            status: "Internal Server Error",
+                            message: "Error in Mistral AI response",
+                            end_connection: true
+                        }]
+                        return exitResponse
+                    }
+                    const startDate = new Date(datesResponse.transaction_startdate);
+                    const endDate = new Date(datesResponse.transaction_enddate);
 
                     // Convert to ISO 8601 format
                     const isoStartDate = startDate.toISOString();
@@ -722,6 +763,25 @@ export class ChatStateManager {
                             end_connection: true
                         }]
                     }
+                case 13:
+                    //Ask the user for a rating
+                    this.logger.info('inside case 13')
+                    const askRatingRes = [{
+                        status: "Success",
+                        session_id: sessionId,
+                        message: "Please give a rating on a scale of 1 to 5",
+                        options: [],
+                        end_connection: false,
+                        prompt: "text_message"
+                    }]
+                    await this.prisma.sessions.update({
+                        where:{id:reqData.session_id},
+                        data:{
+                            state:15
+                        }
+                    })
+                    return askRatingRes
+                    break;
                 case 14:
                     //Select the transaction from the list
                     this.logger.info('inside case 14')
@@ -747,6 +807,29 @@ export class ChatStateManager {
                     return educresp
                     msg = 'Select the transaction from the list'
                     break;
+                case 15:
+                    //take the rating, store it and close the connection
+                    this.logger.info('inside case 14')
+                    const storeRatingRes = [{
+                        status: "Success",
+                        session_id: sessionId,
+                        message: "Thanks for your feedback. Happy to serve you.",
+                        options: [],
+                        end_connection: false,
+                        prompt: "text_message"
+                    }]
+                    await this.prisma.sessions.update({
+                        where:{id:reqData.session_id},
+                        data:{
+                            state:99
+                        }
+                    })
+                    const resArray = []
+                    resArray.push(storeRatingRes)
+
+                    const closeResponse = await this.states(reqData, languageDetected, 99)
+                    resArray.push(closeResponse)
+                    return resArray
                 case 16:
                     //Waiting for user response to educate him about other trasnactions
                     this.logger.info('inside case 16')
@@ -793,58 +876,8 @@ export class ChatStateManager {
 
                     msg = 'User response for educating him'
                     break;
-                case 12:
-                    //Notify that the intent did not classify
-                    this.logger.info('inside case 21')
-                    msg = 'Notify that the intent did not classify'
-                    break;
-                case 13:
-                    //Ask the user for a rating
-                    this.logger.info('inside case 13')
-                    const askRatingRes = [{
-                        status: "Success",
-                        session_id: sessionId,
-                        message: "Please give a rating on a scale of 1 to 5",
-                        options: [],
-                        end_connection: false,
-                        prompt: "text_message"
-                    }]
-                    await this.prisma.sessions.update({
-                        where:{id:reqData.session_id},
-                        data:{
-                            state:15
-                        }
-                    })
-                    return askRatingRes
-                    break;
-                case 14:
-                    //take t
-                    this.logger.info('inside case 14')
-                    msg = 'Ask the user to get the transactionId and start the process again'
-                    break;
-                case 15:
-                    //take the rating, store it and close the connection
-                    this.logger.info('inside case 14')
-                    const storeRatingRes = [{
-                        status: "Success",
-                        session_id: sessionId,
-                        message: "Thanks for your feedback. Happy to serve you.",
-                        options: [],
-                        end_connection: false,
-                        prompt: "text_message"
-                    }]
-                    await this.prisma.sessions.update({
-                        where:{id:reqData.session_id},
-                        data:{
-                            state:99
-                        }
-                    })
-                    const resArray = []
-                    resArray.push(storeRatingRes)
-
-                    const closeResponse = await this.states(reqData, languageDetected, 99)
-                    resArray.push(closeResponse)
-                    return resArray
+                
+                
                 case 99:
                     //End connection
                     this.logger.info('inside case 99')
@@ -910,13 +943,27 @@ export class ChatStateManager {
         }
     }
 
-    async IntentCheck(message: String) :Promise<any> {
+    async PostRequest(message: String,apiUrl: any) :Promise<any> {
         try {
-            const apiUrl="URL"
             const requestBody = {
                 message: message,
               };
-            this.logger.info('API for Intent check')
+            this.logger.info('API for Post Request')
+            const response = await axios.post(apiUrl,requestBody)
+            return response.data
+        } catch (error) {
+            this.logger.error('Error in calling this API', error)
+            return { statusCode: 400, message: 'Error in calling this API', error: error }
+        }
+    }
+
+    async PostRequestforTransactionDates(message: String,apiUrl: any) :Promise<any> {
+        try {
+            const requestBody = {
+                userprompt: message,
+                task:"fetch me the start and end date in format(mm-dd-yyyy example) in json format like:{'transaction_startdate': 'ISODate''transaction_enddate': 'ISODate'}"
+              };
+            this.logger.info('API for Post Request for TransactionDates')
             const response = await axios.post(apiUrl,requestBody)
             return response.data
         } catch (error) {
@@ -924,7 +971,6 @@ export class ChatStateManager {
             return { statusCode: 400, message: 'Error in this move', error: error }
         }
     }
-
     // close socket connection code
     // case to rate a session and close socket connections
     //make sure to return response in the same language as of users query
