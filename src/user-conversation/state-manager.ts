@@ -33,15 +33,33 @@ export class ChatStateManager {
             const message = reqData.message
 
             //detect language here
-            const languageDetected = 'en'
+            const languageDetectedresponse = await this.PostRequest(reqData.message.text,"https://rbih-agr.free.beeceptor.com/languagedetection")
+            if(languageDetectedresponse.error){
+                const exitResponse =  [{
+                    status: "Internal Server Error",
+                    message: "Error in language Detection",
+                    end_connection: true
+                }]
+                return exitResponse
+            }
+            const languageDetected = languageDetectedresponse?.language
             if(languageDetected !== 'en') {
                 if(languageDetected === 'hi' || languageDetected === 'od'){
                     //convert the message to english
                 }else {
                     //throw error stating to change the message language (User to enter the query)
-                    const msg = 'Please enter you query in english, hindi or odia'
+                    const lang_detected=[{
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        "message": "Please enter you query in english, hindi or odia",
+                        "options": [],
+                        "end_connection": false,
+                        "prompt": "text_message",
+                        "metadata":{}
+                      }]
+                    // const msg = 'Please enter you query in english, hindi or odia'
                     //return proper formatted response
-                    return msg
+                    return lang_detected
                 }
                 
             }
@@ -61,7 +79,60 @@ export class ChatStateManager {
                 }]
                 return exitResponse
             }
-            const response = await this.states(reqData, languageDetected, state)
+            let response = await this.states(reqData, languageDetected, state)
+            // Check if the language detected is "en"
+            let messageTranslation=""
+            if(languageDetected!=="en")
+            {
+                //convert the message to Language detected and return
+                //Translator API
+                
+                let translatedresponse=response?.map(async(e)=>
+                {
+                    let messageTranslationresp= await this.PostRequest(e?.message,"https://rbih-agr.free.beeceptor.com/languagetranslation")
+                    messageTranslation = messageTranslationresp.translated
+                    return {...e,message:messageTranslation}
+                })
+                response=translatedresponse
+            }
+            //Store messages in db
+            //Access user
+            
+            //1. Store the request from user
+            if(state != 0) {
+                await this.prisma.messages.create({
+                    data:{
+                        sessionId: reqData.session_id,
+                        userId: session.userId,
+                        sender:"user",
+                        message: reqData.message.text||"",
+                        messageTranslation:"",
+                        languageDetected:languageDetected||"",
+                        promptType:"text_message",
+                        options:[],
+                        timeStamp: new Date()
+                    }
+                })
+            }
+            
+            //2. Store the response from chatbot
+            response?.forEach(async(e:any)=>
+            {
+                await this.prisma.messages.create({
+                    data:{
+                        sessionId: reqData.session_id,
+                        userId: '567f1f77bcf86cd799439544',
+                        sender:"chatbot",
+                        message: e?.message||"",
+                        messageTranslation:messageTranslation||"",
+                        languageDetected:languageDetected||"",
+                        promptType:e?.prompt||"",
+                        options:e?.options||[],
+                        timeStamp: new Date()
+                    }
+                })
+            })
+            
             return response
         } catch (error) {
             this.logger.error('error occured in state manager ', error)
@@ -118,6 +189,19 @@ export class ChatStateManager {
                                 state:1
                             }
                         })
+                        await this.prisma.messages.create({
+                            data:{
+                                sessionId: reqData.session_id,
+                                userId: createdSession.userId,
+                                sender:"user",
+                                message: message||"",
+                                messageTranslation:"",
+                                languageDetected:languageDetected||"",
+                                promptType:"text_message",
+                                options:[],
+                                timeStamp: new Date()
+                            }
+                        })
                        const stateCreationRes = await this.states(reqData, languageDetected, 1)
                        return stateCreationRes
                     } else {
@@ -151,12 +235,21 @@ export class ChatStateManager {
                     } 
 
                     //call intent api
-                    const intentResponse = {
-                        category: '',
-                        subtype: 'subtype',
-                        type: 'type'
-                    }
 
+                    // const intentResponse = {
+                    //     category: 'category',
+                    //     subtype: 'subtype',
+                    //     type: 'type'
+                    // }
+                    const intentResponse = await this.PostRequest(reqData.message.text,"https://rbih-agr.free.beeceptor.com/intentclassifier")
+                    if(intentResponse.error){
+                        const exitResponse =  [{
+                            status: "Internal Server Error",
+                            message: "Error in intent response",
+                            end_connection: true
+                        }]
+                        return exitResponse
+                    }
                     if (!intentResponse.category || !intentResponse.subtype || !intentResponse.type) {
                         //intent did not classify
 
@@ -167,18 +260,19 @@ export class ChatStateManager {
                                   retriesLeft: sessionForIntent.retriesLeft - 1,
                                 },
                                 where: {
-                                  sessionId: sessionId,
+                                  sessionId: reqData.session_id,
                                 },
                               })
                         }
                         const intentFailRes = [{
                             status: "Success",
-                            session_id: sessionId,
-                            message: "Please reframe your query.",
-                            options: [],
-                            end_connection: false,
-                            prompt: "text_message",
-                        }]
+                            session_id: reqData.session_id,
+                            "message": "Please reframe your query.",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }]
                         return intentFailRes
                         
                     }
@@ -192,28 +286,28 @@ export class ChatStateManager {
                     return intentPassRes
                     break;
                 case 2:
-                    //Check for all requierd fields
+                    //Check for all required fields
                     this.logger.info('inside case 2')
                     if(!this.validstate(st, 2)){
                         //Invalid state
                         const FailRes = [{
                             status: "Internal Server Error",
                             "message": "Invalid state",
-                            "end_connection": false,
-                        }]
+                            "end_connection": false
+                          }]
                         return FailRes
                     }
                     //check for the required fields: transactionstartdate, enddate and bankaccount
                     
-                    session = await this.prisma.sessions.findUnique({
+                    const intentSsession = await this.prisma.sessions.findUnique({
                         where:{
                             sessionId:reqData.session_id
                         }
                     })
                     //If bank account number exists
-                    if(session?.bankAccountNumber){
+                    if(intentSsession?.bankAccountNumber){
                         //Check for start and enddate of transaction
-                        if(!session?.startDate)
+                        if(!intentSsession?.startDate)
                         {
                             //Return response to ask for start date
                             //Updating the state to 6
@@ -464,7 +558,7 @@ export class ChatStateManager {
                     const success_r3 = [{
                         status: "Success",
                         session_id: reqData.session_id,
-                        "message": "Could you please restart the process from the beginning?",
+                        "message": "Could you please restart the process from the beginning since you did not confirm the transactions?",
                         "options": [],
                         "end_connection": true,
                         "prompt": "date_pick",
@@ -482,15 +576,22 @@ export class ChatStateManager {
                         }
                     })
                     //Data from MistralAI
-                    const datesResponse = {
-                        startdate: '13/03/2024',
-                        enddate: '14/03/2024'
-                    }
+                    const datesResponse = await this.PostRequestforTransactionDates(reqData.message.text,"https://rbih-agr.free.beeceptor.com/transactiondates")
+                    // const datesResponse = {
+                    //     startdate: '13/03/2024',
+                    //     enddate: '14/03/2024'
+                    // }
                     //Store it in db
-                    const startDateParts = datesResponse.startdate.split('/');
-                    const endDateParts = datesResponse.enddate.split('/');
-                    const startDate = new Date(`${startDateParts[2]}-${startDateParts[1]}-${startDateParts[0]}`);
-                    const endDate = new Date(`${endDateParts[2]}-${endDateParts[1]}-${endDateParts[0]}`);
+                    if(datesResponse.error){
+                        const exitResponse =  [{
+                            status: "Internal Server Error",
+                            message: "Error in Mistral AI response",
+                            end_connection: true
+                        }]
+                        return exitResponse
+                    }
+                    const startDate = new Date(datesResponse.transaction_startdate);
+                    const endDate = new Date(datesResponse.transaction_enddate);
 
                     // Convert to ISO 8601 format
                     const isoStartDate = startDate.toISOString();
@@ -517,13 +618,9 @@ export class ChatStateManager {
                     {
                         const intentFailRes = [{
                             status: "Internal Server Error",
-                            session_id: reqData.session_id,
                             "message": "No Response from Mistral.AI",
-                            "options": [],
-                            "end_connection": false,
-                            "prompt": "text_message",
-                            "metadata":{}
-                        }]
+                            "end_connection": false
+                          }]
                         return intentFailRes
                     }
                     
@@ -557,7 +654,16 @@ export class ChatStateManager {
                             "end_connection": false,
                             "prompt": "text_message",
                             "metadata":{}
-                        }]
+                          }]
+                          success_resp.push({
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": null,
+                            "options": ["Yes","No"],
+                            "end_connection": false,
+                            "prompt": "option_selection",
+                            "metadata":{}
+                          })
                           //Add another response for choices
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
@@ -649,81 +755,6 @@ export class ChatStateManager {
                             end_connection: true
                         }]
                     }
-                case 14:
-                    //Select the transaction from the list
-                    this.logger.info('inside case 14')
-                    //Updating the transaction iseducated value to true
-                    await this.prisma.transactionDetails.update({
-                        where:{
-                            sessionId: reqData.session_id,
-                            transactionId: metaData.transactionId
-                        },
-                        data:{
-                            isEducated:true
-                        }
-                    })
-                    //Send the user to state 7 for educating him
-                    const educresp = await this.states(reqData,languageDetected,7)
-                    await this.prisma.sessions.update({
-                        where:{sessionId:reqData.session_id},
-                        data:{
-                            state:7
-                        }
-                    })
-                    return educresp
-                    msg = 'Select the transaction from the list'
-                    break;
-                case 16:
-                    //Waiting for user response to educate him about other trasnactions
-                    this.logger.info('inside case 16')
-                    const userresponse = reqData.message.text
-                    if(userresponse==="Yes")
-                    {
-                        //Pass the remaining transaction list data
-                        const uneducated_transaction = await this.prisma.transactionDetails.findMany({
-                            where:{
-                                sessionId:reqData.session_id,
-                                isEducated:false
-                            }
-                        })
-                        
-                        const success_r4= [{
-                            status: "Success",
-                            session_id: reqData.session_id,
-                            "message": null,
-                            "options": uneducated_transaction,
-                            "end_connection": false,
-                            "prompt": "option_selection",
-                            "metadata":{}
-                        }]
-                        
-                        //Update the state to 14
-                        await this.prisma.sessions.update({
-                            where:{sessionId:reqData.session_id},
-                            data:{
-                                state:14
-                            }
-                        })
-                        return success_r4
-                    }
-                    else{
-                        await this.prisma.sessions.update({
-                            where:{sessionId:reqData.session_id},
-                            data:{
-                                state:13
-                            }
-                        })
-                        const res = await this.states(reqData, languageDetected, 13)
-                        return res
-                    }
-
-                    msg = 'User response for educating him'
-                    break;
-                case 12:
-                    //Notify that the intent did not classify
-                    this.logger.info('inside case 21')
-                    msg = 'Notify that the intent did not classify'
-                    break;
                 case 13:
                     //Ask the user for a rating
                     this.logger.info('inside case 13')
@@ -744,9 +775,29 @@ export class ChatStateManager {
                     return askRatingRes
                     break;
                 case 14:
-                    //take t
+                    //Select the transaction from the list
                     this.logger.info('inside case 14')
-                    msg = 'Ask the user to get the transactionId and start the process again'
+                    //Updating the transaction iseducated value to true
+                    await this.prisma.transactionDetails.update({
+                        where:{
+                            sessionId: reqData.session_id,
+                            transactionId: metaData.transactionId
+                        },
+                        data:{
+                            isEducated:true
+                        }
+                    })
+                    //Send the user to state 7 for educating him
+                    await this.prisma.sessions.update({
+                        where:{sessionId:reqData.session_id},
+                        data:{
+                            state:7
+                        }
+                    })
+                    const educresp = await this.states(reqData,languageDetected,7)
+                    
+                    return educresp
+                    msg = 'Select the transaction from the list'
                     break;
                 case 15:
                     //take the rating, store it and close the connection
@@ -771,6 +822,54 @@ export class ChatStateManager {
                     const closeResponse = await this.states(reqData, languageDetected, 99)
                     resArray.push(closeResponse)
                     return resArray
+                case 16:
+                    //Waiting for user response to educate him about other trasnactions
+                    this.logger.info('inside case 16')
+                    const userresponse = reqData.message.text
+                    if(userresponse==="Yes")
+                    {
+                        //Pass the remaining transaction list data
+                        const uneducated_transaction = await this.prisma.transactionDetails.findMany({
+                            where:{
+                                sessionId:reqData.session_id,
+                                isEducated:false
+                            }
+                        })
+                        
+                        const success_r4= [{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": null,
+                            "options": uneducated_transaction,
+                            "end_connection": false,
+                            "prompt": "option_selection",
+                            "metadata":{}
+                          }]
+                        
+                        //Update the state to 14
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:14
+                            }
+                        })
+                        return success_r4
+                    }
+                    else{
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:13
+                            }
+                        })
+                        const res = await this.states(reqData, languageDetected, 13)
+                        return res
+                    }
+
+                    msg = 'User response for educating him'
+                    break;
+                
+                
                 case 99:
                     //End connection
                     this.logger.info('inside case 99')
@@ -836,13 +935,27 @@ export class ChatStateManager {
         }
     }
 
-    async IntentCheck(message: String) :Promise<any> {
+    async PostRequest(message: String,apiUrl: any) :Promise<any> {
         try {
-            const apiUrl="URL"
             const requestBody = {
                 message: message,
               };
-            this.logger.info('API for Intent check')
+            this.logger.info('API for Post Request')
+            const response = await axios.post(apiUrl,requestBody)
+            return response.data
+        } catch (error) {
+            this.logger.error('Error in calling this API', error)
+            return { statusCode: 400, message: 'Error in calling this API', error: error }
+        }
+    }
+
+    async PostRequestforTransactionDates(message: String,apiUrl: any) :Promise<any> {
+        try {
+            const requestBody = {
+                userprompt: message,
+                task:"fetch me the start and end date in format(mm-dd-yyyy example) in json format like:{'transaction_startdate': 'ISODate''transaction_enddate': 'ISODate'}"
+              };
+            this.logger.info('API for Post Request for TransactionDates')
             const response = await axios.post(apiUrl,requestBody)
             return response.data
         } catch (error) {
@@ -850,7 +963,6 @@ export class ChatStateManager {
             return { statusCode: 400, message: 'Error in this move', error: error }
         }
     }
-
     // close socket connection code
     // case to rate a session and close socket connections
     //make sure to return response in the same language as of users query
