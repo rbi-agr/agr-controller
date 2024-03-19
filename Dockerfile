@@ -13,6 +13,8 @@ RUN npm install -g prisma
 # Copy the rest of the application code to the container
 COPY . .
 
+COPY env.example .env
+
 # Generate Prisma client
 RUN prisma generate
 
