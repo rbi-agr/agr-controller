@@ -18,7 +18,7 @@ export class IndianBankService {
       throw new Error('Bank URL not found');
     }
     // TODO: Update endpoint when exposed by the bank
-    const endpoint = `/`;
+    const endpoint = `/transactions`;
 
     const requestPayload = {
       Account_Number: transactionsDto.accountNumber,
@@ -89,7 +89,7 @@ export class IndianBankService {
     });
 
     // TODO: Update endpoint when exposed by the bank
-    const endpoint = `/`;
+    const endpoint = `/ticket`;
 
     const requestPayload = {
       Date_Time: new Date(),
