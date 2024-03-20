@@ -23,7 +23,7 @@ export class ChatStateManager {
         try {
             //check if session exists
             const sessionId = reqData.session_id
-
+            
             let session = await this.prisma.sessions.findUnique({
                 where: {
                     sessionId: sessionId,
@@ -33,7 +33,7 @@ export class ChatStateManager {
             const message = reqData.message
 
             //detect language here
-            // const languageDetectedresponse = await this.PostRequest(reqData.message.text,"https://rbih-agr.free.beeceptor.com/languagedetection")
+            // const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/languagedetection`)
             const languageDetectedresponse = {
                 language: 'en',
                 error: null
@@ -247,7 +247,7 @@ export class ChatStateManager {
                         type: 'type',
                         error: null
                     }
-                    // const intentResponse = await this.PostRequest(reqData.message.text,"https://rbih-agr.free.beeceptor.com/intentclassifier")
+                    // const intentResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/intentclassifier`)
                     if(intentResponse.error){
                         const exitResponse =  [{
                             status: "Internal Server Error",
@@ -449,7 +449,7 @@ export class ChatStateManager {
                     if(state4TransactionNarration.length > 0) {
                         nextState = 7;
                     } else {
-                        nextState = 8;
+                        nextState = 17;
                     }
                     //Update the state
                     await this.prisma.sessions.update({
@@ -615,7 +615,7 @@ export class ChatStateManager {
                         }
                     })
                     //Data from MistralAI
-                    // const datesResponse = await this.PostRequestforTransactionDates(reqData.message.text,"https://rbih-agr.free.beeceptor.com/transactiondates")
+                    // const datesResponse = await this.PostRequestforTransactionDates(reqData.message.text,`${process.env.BASEURL}/transactiondates`)
                     const datesResponse = {
                         transaction_startdate: '13/03/2024',
                         transaction_enddate: '14/03/2024',
@@ -675,7 +675,7 @@ export class ChatStateManager {
                     this.logger.info('inside case 10')
 
                     const state10Message = reqData.message.text;
-                    if(state10Message === 'Yes') {
+                    if(state10Message && state10Message.toLowerCase() === 'yes') {
                         await this.prisma.sessions.update({
                             where: { sessionId: reqData.session_id },
                             data: {
@@ -908,7 +908,7 @@ export class ChatStateManager {
                     //Waiting for user response to educate him about other trasnactions
                     this.logger.info('inside case 16')
                     const userresponse = reqData.message.text
-                    if(userresponse==="Yes")
+                    if(userresponse && userresponse.toLowerCase()==="yes")
                     {
                         //Pass the remaining transaction list data
                         const uneducated_transaction = await this.prisma.transactionDetails.findMany({
