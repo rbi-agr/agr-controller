@@ -446,12 +446,23 @@ export class ChatStateManager {
 
                     const selectedTransaction = reqData.message.text;
                     const state4TransactionNarration = selectedTransaction.split('-')[0];
-                    
+                    const existing_session = await this.prisma.sessions.findUnique({
+                        where:{
+                            sessionId: reqData.session_id
+                        }
+                    })
                     let nextState;
                     if(state4TransactionNarration.length > 0) {
                         nextState = 7;
                     } else {
-                        nextState = 17;
+                        if(existing_session.retriesLeftforDate <=0)
+                        {
+                            nextState = 99;
+                        }
+                        else{
+                            nextState = 17;
+                        }
+                        
                     }
                     //Update the state
                     await this.prisma.sessions.update({
@@ -566,9 +577,15 @@ export class ChatStateManager {
                         } else {
                             const educatingFailRes = [{
                                 status: "Internal Server Error",
-                                message: "Internal Server Error",
-                                end_connection: false
+                                message: "We could not find the cause for this transaction. Please try later",
+                                end_connection: true
                             }]
+                            await this.prisma.sessions.update({
+                                where: { sessionId: reqData.session_id },
+                                data: {
+                                    state: 99
+                                }
+                            })
                             return educatingFailRes
                         }
                     } else {

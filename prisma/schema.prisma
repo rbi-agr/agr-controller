@@ -46,6 +46,7 @@ model Sessions {
   state                    Int                  @default(0)
   languageByAdya           String
   retriesLeft              Int?
+  retriesLeftforDate       Int?
   ratings                  Int?
   bankAccountNumber        String
   startDate                DateTime?
