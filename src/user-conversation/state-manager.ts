@@ -307,25 +307,33 @@ export class ChatStateManager {
                     }
                     //check for the required fields: transactionstartdate, enddate and bankaccount
                     
-                    const intentSsession = await this.prisma.sessions.findUnique({
+                    const intentSession = await this.prisma.sessions.findUnique({
                         where:{
                             sessionId:reqData.session_id
                         }
                     })
                     //If bank account number exists
-                    if(intentSsession?.bankAccountNumber){
+                    if(intentSession?.bankAccountNumber){
                         //Check for start and enddate of transaction
-                        if(!intentSsession?.startDate)
+                        if(!intentSession?.startDate)
                         {
                             //Return response to ask for start date
-                            //Updating the state to 6
+                            //Updating the state to 17
                             await this.prisma.sessions.update({
-                                where:{sessionId:reqData.session_id},
+                                where:{ sessionId: reqData.session_id },
                                 data:{
-                                    state:6
+                                    state: 17
                                 }
                             })
-                            const fail_r1= await this.states(reqData, languageDetected,6)
+                            const fail_r1 = [{
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                "message": "Do you remember the date of transaction?",
+                                "options": ['Yes', 'No'],
+                                "end_connection": false,
+                                "prompt": "option_selection",
+                                "metadata": {}
+                            }]
                             return fail_r1
                         }
                         else
@@ -408,7 +416,7 @@ export class ChatStateManager {
                             })
                         });
                         const transactionOptions = transactions.map(transaction => {
-                            return transaction.transactionNarration + '-' + transaction.amount.toString()
+                            return transaction.transactionDate + '|' + transaction.transactionNarration + '|' + transaction.amount.toString()
                         });
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
@@ -416,6 +424,7 @@ export class ChatStateManager {
                                 state:4
                             }
                         })
+                        transactionOptions.push('None of the above')
                         const transaction_success = [{
                             status: "Success",
                             session_id: reqData.session_id,
@@ -441,7 +450,7 @@ export class ChatStateManager {
                     this.logger.info('inside case 4')
 
                     const selectedTransaction = reqData.message.text;
-                    const state4TransactionNarration = selectedTransaction.split('-')[0];
+                    const state4TransactionNarration = selectedTransaction.split('|')[1];
                     
                     let nextState;
                     if(state4TransactionNarration.length > 0) {
@@ -484,7 +493,7 @@ export class ChatStateManager {
                     
                 case 6:
                     this.logger.info('inside case 6')
-                    //after fetching insert all transactions into the db, (bulk create)
+                    //Updating the state to 9
                     await this.prisma.sessions.update({
                         where:{sessionId:reqData.session_id},
                         data:{
@@ -492,11 +501,10 @@ export class ChatStateManager {
                         }
                     })
                     msg = 'Ask for date of transaction'
-                    //Updating the state to 9
                     const success_r2 = [{
                         status: "Success",
                         session_id: reqData.session_id,
-                        "message": "Please enter startdate and enddate for the transaction",
+                        "message": "Please enter the date of transaction",
                         "options": [],
                         "end_connection": false,
                         "prompt": "date_pick",
@@ -509,7 +517,7 @@ export class ChatStateManager {
                     this.logger.info('inside case 7')
 
                     const transaction = reqData.message.text;
-                    const state7TransactionNarration = transaction.split('-')[0];
+                    const state7TransactionNarration = transaction.split('|')[1];
 
                     if(state7TransactionNarration.length > 0) {
                         //Update the state to 10
@@ -665,7 +673,6 @@ export class ChatStateManager {
                           }]
                         return intentFailRes
                     }
-                    
                 case 10:
                     //Redirect to state 11 or 12 based on answer
                     this.logger.info('inside case 10')
@@ -692,21 +699,12 @@ export class ChatStateManager {
                             status: "Success",
                             session_id: reqData.session_id,
                             "message": "Do you want to know about the other transactions too?",
-                            "options": [],
-                            "end_connection": false,
-                            "prompt": "text_message",
-                            "metadata":{}
-                          }]
-                          success_resp.push({
-                            status: "Success",
-                            session_id: reqData.session_id,
-                            "message": null,
-                            "options": ["Yes","No"],
+                            "options": ["Yes", "No"],
                             "end_connection": false,
                             "prompt": "option_selection",
                             "metadata":{}
-                          })
-                          //Add another response for choices
+                        }]
+                        //Add another response for choices
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
                             data:{
@@ -728,7 +726,6 @@ export class ChatStateManager {
                         const res = await this.states(reqData, languageDetected, 13)
                         return res
                     }
-                    msg = 'Ask the user for other transaction'
                     break;
                 case 12:
                     //Raise a ticket
@@ -746,7 +743,7 @@ export class ChatStateManager {
                     })
                     if(session.complaintCategory == undefined 
                         || session.complaintCategoryType == undefined
-                        || session.complaintCategorySubtype == undefined) {
+                        || session.complaintCategorySubType == undefined) {
                         return [{
                             status: "Internal Server Error",
                             message: "Complaint category, type and subtype are required for state 12",
@@ -911,11 +908,54 @@ export class ChatStateManager {
                         const res = await this.states(reqData, languageDetected, 13)
                         return res
                     }
-
-                    msg = 'User response for educating him'
                     break;
-                
-                
+                case 17:
+                    //Redirect to state 6 or 18 based on answer
+                    this.logger.info('inside case 17')
+
+                    const state17Message = reqData.message.text;
+                    let state17NextState;
+                    if(state17Message === 'Yes') {
+                        state17NextState = 6;
+                    } else {
+                        state17NextState = 18;
+                    }
+                    await this.prisma.sessions.update({
+                        where: {
+                            sessionId:reqData.session_id
+                        },
+                        data: {
+                            state: state17NextState
+                        }
+                    })
+                    return this.states(reqData, languageDetected, state17NextState)
+                case 18:
+                    this.logger.info('inside case 18')
+                    //Updating the state to 9
+                    await this.prisma.sessions.update({
+                        where: { sessionId: reqData.session_id },
+                        data: {
+                            state: 9
+                        }
+                    })
+                    const state18SuccessResponse = [{
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        "message": "Please enter startdate for the transaction",
+                        "options": [],
+                        "end_connection": false,
+                        "prompt": "date_pick",
+                        "metadata": {}
+                    }, {
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        "message": "Please enter enddate for the transaction",
+                        "options": [],
+                        "end_connection": false,
+                        "prompt": "date_pick",
+                        "metadata": {}
+                    }]
+                    return state18SuccessResponse
                 case 99:
                     //End connection
                     this.logger.info('inside case 99')
