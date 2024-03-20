@@ -32,7 +32,8 @@ export class ChatStateManager {
 
             const message = reqData.message
 
-            //detect language here
+            
+
             const languageDetectedresponse = await this.PostRequest(reqData.message.text,"https://rbih-agr.free.beeceptor.com/languagedetection")
             if(languageDetectedresponse.error){
                 const exitResponse =  [{
@@ -169,7 +170,8 @@ export class ChatStateManager {
                             }
                         })
                     }
-    
+                    //detect language here
+                    const languageByAdya = reqData.metadata.language
                     const createdSession = await this.prisma.sessions.create({
                         data: {
                             user: {
@@ -179,6 +181,7 @@ export class ChatStateManager {
                             state: 0,
                             bankAccountNumber: accountNumber,
                             initialQuery: message,
+                            languageByAdya: languageByAdya,
                             retriesLeft: 3
                         }
                     })
