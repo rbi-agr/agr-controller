@@ -290,7 +290,8 @@ export class ChatStateManager {
                             state:2,
                             complaintCategory: intentResponse.category,
                             complaintCategoryType: intentResponse.type,
-                            complaintCategorySubType: intentResponse.subtype
+                            complaintCategorySubType: intentResponse.subtype,
+                            retriesLeft: 3
                         }
                     })
                     const intentPassRes = await this.states(reqData, languageDetected, 2)
@@ -459,13 +460,13 @@ export class ChatStateManager {
                         const existing_session = await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
                             data:{
-                                retriesLeftforDate: {
+                                retriesLeft: {
                                     decrement: 1
                                 },
                                 state: nextState
                             }
                         })
-                        if(existing_session.retriesLeftforDate < 0) {
+                        if(existing_session.retriesLeft < 0) {
                             nextState = 99;
                         }
                     } else {
