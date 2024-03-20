@@ -401,13 +401,26 @@ export class ChatStateManager {
                             amount: 1000
                         }]
                         if(transactions.length === 0) {
-                            await this.prisma.sessions.update({
-                                where:{ sessionId: reqData.session_id },
-                                data:{
-                                    state: 5
-                                }
-                            })
-                            return this.states(reqData, languageDetected, 5)
+                            if(session.retriesLeft <= 0) {
+                                await this.prisma.sessions.update({
+                                    where:{sessionId:reqData.session_id},
+                                    data:{
+                                        state:99
+                                    }
+                                })
+                                return this.states(reqData, languageDetected, 99)
+                            } else {
+                                await this.prisma.sessions.update({
+                                    where:{ sessionId: reqData.session_id },
+                                    data:{
+                                        state: 5,
+                                        retriesLeft: {
+                                            decrement: 1
+                                        }
+                                    }
+                                })
+                                return this.states(reqData, languageDetected, 5)
+                            }
                         }
                         transactions.forEach(async (transaction) => {
                             await this.prisma.transactionDetails.create({
