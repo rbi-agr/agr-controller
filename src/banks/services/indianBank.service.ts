@@ -4,6 +4,7 @@ import axios from 'axios';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { TransactionsRequestDto, TransactionsResponseDto } from '../dto/transactions.dto';
 import { ComplaintRequestDto, ComplaintResponseDto } from '../dto/complaint.dto';
+import * as constants from '../utils/bankConstants';
 
 @Injectable()
 export class IndianBankService {
@@ -145,18 +146,18 @@ export class IndianBankService {
   private constructRequestHeaders(apiInteractionId: string) {
     
     const headers = {
-      'X-IB-Client-Id': process.env.INDIAN_BANK_CLIENT_ID,
-      'X-IB-Client-Secret': process.env.INDIAN_BANK_CLIENT_SECRET,
-      'Channel': process.env.INDIAN_BANK_CHANNEL,
-      'X-Client-Certificate': process.env.INDIAN_BANK_CLIENT_CERTIFICATE,
+      'X-IB-Client-Id': constants.indianBankClientId,
+      'X-IB-Client-Secret': constants.indianBankClientSecret,
+      'Channel': constants.indianBankChannelName,
+      'X-Client-Certificate': constants.indianBankClientCertificate,
       'X-API-Interaction-ID': apiInteractionId,
       'HealthCheck': 'FALSE',
       // 'HealthType': ,
-      'Branch-Number': process.env.INDIAN_BANK_BRANCH_NUMBER,
-      'Teller-Number': process.env.INDIAN_BANK_TELLER_NUMBER,
-      'Terminal-Number': process.env.INDIAN_BANK_TERMINAL_NUMBER,
+      'Branch-Number': constants.indianBankBranchNumber,
+      'Teller-Number': constants.indianBankTellerNumber,
+      'Terminal-Number': constants.indianBankTerminalNumber,
     };
-        // check if these values are present
+    // check if these values are present
     for (const key in headers) {
       if (!headers[key]) {
         throw new Error(`Header ${key} not found`);
