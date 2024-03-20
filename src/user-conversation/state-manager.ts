@@ -86,6 +86,7 @@ export class ChatStateManager {
             let response = await this.states(reqData, languageDetected, state)
             // Check if the language detected is "en"
             let messageTranslation=""
+            
             if(languageDetected!=="en")
             {
                 //convert the message to Language detected and return
@@ -384,7 +385,7 @@ export class ChatStateManager {
                             amount: 1000
                         }, {
                             transactionDate: '2024-03-14T00:00:00.000Z',
-                            transactionNarration: 'Folio Charges -Txn',
+                            transactionNarration: 'UNCOLL CHRG DT',
                             transactionType: 'DR',
                             amount: 1000
                         }]
@@ -403,7 +404,8 @@ export class ChatStateManager {
                                     sessionId: sessionId,
                                     transactionTimeBank: transaction.transactionDate,
                                     transactionNarration: transaction.transactionNarration,
-                                    transactionType: transaction.transactionType
+                                    transactionType: transaction.transactionType,
+                                    amount: transaction.amount
                                 }
                             })
                         });
@@ -513,14 +515,14 @@ export class ChatStateManager {
 
                     if(state7TransactionNarration.length > 0) {
                         //Update the state to 10
-                        await this.prisma.sessions.update({
-                            where: {
-                                sessionId:reqData.session_id
-                            },
-                            data: {
-                                state: 10
-                            }
-                        })
+                        // await this.prisma.sessions.update({
+                        //     where: {
+                        //         sessionId:reqData.session_id
+                        //     },
+                        //     data: {
+                        //         state: 10
+                        //     }
+                        // })
                         const educatingMessage = getEduMsg(state7TransactionNarration)
 
                         if(educatingMessage) {
@@ -539,9 +541,10 @@ export class ChatStateManager {
                                 message: "Are you satisfied with the resolution provided?",
                                 options: ['Yes', 'No'],
                                 end_connection: false,
-                                prompt: "text_message",
+                                prompt: "option_selection",
                                 metadata: {}
                             })
+                            //On sending successfull response update state to 10
                             await this.prisma.sessions.update({
                                 where: { sessionId: reqData.session_id },
                                 data: {
@@ -567,10 +570,11 @@ export class ChatStateManager {
                             return educatingFailRes
                         }
                     } else {
-                        //Update the state to 8
+                        
                         this.logger.info("Selected transaction not found")
+                        
                         const failRes = [{
-                            status: "Internal Server Error",
+                            status: "Bad Request",
                             message: "No transaction selected",
                             end_connection: false
                         }]
@@ -593,10 +597,10 @@ export class ChatStateManager {
                     const success_r3 = [{
                         status: "Success",
                         session_id: reqData.session_id,
-                        "message": "Could you please restart the process from the beginning since you did not confirm the transactions?",
+                        "message": "The transaction was not selected. Could you please restart the process from the beginning?",
                         "options": [],
                         "end_connection": true,
-                        "prompt": "date_pick",
+                        "prompt": "text_message",
                         "metadata":{}
                     }]
                     return success_r3
@@ -672,8 +676,20 @@ export class ChatStateManager {
 
                     const state10Message = reqData.message.text;
                     if(state10Message === 'Yes') {
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 11
+                            }
+                        })
                         return this.states(reqData, languageDetected, 11)
                     } else {
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 12
+                            }
+                        })
                         return this.states(reqData, languageDetected, 12)
                     }
                 case 11:
@@ -736,9 +752,10 @@ export class ChatStateManager {
                     sessionId = reqData.session_id
                     session = await this.prisma.sessions.findUnique({
                         where:{
-                            sessionId
+                            sessionId:sessionId
                         }
                     });
+                    
                     const userForTicket = await this.prisma.users.findUnique({
                         where:{
                             id:session.userId
@@ -746,7 +763,7 @@ export class ChatStateManager {
                     })
                     if(session.complaintCategory == undefined 
                         || session.complaintCategoryType == undefined
-                        || session.complaintCategorySubtype == undefined) {
+                        || session.complaintCategorySubType == undefined) {
                         return [{
                             status: "Internal Server Error",
                             message: "Complaint category, type and subtype are required for state 12",
@@ -781,6 +798,13 @@ export class ChatStateManager {
                                 ticketId: ticketResponse.ticketNumber,
                                 ticketRaised: true,
                                 ticketRaisedTime: new Date()
+                            }
+                        })
+                        //Update the state to 99
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 99
                             }
                         })
                         return [{
@@ -823,25 +847,37 @@ export class ChatStateManager {
                     //Select the transaction from the list
                     this.logger.info('inside case 14')
                     //Updating the transaction iseducated value to true
-                    await this.prisma.transactionDetails.update({
-                        where:{
-                            sessionId: reqData.session_id,
-                            transactionId: metaData.transactionId
-                        },
-                        data:{
-                            isEducated:true
-                        }
-                    })
+                    // await this.prisma.transactionDetails.update({
+                    //     where:{
+                    //         sessionId: reqData.session_id,
+                    //         transactionId: metaData.transactionId
+                    //     },
+                    //     data:{
+                    //         isEducated:true
+                    //     }
+                    // })
                     //Send the user to state 7 for educating him
-                    await this.prisma.sessions.update({
-                        where:{sessionId:reqData.session_id},
-                        data:{
-                            state:7
-                        }
-                    })
-                    const educresp = await this.states(reqData,languageDetected,7)
-                    
-                    return educresp
+                    if(reqData.message.text)
+                    {
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:7
+                            }
+                        })
+                        const educresp = await this.states(reqData,languageDetected,7)
+                        
+                        return educresp
+                        
+                    }
+                    else{
+                        const failRes = [{
+                            status: "Bad Request",
+                            message: "No transaction selected",
+                            end_connection: false
+                        }]
+                        return failRes
+                    }
                     msg = 'Select the transaction from the list'
                     break;
                 case 15:
@@ -882,11 +918,15 @@ export class ChatStateManager {
                             }
                         })
                         
+                        const transactionOptions = uneducated_transaction.map(transaction => {
+                            return transaction.transactionNarration + '-' + transaction.amount.toString()
+                        });
+                        
                         const success_r4= [{
                             status: "Success",
                             session_id: reqData.session_id,
                             "message": null,
-                            "options": uneducated_transaction,
+                            "options": transactionOptions,
                             "end_connection": false,
                             "prompt": "option_selection",
                             "metadata":{}
