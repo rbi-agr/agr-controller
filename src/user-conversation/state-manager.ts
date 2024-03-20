@@ -453,37 +453,34 @@ export class ChatStateManager {
                     //ask user to confirm transaction
                     this.logger.info('inside case 4')
 
-                    const selectedTransaction = reqData.message.text;
-                    const state4TransactionNarration = selectedTransaction.split('|')[1];
-                    const existing_session = await this.prisma.sessions.findUnique({
-                        where:{
-                            sessionId: reqData.session_id
-                        }
-                    })
                     let nextState;
-                    if(state4TransactionNarration.length > 0) {
-                        nextState = 7;
-                    } else {
-                        if(existing_session.retriesLeftforDate <=0)
-                        {
+                    if(reqData.message.text.toLowerCase() === 'none of the above') {
+                        nextState = 17;
+                        const existing_session = await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                retriesLeftforDate: {
+                                    decrement: 1
+                                },
+                                state: nextState
+                            }
+                        })
+                        if(existing_session.retriesLeftforDate < 0) {
                             nextState = 99;
                         }
-                        else{
-                            nextState = 17;
-                        }
-                        
+                    } else {
+                        nextState = 7;
+                        //Update the state
+                        await this.prisma.sessions.update({
+                            where: {
+                                sessionId:reqData.session_id
+                            },
+                            data: {
+                                state: nextState
+                            }
+                        })
                     }
-                    //Update the state
-                    await this.prisma.sessions.update({
-                        where: {
-                            sessionId:reqData.session_id
-                        },
-                        data: {
-                            state: nextState
-                        }
-                    })
                     return this.states(reqData, languageDetected, nextState)
-
                 case 5:
                     //If not transaction, ask for different date range
                     this.logger.info('inside case 5')
