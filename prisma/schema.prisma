@@ -44,6 +44,7 @@ model Sessions {
   ticketId                 String?
   ticketRaisedTime         DateTime?
   state                    Int                  @default(0)
+  languageByAdya           String
   retriesLeft              Int?
   ratings                  Int?
   bankAccountNumber        String
@@ -52,7 +53,7 @@ model Sessions {
   complaintCategory        String?
   complaintCategoryType    String?
   complaintCategorySubType String?
-  initialQuery             String 
+  initialQuery             String
   bankInteractions         BankInteractions[]
   transactions             TransactionDetails[]
 }
@@ -92,7 +93,6 @@ model BankInteractions {
   timestamp       DateTime        @default(now())
   metadata        Json?
 }
-
 
 //naration-educative text
 //helperText             String

@@ -174,7 +174,8 @@ export class ChatStateManager {
                             }
                         })
                     }
-    
+                    //detect language here
+                    const languageByAdya = reqData.metadata.language
                     const createdSession = await this.prisma.sessions.create({
                         data: {
                             user: {
@@ -184,6 +185,7 @@ export class ChatStateManager {
                             state: 0,
                             bankAccountNumber: accountNumber,
                             initialQuery: message,
+                            languageByAdya: languageByAdya,
                             retriesLeft: 3
                         }
                     })
