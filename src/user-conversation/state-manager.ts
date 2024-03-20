@@ -455,7 +455,7 @@ export class ChatStateManager {
                     if(state4TransactionNarration.length > 0) {
                         nextState = 7;
                     } else {
-                        if(existing_session.retriesLeftforDate <=0)
+                        if(existing_session.retriesLeft <=0)
                         {
                             nextState = 99;
                         }
