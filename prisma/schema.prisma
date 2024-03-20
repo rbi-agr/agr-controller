@@ -44,7 +44,7 @@ model Sessions {
   ticketId                 String?
   ticketRaisedTime         DateTime?
   state                    Int                  @default(0)
-  languageByAdya           String
+  languageByAdya           String?
   retriesLeft              Int?
   ratings                  Int?
   bankAccountNumber        String

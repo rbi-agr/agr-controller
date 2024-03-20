@@ -25,30 +25,3 @@ export const NarrationEducatingMessagesMap = {
     "Folio Charges -Txn": "Account keeping charges",
     "Excess wdl charges": "Excess withdrawal charges"
 }
-
-// export enum Narration {
-//     DUP_PASSBOOK_CHG = "DUP PASSBOOK CHG",
-//     CHG_FOR_ONUS_WDL = "CHG FOR ONUS WDL",
-//     ATM_WDL_CHARGES = "ATM WDL CHARGES",
-//     ATM_ENQ_CHARGES = "ATM ENQ CHARGES",
-//     ATM_INSUFFICIENT_FUNDS_CHARGES = "ATM INSUFFICIENT FUNDS CHARGES",
-//     ATM_CARD_ISSUANCE_FE = "ATM _Card _Issuance_ Fe",
-//     DUP_CARD = "DUP CARD",
-//     ATM_AMC_CHGS = "ATM AMC CHGS",
-//     CHG_FOR_ATM_ONUS_DEP = "CHG FOR ATM ONUS DEP",
-//     CHQ_DISHONOUR = "CHQ DISHONOUR",
-//     ACH_RTN_CHRGS = "ACH RTN CHRGS",
-//     NEFT_CHARGE = "NEFT Charge",
-//     RGTS_CHARGE = "RGTS Charge",
-//     IMPS_CHARGE = "IMPS Charge",
-//     SI_CHARGE = "SI Charge",
-//     CASH_HANDLING_CHARGES = "Cash handling charges",
-//     SMS_CHGS = "SMS_ CHGS_",
-//     MIN_BAL_CHGS = "MIN BAL CHGS",
-//     LOCKER_RENT = "LOCKER RENT",
-//     CASH_DEPOSIT_CHARGES_OTHER = "Cash deposit charges other",
-//     MANDATE_REG_CHGS = "Mandate Reg Chgs",
-//     UNCOLL_CHRG_DT = "UNCOLL CHRG DT",
-//     FOLIO_CHARGES_TXN = "Folio Charges -Txn",
-//     EXCESS_WDL_CHARGES = "Excess wdl charges"
-// }
