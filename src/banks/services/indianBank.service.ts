@@ -74,7 +74,7 @@ export class IndianBankService {
 
   async registerComplaint(sessionId: string, complaintDto: ComplaintRequestDto): Promise<ComplaintResponseDto> {
 
-    const bankUrl = process.env.INDIAN_BANK_URL;
+    const bankUrl = constants.indianBankUrl;
     if (!bankUrl) {
       throw new Error('Bank URL not found');
     }

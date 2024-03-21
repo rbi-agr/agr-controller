@@ -54,6 +54,7 @@ model Sessions {
   complaintCategoryType    String?
   complaintCategorySubType String?
   initialQuery             String
+  selectedTransactionId    String?
   bankInteractions         BankInteractions[]
   transactions             TransactionDetails[]
 }
@@ -92,6 +93,13 @@ model BankInteractions {
   interactionType InteractionType
   timestamp       DateTime        @default(now())
   metadata        Json?
+}
+
+model BankNarrations {
+  id              String     @id @default(auto()) @map("_id") @db.ObjectId
+  narration       String
+  natureOfCharge  String
+  details         String
 }
 
 //naration-educative text
