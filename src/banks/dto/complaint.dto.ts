@@ -1,6 +1,7 @@
 export interface ComplaintRequestDto {
     accountNumber: string;
     mobileNumber: string;
+    complaintCategoryId: string;
     complaintCategory: string;
     complaintCategoryType: string;
     complaintCategorySubtype: string;
