@@ -29,8 +29,7 @@ export class ChatStateManager {
                     sessionId: sessionId,
                 },
             })
-
-            const message = reqData.message
+            const message = reqData.message.text
 
             //detect language here
             // const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/languagedetection`)
@@ -73,6 +72,30 @@ export class ChatStateManager {
             if (!session) {
                 state = 0
             } else {
+                //add a retry in the db max 3 tries
+                if(session.retriesLeft<=0) {
+                    const intentFailRes = [{
+                        "status": "Bad Request",
+                        message: "Maximum retries limit reached. Please try again later.",
+                        end_connection: true
+                    }]
+                    return intentFailRes
+                } 
+                if(message.length === 0) {
+                    await this.prisma.sessions.update({
+                        where: { sessionId: reqData.session_id },
+                        data: {
+                            retriesLeft: {
+                                decrement: 1
+                            }
+                        }
+                    });
+                    return [{
+                        status: "Bad Request",
+                        message: "Please enter a valid query",
+                        end_connection: false
+                    }]
+                }
                 state = session.state
             }
             if(state == 99) {
@@ -258,6 +281,12 @@ export class ChatStateManager {
                             end_connection: false
                         }]
                     }
+                    await this.prisma.sessions.update({
+                        where:{ sessionId: reqData.session_id },
+                        data:{
+                            initialQuery: messageForIntent
+                        }
+                    })
                     //call intent api
 
                     const intentResponse = {
@@ -872,11 +901,17 @@ export class ChatStateManager {
                     })
                     // get corresponding bank narration
                     const bankNarrations = await this.prisma.bankNarrations.findMany();
-                    
-                    const correspondingBankNarration = bankNarrations.find(bankNarration => 
-                        state7TransactionNarration.toLowerCase().includes(bankNarration.narration.toLowerCase())
-                    )
 
+                    let correspondingBankNarration;
+                    const transactionNarrationLower = transactionForTicket.transactionNarration.toLowerCase()
+
+                    bankNarrations.forEach((bankNarration) => {
+                        const bankNarrationLower = bankNarration.narration.toLowerCase()
+                        if(transactionNarrationLower.includes(bankNarrationLower)) {
+                            correspondingBankNarration = bankNarration
+                        }
+                    
+                    })
                     // generate complaint details
                     const complaint = {
                         complaintCategory: session.complaintCategory,
