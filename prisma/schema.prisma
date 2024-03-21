@@ -47,6 +47,7 @@ model Sessions {
   languageByAdya           String?
   retriesLeft              Int?
   ratings                  Int?
+  experienceRating         Int?
   bankAccountNumber        String
   startDate                DateTime?
   endDate                  DateTime?
