@@ -90,18 +90,22 @@ export class IndianBankService {
     });
 
     // TODO: Update endpoint when exposed by the bank
-    const endpoint = `/ticket`;
+    const endpoint = `/uat-indian-bankapi/enterprise/rbih/v1/add-complaint-cgrs`;
+
+    // get current date and time in format DD-MM-YYYY HH:MM:SS
+    const currentDateTime = getCurrentDateTime();
 
     const requestPayload = {
-      Date_Time: new Date(),
-      Acc_No: complaintDto.accountNumber,
-      Mob_No: complaintDto.mobileNumber,
-      Comp_Cat: complaintDto.complaintCategory,
-      Comp_Cat_Type: complaintDto.complaintCategoryType,
-      Comp_Cat_Sub_Type: complaintDto.complaintCategorySubtype,
-      Amt: complaintDto.amount,
-      Tran_Date: complaintDto.transactionDate,
-      Comp_Details: complaintDto.complaintDetails,
+      Request_Date_and_Time: currentDateTime,
+      Customer_Account_Number: complaintDto.accountNumber,
+      Customer_Mobile_Number: complaintDto.mobileNumber,
+      Customer_Cat_ID: complaintDto.complaintCategoryId,
+      Complaint_category: complaintDto.complaintCategory,
+      Complaint_category_type: complaintDto.complaintCategoryType,
+      Complaint_category_subtype: complaintDto.complaintCategorySubtype,
+      Amount: complaintDto.amount,
+      txn_Date: complaintDto.transactionDate,
+      Complaint_detail: complaintDto.complaintDetails,
     }
     const headers = this.constructRequestHeaders(apiInteractionId);
 
@@ -165,4 +169,23 @@ export class IndianBankService {
     }
     return headers;
   }
+}
+
+function getCurrentDateTime() {
+  const now = new Date();
+  
+  // Extracting date components
+  const date = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are zero based
+  const year = now.getFullYear();
+  
+  // Extracting time components
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  
+  // Constructing the formatted date and time string
+  const dateTimeString = `${date}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+  
+  return dateTimeString;
 }

@@ -245,7 +245,6 @@ export class ChatStateManager {
                     break;
                 case 1:
                     this.logger.info('inside case 1')
-                    //get the intial query and check for intent which will give us category, subcategory, subtype stored in db
                     const messageForIntent = reqData.message.text
                     let sessionForIntent = await this.prisma.sessions.findUnique({
                         where: {
@@ -253,7 +252,7 @@ export class ChatStateManager {
                         }
                     })
 
-                    //add a retry in the db max 3 tries
+                    // Recheck for valid query and end connection if retries are over
                     if(sessionForIntent && sessionForIntent.retriesLeft<=0) {
                         const intentFailRes = [{
                             "status": "Bad Request",
@@ -283,9 +282,12 @@ export class ChatStateManager {
                             initialQuery: messageForIntent
                         }
                     })
+
+                    //get the intial query and check for intent which will give us category id, category, subcategory, subtype stored in db
                     //call intent api
 
                     const intentResponse = {
+                        categoryId: '450',
                         category: 'category',
                         subtype: 'subtype',
                         type: 'type',
@@ -300,7 +302,7 @@ export class ChatStateManager {
                         }]
                         return exitResponse
                     }
-                    if (!intentResponse.category || !intentResponse.subtype || !intentResponse.type) {
+                    if (!intentResponse.categoryId ||!intentResponse.category || !intentResponse.subtype || !intentResponse.type) {
                         //intent did not classify
 
                         //add a retry in the db max 3 tries
@@ -330,6 +332,7 @@ export class ChatStateManager {
                         where:{sessionId:reqData.session_id},
                         data:{
                             state:2,
+                            complaintCategoryId: intentResponse.categoryId,
                             complaintCategory: intentResponse.category,
                             complaintCategoryType: intentResponse.type,
                             complaintCategorySubType: intentResponse.subtype,
@@ -438,7 +441,7 @@ export class ChatStateManager {
                             amount: 1000
                         }, {
                             transactionDate: '2024-03-14T00:00:00.000Z',
-                            transactionNarration: 'UNCOLL CHRG DT',
+                            transactionNarration: 'ATM AMC CHGS',
                             transactionType: 'DR',
                             amount: 1000
                         }]
@@ -883,10 +886,11 @@ export class ChatStateManager {
                     })
                     if(session.complaintCategory == undefined 
                         || session.complaintCategoryType == undefined
-                        || session.complaintCategorySubType == undefined) {
+                        || session.complaintCategorySubType == undefined
+                        || session.complaintCategoryId == undefined) {
                         return [{
                             status: "Internal Server Error",
-                            message: "Complaint category, type and subtype are required for state 12",
+                            message: "Complaint category, categoryId, type and subtype are required for state 12",
                             end_connection: true
                         }]
                     }
@@ -924,6 +928,7 @@ export class ChatStateManager {
                     const complaintRequestData: ComplaintRequestDto = {
                         accountNumber: session.bankAccountNumber,
                         mobileNumber: userForTicket.phoneNumber,
+                        complaintCategoryId: session.complaintCategoryId,
                         complaintCategory: session.complaintCategory,
                         complaintCategoryType: session.complaintCategoryType,
                         complaintCategorySubtype: session.complaintCategorySubtype,
