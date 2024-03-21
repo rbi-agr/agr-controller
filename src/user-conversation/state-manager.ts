@@ -869,10 +869,16 @@ export class ChatStateManager {
                     // get corresponding bank narration
                     const bankNarrations = await this.prisma.bankNarrations.findMany();
 
-                    const correspondingBankNarration = bankNarrations.find(bankNarration => 
-                        state7TransactionNarration.toLowerCase().includes(bankNarration.narration.toLowerCase())
-                    )
+                    let correspondingBankNarration;
+                    const transactionNarrationLower = transactionForTicket.transactionNarration.toLowerCase()
 
+                    bankNarrations.forEach((bankNarration) => {
+                        const bankNarrationLower = bankNarration.narration.toLowerCase()
+                        if(transactionNarrationLower.includes(bankNarrationLower)) {
+                            correspondingBankNarration = bankNarration
+                        }
+                    
+                    })
                     // generate complaint details
                     const complaint = {
                         complaintCategory: session.complaintCategory,
