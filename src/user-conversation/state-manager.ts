@@ -32,11 +32,12 @@ export class ChatStateManager {
             const message = reqData.message.text
 
             //detect language here
-            // const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/languagedetection`)
-            const languageDetectedresponse = {
-                language: 'en',
-                error: null
-            }
+            const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/language-detect`)
+            // const languageDetectedresponse = {
+            //     language: 'en',
+            //     error: null
+            // }
+            
             if(languageDetectedresponse.error){
                 const exitResponse =  [{
                     status: "Internal Server Error",
@@ -46,9 +47,23 @@ export class ChatStateManager {
                 return exitResponse
             }
             const languageDetected = languageDetectedresponse?.language
+            
             if(languageDetected !== 'en') {
-                if(languageDetected === 'hi' || languageDetected === 'od'){
+                if(languageDetected === 'hi' || languageDetected === 'or'|| languageDetected === 'ori'){
                     //convert the message to english
+                    const translatedmessage = await this.PostRequestforTranslation(reqData.message.text,languageDetected,"en",`${process.env.BASEURL}/ai/translate`)
+                    console.log("translatedmessage..................",translatedmessage)
+                    if(!translatedmessage.error){
+                        //Convert the language to englidh into the reqdata
+                        reqData ={...reqData,message:{"text":translatedmessage.translated}}
+                    }
+                    else{
+                        return[{
+                            status: "Internal Server Error",
+                            "message": "Something went wrong with language translation",
+                            "end_connection": true
+                          }]
+                    }
                 }else {
                     //throw error stating to change the message language (User to enter the query)
                     const lang_detected=[{
@@ -117,9 +132,35 @@ export class ChatStateManager {
                 
                 let translatedresponse=response?.map(async(e)=>
                 {
-                    let messageTranslationresp= await this.PostRequest(e?.message,"https://rbih-agr.free.beeceptor.com/languagetranslation")
-                    messageTranslation = messageTranslationresp.translated
+                    let messageTranslationresp= await this.PostRequestforTranslation(e?.message,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
+                    if(!messageTranslationresp.error){
+                        messageTranslation = messageTranslationresp.translated
+                    if(e?.options.length!==0){
+                        let translatedoption = e?.options.map(async(op)=>{
+                            let translatedoptionresp = await this.PostRequestforTranslation(e?.message,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
+                            if(!translatedoptionresp.error){
+                                return translatedoptionresp.translated
+                            }
+                            else
+                            {
+                                return[{
+                                    status: "Internal Server Error",
+                                    "message": "Something went wrong with language translation",
+                                    "end_connection": true
+                                  }]
+                            }
+                        })
+                        return {...e,message:messageTranslation,options:translatedoption}
+                    }
                     return {...e,message:messageTranslation}
+                    }
+                    else{
+                        return[{
+                            status: "Internal Server Error",
+                            "message": "Something went wrong with language translation",
+                            "end_connection": true
+                          }]
+                    }
                 })
                 response=translatedresponse
             }
@@ -289,13 +330,13 @@ export class ChatStateManager {
                     })
                     //call intent api
 
-                    const intentResponse = {
-                        category: 'category',
-                        subtype: 'subtype',
-                        type: 'type',
-                        error: null
-                    }
-                    // const intentResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/intentclassifier`)
+                    // const intentResponse = {
+                    //     category: 'category',
+                    //     subtype: 'subtype',
+                    //     type: 'type',
+                    //     error: null
+                    // }
+                    const intentResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
                     if(intentResponse.error){
                         const exitResponse =  [{
                             status: "Internal Server Error",
@@ -1220,9 +1261,25 @@ export class ChatStateManager {
     async PostRequest(message: String,apiUrl: any) :Promise<any> {
         try {
             const requestBody = {
-                message: message,
+                text: message,
               };
             this.logger.info('API for Post Request')
+            const response = await axios.post(apiUrl,requestBody)
+            
+            return response.data
+        } catch (error) {
+            this.logger.error('Error in calling this API', error)
+            return { statusCode: 400, message: 'Error in calling this API', error: error }
+        }
+    }
+    async PostRequestforTranslation(message: String,source: String, target:String,apiUrl: any) :Promise<any> {
+        try {
+            const requestBody = {
+                source:source,
+                target: target,
+                text: message,
+              };
+            this.logger.info('API for Post Request for Translation')
             const response = await axios.post(apiUrl,requestBody)
             return response.data
         } catch (error) {
