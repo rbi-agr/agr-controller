@@ -3,7 +3,7 @@ import { Injectable} from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import axios from "axios";
-import { getEduMsg } from "./utils/utils";
+import { getComplaintDetails, getEduMsg } from "./utils/utils";
 import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
 import { BankName } from "@prisma/client";
 import { response } from "express";
@@ -174,7 +174,7 @@ export class ChatStateManager {
                             }
                         })
                     }
-                                        //detect language here
+                    //detect language here
                     const languageByAdya = reqData.metadata.language
                     const createdSession = await this.prisma.sessions.create({
                         data: {
@@ -221,10 +221,9 @@ export class ChatStateManager {
                     }
                     break;
                 case 1:
-                    
                     this.logger.info('inside case 1')
                     //get the intial query and check for intent which will give us category, subcategory, subtype stored in db
-                    const messageForIntent = reqData.message
+                    const messageForIntent = reqData.message.text
                     let sessionForIntent = await this.prisma.sessions.findUnique({
                         where: {
                             sessionId: reqData.session_id
@@ -240,7 +239,21 @@ export class ChatStateManager {
                         }]
                         return intentFailRes
                     } 
-
+                    if(messageForIntent.length === 0) {
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                retriesLeft: {
+                                    decrement: 1
+                                }
+                            }
+                        });
+                        return [{
+                            status: "Bad Request",
+                            message: "Please enter a valid query",
+                            end_connection: false
+                        }]
+                    }
                     //call intent api
 
                     const intentResponse = {
@@ -529,7 +542,7 @@ export class ChatStateManager {
                         "message": "No transactions found. Please select a different range",
                         "options": [],
                         "end_connection": false,
-                        "prompt": "date_pick",
+                        "prompt": "date_range",
                         "metadata":{}
                     }]
                     return intentFailRes
@@ -550,7 +563,7 @@ export class ChatStateManager {
                         "message": "Please enter the date of transaction",
                         "options": [],
                         "end_connection": false,
-                        "prompt": "date_pick",
+                        "prompt": "date_picker",
                         "metadata":{}
                     }]
                     return success_r2
@@ -561,20 +574,46 @@ export class ChatStateManager {
 
                     const transaction = reqData.message.text;
                     const state7TransactionNarration = transaction.split('|')[1];
+                    const state7TransactionAmount = transaction.split('|')[2];
 
                     if(state7TransactionNarration && state7TransactionNarration.length > 0) {
-                        //Update the state to 10
-                        // await this.prisma.sessions.update({
-                        //     where: {
-                        //         sessionId:reqData.session_id
-                        //     },
-                        //     data: {
-                        //         state: 10
-                        //     }
-                        // })
-                        const educatingMessage = getEduMsg(state7TransactionNarration)
 
-                        if(educatingMessage) {
+                        // set selected transaction
+                        const transactionDetails = await this.prisma.transactionDetails.findUnique({
+                            where: {
+                                sessionId: reqData.session_id,
+                                transactionNarration: state7TransactionNarration
+                            }
+                        })
+                        await this.prisma.sessions.update({
+                            where: {
+                                sessionId: reqData.session_id
+                            },
+                            data: {
+                                selectedTransactionId: transactionDetails.id
+                            }
+                        })
+
+                        // generate educating message
+                        const bankNarrations = await this.prisma.bankNarrations.findMany();
+
+                        const correspondingNarration = bankNarrations.find(bankNarration => 
+                            state7TransactionNarration.toLowerCase().includes(bankNarration.narration.toLowerCase())
+                        )
+                        if(correspondingNarration) {
+                            // const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount)
+
+                            // if(educatingMessageResponse.error){
+                            //     this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
+                            //     const exitResponse =  [{
+                            //         status: "Internal Server Error",
+                            //         message: "Internal Server Error",
+                            //         end_connection: true
+                            //     }]
+                            //     return exitResponse
+                            // }
+                            // const educatingMessage = educatingMessageResponse.message;
+                            const educatingMessage = correspondingNarration.natureOfCharge
                             const educatingRes = [{
                                 status: "Success",
                                 session_id: reqData.session_id,
@@ -822,9 +861,29 @@ export class ChatStateManager {
                             end_connection: true
                         }]
                     }
-                    const transactionForTicket = reqData.metadata; 
+                    const transactionForTicket = await this.prisma.transactionDetails.findUnique({
+                        where:{
+                            id: session.selectedTransactionId
+                        }
+                    })
+                    // get corresponding bank narration
+                    const bankNarrations = await this.prisma.bankNarrations.findMany();
+
+                    const correspondingBankNarration = bankNarrations.find(bankNarration => 
+                        state7TransactionNarration.toLowerCase().includes(bankNarration.narration.toLowerCase())
+                    )
 
                     // generate complaint details
+                    const complaint = {
+                        complaintCategory: session.complaintCategory,
+                        complaintCategoryType: session.complaintCategoryType,
+                        complaintCategorySubtype: session.complaintCategorySubtype,
+                        narration: transactionForTicket.transactionNarration,
+                        natureOfCharge: correspondingBankNarration?.natureOfCharge,
+                        amount: transactionForTicket.amount
+                    }
+                    // const complaintDetails = await getComplaintDetails(complaint)
+                    const complaintDetails = ''
 
                     // Call register complaint API
                     const complaintRequestData: ComplaintRequestDto = {
@@ -833,9 +892,9 @@ export class ChatStateManager {
                         complaintCategory: session.complaintCategory,
                         complaintCategoryType: session.complaintCategoryType,
                         complaintCategorySubtype: session.complaintCategorySubtype,
-                        amount: transactionForTicket.amount,
-                        transactionDate: transactionForTicket.transactionDate,
-                        complaintDetails: ''
+                        amount: transactionForTicket.amount.toString(),
+                        transactionDate: transactionForTicket.transactionTimeBank.toISOString(),
+                        complaintDetails: complaintDetails
                     }
                     try {
                         // const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
@@ -1047,18 +1106,10 @@ export class ChatStateManager {
                     const state18SuccessResponse = [{
                         status: "Success",
                         session_id: reqData.session_id,
-                        "message": "Please enter startdate for the transaction",
+                        "message": "Please enter the start date and end date for the transaction",
                         "options": [],
                         "end_connection": false,
-                        "prompt": "date_pick",
-                        "metadata": {}
-                    }, {
-                        status: "Success",
-                        session_id: reqData.session_id,
-                        "message": "Please enter enddate for the transaction",
-                        "options": [],
-                        "end_connection": false,
-                        "prompt": "date_pick",
+                        "prompt": "date_range",
                         "metadata": {}
                     }]
                     return state18SuccessResponse
@@ -1145,7 +1196,7 @@ export class ChatStateManager {
         try {
             const requestBody = {
                 userprompt: message,
-                task:"fetch me the start and end date in format(mm-dd-yyyy example) in json format like:{'transaction_startdate': 'ISODate''transaction_enddate': 'ISODate'}"
+                task:"fetch me the start date and end date in format(mm-dd-yyyy example) in json format like:{'transaction_startdate': 'ISODate', 'transaction_enddate': 'ISODate'}"
               };
             this.logger.info('API for Post Request for TransactionDates')
             const response = await axios.post(apiUrl,requestBody)
