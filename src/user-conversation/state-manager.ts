@@ -141,7 +141,11 @@ export class ChatStateManager {
             return response
         } catch (error) {
             this.logger.error('error occured in state manager ', error)
-            return error
+            return [{
+                status: "Internal Server Error",
+                message: "Something went wrong. Please try again later",
+                end_connection: true
+            }]
         }
     }
 
@@ -868,7 +872,7 @@ export class ChatStateManager {
                     })
                     // get corresponding bank narration
                     const bankNarrations = await this.prisma.bankNarrations.findMany();
-
+                    
                     const correspondingBankNarration = bankNarrations.find(bankNarration => 
                         state7TransactionNarration.toLowerCase().includes(bankNarration.narration.toLowerCase())
                     )
