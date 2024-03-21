@@ -1212,6 +1212,50 @@ export class ChatStateManager {
             return { statusCode: 400, message: 'Error in this move', error: error }
         }
     }
+
+    async addRatingOverall(rating: number, sessionid: string): Promise<any>{
+        try{
+            this.logger.info("API for overall rating")
+            if(sessionid && rating){
+                const existing_session = await this.prisma.sessions.findUnique({
+                    where:{
+                        sessionId: sessionid
+                    }
+                })
+                if(existing_session)
+                {
+                    await this.prisma.sessions.update({
+                        where:{
+                            sessionId: sessionid
+                        },
+                        data:{
+                            experienceRating: rating
+                        }
+                    })
+                    return{
+                        status:"Success", 
+                        message: 'Overall experience updated successfully'
+                    }
+                }
+                return{
+                    status:"Internal Server Error", 
+                    message: 'No session found'
+                }
+                
+            }
+            else
+            {
+                return{
+                    status:"Internal Server Error", 
+                    message: 'Fields missing'
+                }
+            }
+        }
+        catch (error) {
+            this.logger.error('Error ', error)
+            return { status:"Internal Server Error", message: 'Something went wrong'}
+        }
+    }
     // close socket connection code
     // case to rate a session and close socket connections
     //make sure to return response in the same language as of users query
