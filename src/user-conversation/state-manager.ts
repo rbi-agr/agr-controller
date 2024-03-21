@@ -776,7 +776,7 @@ export class ChatStateManager {
                             }
                         })
                         return this.states(reqData, languageDetected, 11)
-                    } else {
+                    } else if((state10Message && state10Message.toLowerCase() === 'no')) {
                         await this.prisma.sessions.update({
                             where: { sessionId: reqData.session_id },
                             data: {
@@ -784,6 +784,14 @@ export class ChatStateManager {
                             }
                         })
                         return this.states(reqData, languageDetected, 12)
+                    }
+                    else
+                    {
+                        return [{
+                                status: "Bad Request",
+                                message: "Invalid Query",
+                                end_connection: true
+                        }]
                     }
                 case 11:
                     //If transactions are fetched more than 1, ask user about the other transaction too
@@ -1039,7 +1047,7 @@ export class ChatStateManager {
                         })
                         return success_r4
                     }
-                    else{
+                    else if(userresponse && userresponse.toLowerCase()==="no"){
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
                             data:{
@@ -1049,6 +1057,14 @@ export class ChatStateManager {
                         const res = await this.states(reqData, languageDetected, 13)
                         return res
                     }
+                    else 
+                    {
+                        return [{
+                            status: "Bad Request",
+                            message: "Invalid Query",
+                            end_connection: true
+                    }]
+                    }
                     break;
                 case 17:
                     //Redirect to state 6 or 18 based on answer
@@ -1056,10 +1072,18 @@ export class ChatStateManager {
 
                     const state17Message = reqData.message.text;
                     let state17NextState;
-                    if(state17Message === 'Yes') {
+                    if(state17Message && state17Message.toLowerCase() === 'yes') {
                         state17NextState = 6;
-                    } else {
+                    } else if (state17Message && state17Message.toLowerCase() === 'no') {
                         state17NextState = 18;
+                    }
+                    else
+                    {
+                        return [{
+                            status: "Bad Request",
+                            message: "Invalid Query",
+                            end_connection: true
+                    }]
                     }
                     await this.prisma.sessions.update({
                         where: {
