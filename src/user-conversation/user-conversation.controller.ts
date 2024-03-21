@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { ChatStateManager } from './state-manager';
 
-@Controller('user')
+@Controller('chat')
 export class UserConversationController {
     constructor(private readonly chatService: ChatStateManager){}
 
