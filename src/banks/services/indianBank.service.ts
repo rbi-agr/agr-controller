@@ -39,7 +39,7 @@ export class IndianBankService {
     const headers = this.constructRequestHeaders(apiInteractionId)
 
     try {
-            const response = await axios.post(bankUrl + endpoint, requestPayload, {
+      const response = await axios.post(bankUrl + endpoint, requestPayload, {
         headers: headers
       })
       const transactions = response.data.TXN_CHGS_RESPONSE.body.payload.collection;
@@ -58,8 +58,9 @@ export class IndianBankService {
         }
       });
       const formattedTransactions: TransactionsResponseDto[] = transactions.map(transaction => {
+        const transactionDate = formatResponseDate(transaction.Valid_Date)
         return {
-          transactionDate: transaction.Valid_Date,
+          transactionDate: transactionDate,
           transactionType: transaction.Transaction_Type,
           amount: transaction.Amount,
           transactionNarration: transaction.Narration,
@@ -188,4 +189,16 @@ function getCurrentDateTime() {
   const dateTimeString = `${date}-${month}-${year} ${hours}:${minutes}:${seconds}`;
   
   return dateTimeString;
+}
+
+function formatResponseDate(dateString: string): string {
+  if (dateString.length !== 8) {
+      return dateString; // Invalid input length
+  }
+  
+  const day = dateString.substring(0, 2);
+  const month = dateString.substring(2, 4);
+  const year = dateString.substring(4, 8);
+
+  return `${day}/${month}/${year}`;
 }

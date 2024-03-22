@@ -435,15 +435,15 @@ export class ChatStateManager {
                     try {
                         // const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
                         const transactions = [{
-                            transactionDate: '2024-03-13T00:00:00.000Z',
+                            transactionDate: '13/03/2024',
                             transactionNarration: 'Excess wdl charges',
                             transactionType: 'DR',
-                            amount: 1000
+                            amount: "1000"
                         }, {
-                            transactionDate: '2024-03-14T00:00:00.000Z',
+                            transactionDate: '14/03/2024',
                             transactionNarration: 'ATM AMC CHGS',
                             transactionType: 'DR',
-                            amount: 1000
+                            amount: "1000"
                         }]
                         if(transactions.length === 0) {
                             if(session.retriesLeft <= 0) {
@@ -479,7 +479,7 @@ export class ChatStateManager {
                             })
                         });
                         const transactionOptions = transactions.map(transaction => {
-                            return transaction.transactionDate + '|' + transaction.transactionNarration + '|' + transaction.amount.toString()
+                            return transaction.transactionDate + '|' + transaction.transactionNarration + '|' + transaction.amount
                         });
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
