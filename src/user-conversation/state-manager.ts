@@ -213,6 +213,28 @@ export class ChatStateManager {
                         }
                     })
                     if(createdSession) {
+                        // check if initial query is empty and ask if it is empty
+                        if(!message) {
+                            await this.prisma.sessions.update({
+                                data: {
+                                  retriesLeft: reqData.session_id.retriesLeft - 1,
+                                },
+                                where: {
+                                  sessionId: reqData.session_id,
+                                },
+                              })
+
+                            return [{
+                                "success": "true",
+                                "message":"Please enter your query",
+                                "options": [],
+                                "end_connection": false,
+                                "prompt": "text_message",
+                                "metadata":{}
+                            }]
+                        }
+
+                        
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
                             data:{
@@ -232,6 +254,8 @@ export class ChatStateManager {
                                 timeStamp: new Date()
                             }
                         })
+                        
+                        
                        const stateCreationRes = await this.states(reqData, languageDetected, 1)
                        return stateCreationRes
                     } else {
@@ -419,10 +443,11 @@ export class ChatStateManager {
                             sessionId
                         }
                     })
+                    
                     if(session.startDate == undefined || session.endDate == undefined) {
                         return [{
                             status: "Internal Server Error",
-                            message: "Transaction start date and end date are required for state 3",
+                            message: "Transaction start date and end date are required for fetching transactions",
                             end_connection: true
                         }]
                     }
@@ -741,7 +766,12 @@ export class ChatStateManager {
                         }
                     })
                     //Data from MistralAI
-                    // const datesResponse = await this.PostRequestforTransactionDates(reqData.message.text,`${process.env.BASEURL}/transactiondates`)
+                    const userMessage = reqData.message.text
+                    // const contextMessageForMistral = `user query: ${userMessage} task- give me the start and end date from the user query, just the result in json format, in the following format.  response={ startDate: <startDate>, endDate: <endDate>}, pls do not add any description or explanation just give me the json response`
+                    // const mistralResponse = await this.callMistralAI(contextMessageForMistral)
+                    // console.log('mistral response ', mistralResponse)
+                    // const dateData = mistralResponse.data.message.content
+                    // console.log('dateData ', dateData)
                     const datesResponse = {
                         transaction_startdate: '13/03/2024',
                         transaction_enddate: '14/03/2024',
@@ -1071,7 +1101,7 @@ export class ChatStateManager {
                         const success_r4= [{
                             status: "Success",
                             session_id: reqData.session_id,
-                            "message": null,
+                            "message": 'Please select from the following transactions',
                             "options": transactionOptions,
                             "end_connection": false,
                             "prompt": "option_selection",
@@ -1293,4 +1323,26 @@ export class ChatStateManager {
     // close socket connection code
     // case to rate a session and close socket connections
     //make sure to return response in the same language as of users query
+
+
+    //mistral - 1. startDate and endDate 2. Educative message 3. Generating Complaint Details 4. Get Neration from the bank list
+    async callMistralAI(message) {
+        try {
+            const url = process.env.MISTRAL_BASE_URL
+            const obj = {
+                "model": "mistral",
+                "messages":[{
+                    "role": "user",
+                    "content": message
+                }],
+                "stream": false
+            }
+            const mistralResponse = await axios.post(url, obj)
+            console.log(mistralResponse)
+            return mistralResponse
+        } catch(error) {
+            this.logger.error('Error ', error)
+            return { status:"Internal Server Error", message: 'Something went wrong'}
+        }
+    }
 }
