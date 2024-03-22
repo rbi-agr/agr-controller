@@ -80,7 +80,7 @@ model TransactionDetails {
   sessionId            String   @unique
   session              Sessions @relation(fields: [sessionId], references: [sessionId])
   transactionId        String?
-  amount               Int?
+  amount               String?
   transactionType      String
   transactionTimeBank  DateTime
   transactionNarration String
