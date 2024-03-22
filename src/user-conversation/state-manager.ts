@@ -788,43 +788,21 @@ export class ChatStateManager {
                     })
                     //Data from MistralAI
                     const userMessage = reqData.message.text
-                    // const contextMessageForMistral = `user query: ${userMessage} task- give me the start and end date from the user query, just the result in json format, in the following format.  response={ startDate: <startDate>, endDate: <endDate>}, pls do not add any description or explanation just give me the json response`
-                    // const mistralResponse = await this.callMistralAI(contextMessageForMistral)
-                    // console.log('mistral response ', mistralResponse)
-                    // const dateData = mistralResponse.data.message.content
-                    // console.log('dateData ', dateData)
-                    const datesResponse = {
-                        transaction_startdate: '13/03/2024',
-                        transaction_enddate: '14/03/2024',
-                        error: null
-                    }
-                    //Store it in db
-                    const startDateParts = datesResponse.transaction_startdate.split('/');
-                    const endDateParts = datesResponse.transaction_enddate.split('/');
-                    const startDate = new Date(`${startDateParts[2]}-${startDateParts[1]}-${startDateParts[0]}`);
-                    const endDate = new Date(`${endDateParts[2]}-${endDateParts[1]}-${endDateParts[0]}`);
 
-                    //Store it in db
-                    // if(datesResponse.error){
-                    //     const exitResponse =  [{
-                    //         status: "Internal Server Error",
-                    //         message: "Error in Mistral AI response",
-                    //         end_connection: true
-                    //     }]
-                    //     return exitResponse
-                    // }
-                    // const startDate = new Date(datesResponse.transaction_startdate);
-                    // const endDate = new Date(datesResponse.transaction_enddate);
+                    const datesInMessages = JSON.parse(userMessage)
+                    console.log('dates in user message ', datesInMessages)
+                    
+                    const startDate = new Date(datesInMessages.startDate).toISOString();
+                    const endDate = new Date(datesInMessages.endDate)
 
-                    // Convert to ISO 8601 format
-                    const isoStartDate = startDate.toISOString();
-                    const isoEndDate = endDate.toISOString();
-                    if (datesResponse){
+                    
+                    
+                    if (startDate && endDate){
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
                             data:{
-                                startDate:isoStartDate,
-                                endDate:isoEndDate
+                                startDate:startDate,
+                                endDate:endDate
                             }
                         })
                         await this.prisma.sessions.update({
@@ -841,7 +819,7 @@ export class ChatStateManager {
                     {
                         const intentFailRes = [{
                             status: "Internal Server Error",
-                            "message": "No Response from Mistral.AI",
+                            "message": "Could not find the dates of deduction.",
                             "end_connection": false
                           }]
                         return intentFailRes
