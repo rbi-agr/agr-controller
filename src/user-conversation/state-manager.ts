@@ -362,7 +362,7 @@ export class ChatStateManager {
                     //     error: null
                     // }
                     const intentResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
-                    if(intentResponse.error){
+                    if(intentResponse.statusCode == 400) {
                         const exitResponse =  [{
                             status: "Internal Server Error",
                             message: "Error in intent response",
@@ -400,6 +400,7 @@ export class ChatStateManager {
                         where:{sessionId:reqData.session_id},
                         data:{
                             state:2,
+                            complaintCategoryId: intentResponse.categoryId,
                             complaintCategory: intentResponse.category,
                             complaintCategoryType: intentResponse.type,
                             complaintCategorySubType: intentResponse.subtype,
@@ -497,18 +498,18 @@ export class ChatStateManager {
 
                     const transactionsData: TransactionsRequestDto = {
                         accountNumber: session.bankAccountNumber,
-                        fromDate: session.startDate.toISOString(),
-                        toDate: session.endDate.toISOString()
+                        fromDate: session.startDate,
+                        toDate: session.endDate
                     }
                     try {
                         // const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
                         const transactions = [{
-                            transactionDate: '13/03/2024',
+                            transactionDate: '2024-03-13',
                             transactionNarration: 'Excess wdl charges',
                             transactionType: 'DR',
                             amount: "1000"
                         }, {
-                            transactionDate: '14/03/2024',
+                            transactionDate: '2024-03-14',
                             transactionNarration: 'ATM AMC CHGS',
                             transactionType: 'DR',
                             amount: "1000"
@@ -1007,7 +1008,7 @@ export class ChatStateManager {
                         complaintCategoryType: session.complaintCategoryType,
                         complaintCategorySubtype: session.complaintCategorySubtype,
                         amount: transactionForTicket.amount.toString(),
-                        transactionDate: transactionForTicket.transactionTimeBank.toISOString(),
+                        transactionDate: transactionForTicket.transactionTimeBank,
                         complaintDetails: complaintDetails
                     }
                     try {
@@ -1400,7 +1401,7 @@ export class ChatStateManager {
                     if(!messageTranslationresp.error){
                         console.log("Translated",messageTranslationresp.translated)
                         let messageTranslation = messageTranslationresp.translated
-                        if(currentmessage.options.length>0 && translateOptions){
+                        if(currentmessage.options && currentmessage.options.length>0 && translateOptions){
                             let translatedoption=[]
                             for(let o=0; o<currentmessage.options.length; o++){
                                 let op = currentmessage.options[o]

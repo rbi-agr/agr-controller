@@ -51,7 +51,7 @@ model Sessions {
   bankAccountNumber        String
   startDate                DateTime?
   endDate                  DateTime?
-  complaintCategoryId      String?
+  complaintCategoryId      Int?
   complaintCategory        String?
   complaintCategoryType    String?
   complaintCategorySubType String?

@@ -6,7 +6,7 @@ export interface ComplaintRequestDto {
     complaintCategoryType: string;
     complaintCategorySubtype: string;
     amount: string;
-    transactionDate: string;
+    transactionDate: Date;
     complaintDetails: string;
 }
 
