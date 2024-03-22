@@ -32,11 +32,12 @@ export class ChatStateManager {
             const message = reqData.message.text
 
             //detect language here
-            // const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/languagedetection`)
-            const languageDetectedresponse = {
-                language: 'en',
-                error: null
-            }
+            const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/language-detect`)
+            // const languageDetectedresponse = {
+            //     language: 'en',
+            //     error: null
+            // }
+            
             if(languageDetectedresponse.error){
                 const exitResponse =  [{
                     status: "Internal Server Error",
@@ -46,9 +47,23 @@ export class ChatStateManager {
                 return exitResponse
             }
             const languageDetected = languageDetectedresponse?.language
+            
             if(languageDetected !== 'en') {
-                if(languageDetected === 'hi' || languageDetected === 'od'){
+                if(languageDetected === 'hi' || languageDetected === 'or'|| languageDetected === 'ori'){
                     //convert the message to english
+                    const translatedmessage = await this.PostRequestforTranslation(reqData.message.text,languageDetected,"en",`${process.env.BASEURL}/ai/language-translate`)
+                    console.log("translatedmessage..................",translatedmessage)
+                    if(!translatedmessage.error){
+                        //Convert the language to englidh into the reqdata
+                        reqData ={...reqData,message:{"text":translatedmessage.translated}}
+                    }
+                    else{
+                        return[{
+                            status: "Internal Server Error",
+                            "message": "Something went wrong with language translation",
+                            "end_connection": true
+                          }]
+                    }
                 }else {
                     //throw error stating to change the message language (User to enter the query)
                     const lang_detected=[{
@@ -115,12 +130,8 @@ export class ChatStateManager {
                 //convert the message to Language detected and return
                 //Translator API
                 
-                let translatedresponse=response?.map(async(e)=>
-                {
-                    let messageTranslationresp= await this.PostRequest(e?.message,"https://rbih-agr.free.beeceptor.com/languagetranslation")
-                    messageTranslation = messageTranslationresp.translated
-                    return {...e,message:messageTranslation}
-                })
+                let translatedresponse = await this.translatedResponse(response, languageDetected)
+                console.log("translatedresponse",translatedresponse)
                 response=translatedresponse
             }
             //Store messages in db
@@ -164,7 +175,11 @@ export class ChatStateManager {
             return response
         } catch (error) {
             this.logger.error('error occured in state manager ', error)
-            return error
+            return [{
+                status: "Internal Server Error",
+                message: "Something went wrong. Please try again later",
+                end_connection: true
+            }]
         }
     }
 
@@ -310,14 +325,21 @@ export class ChatStateManager {
                     //get the intial query and check for intent which will give us category id, category, subcategory, subtype stored in db
                     //call intent api
 
-                    const intentResponse = {
-                        categoryId: '450',
-                        category: 'category',
-                        subtype: 'subtype',
-                        type: 'type',
-                        error: null
-                    }
+                    // const intentResponse = {
+                    //     categoryId: '450',
+                    //     category: 'category',
+                    //     subtype: 'subtype',
+                    //     type: 'type',
+                    //     error: null
+                    // }
                     // const intentResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/intentclassifier`)
+                    // const intentResponse = {
+                    //     category: 'category',
+                    //     subtype: 'subtype',
+                    //     type: 'type',
+                    //     error: null
+                    // }
+                    const intentResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
                     if(intentResponse.error){
                         const exitResponse =  [{
                             status: "Internal Server Error",
@@ -326,7 +348,7 @@ export class ChatStateManager {
                         }]
                         return exitResponse
                     }
-                    if (!intentResponse.categoryId ||!intentResponse.category || !intentResponse.subtype || !intentResponse.type) {
+                    if (!intentResponse.category || !intentResponse.subtype || !intentResponse.type) {
                         //intent did not classify
 
                         //add a retry in the db max 3 tries
@@ -356,7 +378,6 @@ export class ChatStateManager {
                         where:{sessionId:reqData.session_id},
                         data:{
                             state:2,
-                            complaintCategoryId: intentResponse.categoryId,
                             complaintCategory: intentResponse.category,
                             complaintCategoryType: intentResponse.type,
                             complaintCategorySubType: intentResponse.subtype,
@@ -504,7 +525,7 @@ export class ChatStateManager {
                             })
                         });
                         const transactionOptions = transactions.map(transaction => {
-                            return transaction.transactionDate + '|' + transaction.transactionNarration + '|' + transaction.amount.toString()
+                            return this.formatDate(transaction.transactionDate) + '|' + transaction.transactionNarration + '|' + transaction.amount.toString()
                         });
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
@@ -916,8 +937,7 @@ export class ChatStateManager {
                     })
                     if(session.complaintCategory == undefined 
                         || session.complaintCategoryType == undefined
-                        || session.complaintCategorySubType == undefined
-                        || session.complaintCategoryId == undefined) {
+                        || session.complaintCategorySubType == undefined) {
                         return [{
                             status: "Internal Server Error",
                             message: "Complaint category, categoryId, type and subtype are required for state 12",
@@ -1095,7 +1115,7 @@ export class ChatStateManager {
                         })
                         
                         const transactionOptions = uneducated_transaction.map(transaction => {
-                            return transaction.transactionTimeBank.toISOString() + '|' + transaction.transactionNarration + '|' + transaction.amount.toString()
+                            return this.formatDate(transaction.transactionTimeBank.toISOString()) + '|' + transaction.transactionNarration + '|' + transaction.amount.toString()
                         });
                         
                         const success_r4= [{
@@ -1251,12 +1271,29 @@ export class ChatStateManager {
     async PostRequest(message: String,apiUrl: any) :Promise<any> {
         try {
             const requestBody = {
-                message: message,
+                text: message,
               };
             this.logger.info('API for Post Request')
             const response = await axios.post(apiUrl,requestBody)
+            
             return response.data
         } catch (error) {
+            this.logger.error('Error in calling this API', error)
+            return { statusCode: 400, message: 'Error in calling this API', error: error }
+        }
+    }
+    async PostRequestforTranslation(message: String,source: String, target:String,apiUrl: any) :Promise<any> {
+        try {
+            const requestBody = {
+                source:source,
+                target: target,
+                text: message,
+              };
+            this.logger.info('API for Post Request for Translation')
+            const response = await axios.post(apiUrl,requestBody)
+            return response.data
+        } catch (error) {
+            console.log(error)
             this.logger.error('Error in calling this API', error)
             return { statusCode: 400, message: 'Error in calling this API', error: error }
         }
@@ -1318,6 +1355,66 @@ export class ChatStateManager {
         catch (error) {
             this.logger.error('Error ', error)
             return { status:"Internal Server Error", message: 'Something went wrong'}
+        }
+    }
+
+    formatDate(isoDateString: string): string {
+        const date = new Date(isoDateString);
+        const options = { day: 'numeric', month: 'long', year: 'numeric' } as const;
+        const formattedDate = date.toLocaleDateString('en-US', options);
+        return formattedDate.replace(/(\d+)(st|nd|rd|th)/, '$1'); // Remove suffix from day
+    }
+
+    async translatedResponse(response, languageDetected){
+        try {
+            let translatedresponse
+                for(let e=0; e<response.length; e++)
+                {
+                    let currentmessage = response[e]
+                    let messageTranslationresp= await this.PostRequestforTranslation(currentmessage.message,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
+                    
+                    if(!messageTranslationresp.error){
+                        console.log("Translated",messageTranslationresp.translated)
+                        let messageTranslation = messageTranslationresp.translated
+                        if(currentmessage.options.length>0){
+                            let translatedoption=[]
+                            for(let o=0; o<currentmessage.options.length; o++){
+                                let op = currentmessage.options[o]
+                                let translatedoptionresp = await this.PostRequestforTranslation(op,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
+                                console.log("Translatedoption", translatedoptionresp)
+                                if(!translatedoptionresp.error){
+                                    translatedoption.push(translatedoptionresp.translated)
+                                }
+                                else
+                                {
+                                    return[{
+                                        status: "Internal Server Error",
+                                        "message": "Something went wrong with language translation",
+                                        "end_connection": true
+                                    }]
+                                }
+                            }
+                            console.log("HERE",translatedoption)
+                            
+                            return [{...currentmessage,message:messageTranslation,options:translatedoption}]
+                        }
+                    console.log("Here")
+                    return [{...currentmessage,message:messageTranslation}]
+                    }
+                    else{
+                        return[{
+                            status: "Internal Server Error",
+                            "message": "Something went wrong with language translation",
+                            "end_connection": true
+                          }]
+                    }
+                }
+        } catch (error) {
+            return[{
+                status: "Internal Server Error",
+                "message": "Something went wrong with language translation",
+                "end_connection": true
+              }]
         }
     }
     // close socket connection code
