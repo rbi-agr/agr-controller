@@ -22,10 +22,10 @@ export class UserConversationService {
   async handleMessage(@MessageBody() body: any, @ConnectedSocket() clientSocket: Socket) {
     //1. extract input data
     console.log(body)
-    const data = JSON.parse(body)
-    console.log('client socket ', clientSocket)
+    const data = JSON.parse(JSON.stringify(body))
+    // console.log('client socket ', clientSocket)
     const headers = clientSocket.handshake.headers
-    console.log('headers ', headers) 
+    // console.log('headers ', headers) 
     // const clientId: string = String(headers.client_id)
     
     const sessionId = data.session_id
