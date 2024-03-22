@@ -7,6 +7,8 @@ WORKDIR /app
 # Copy package.json and package-lock.json (if available) to the container
 COPY package*.json ./
 
+RUN npm install
+
 # Install Prisma globally
 RUN npm install -g prisma
 
