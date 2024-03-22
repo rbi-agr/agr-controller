@@ -1,17 +1,20 @@
 import axios from "axios";
+import { ChatStateManager } from "../state-manager";
+
+
 
 export async function getEduMsg(bankNarration: any, amount: number) {
     const userprompt = `amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}}`
-    const task = "Get me the reason for these charges and how I can prevent them based on amount, bank narration, nature of charge and details provided"
-    return getDataFromLLM(userprompt, task)
+    const task = `this is the user query: Get me the reason for the charges: amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}} and how I can prevent them based on amount, bank narration, nature of charge and details provided`
+    return callMistralAI(task)
 }
 
 export async function getComplaintDetails(complaint: any) {
-
+    
     const userprompt = `complaint category: ${complaint.complaintCategory}, complaint category type: ${complaint.complaintCategoryType}, complaint category subtype: ${complaint.complaintCategorySubtype}, bank narration: "${complaint.narration}", nature of charge: "${complaint.natureOfCharge}", amount: {${complaint.amount}}`
-    const task = "Based on the the complaint category, complaint category type, complaint category subtype, bank narration, nature of charge and amount, get me the short description of the complaint"
+    const task = `this is the user query: Based on the the complaint category: ${complaint.complaintCategory}, complaint category type: ${complaint.complaintCategoryType}, complaint category subtype: ${complaint.complaintCategorySubtype}, bank narration: "${complaint.narration}", nature of charge: "${complaint.natureOfCharge}", amount: {${complaint.amount}}, get me the short description of the complaint`
 
-    return getDataFromLLM(userprompt, task)
+    return callMistralAI(task)
 }
 
 export async function getDataFromLLM(userPrompt: string, task: string) {
@@ -26,4 +29,24 @@ export async function getDataFromLLM(userPrompt: string, task: string) {
         return { statusCode: 400, message: 'Error in fetching data from mistral AI', error: error }
     }
 
+}
+
+export async function callMistralAI(message) {
+    try {
+        const url = process.env.MISTRAL_BASE_URL
+        const obj = {
+            "model": "mistral",
+            "messages":[{
+                "role": "user",
+                "content": message
+            }],
+            "stream": false
+        }
+        const mistralResponse = await axios.post(url, obj)
+        console.log(mistralResponse)
+        return mistralResponse.data
+    } catch(error) {
+        this.logger.error('Error ', error)
+        return { status:"Internal Server Error", message: 'Something went wrong'}
+    }
 }
