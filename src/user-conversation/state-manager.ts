@@ -679,19 +679,19 @@ export class ChatStateManager {
                             state7TransactionNarration.toLowerCase().includes(bankNarration.narration.toLowerCase())
                         )
                         if(correspondingNarration) {
-                            // const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount)
+                            const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount)
 
-                            // if(educatingMessageResponse.error){
-                            //     this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
-                            //     const exitResponse =  [{
-                            //         status: "Internal Server Error",
-                            //         message: "Internal Server Error",
-                            //         end_connection: true
-                            //     }]
-                            //     return exitResponse
-                            // }
-                            // const educatingMessage = educatingMessageResponse.message;
-                            const educatingMessage = correspondingNarration.natureOfCharge
+                            if(educatingMessageResponse.error){
+                                this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
+                                const exitResponse =  [{
+                                    status: "Internal Server Error",
+                                    message: "Internal Server Error",
+                                    end_connection: true
+                                }]
+                                return exitResponse
+                            }
+                            const educatingMessage = educatingMessageResponse.message;
+                            // const educatingMessage = correspondingNarration.natureOfCharge
                             const educatingRes = [{
                                 status: "Success",
                                 session_id: reqData.session_id,
@@ -1423,23 +1423,5 @@ export class ChatStateManager {
 
 
     //mistral - 1. startDate and endDate 2. Educative message 3. Generating Complaint Details 4. Get Neration from the bank list
-    async callMistralAI(message) {
-        try {
-            const url = process.env.MISTRAL_BASE_URL
-            const obj = {
-                "model": "mistral",
-                "messages":[{
-                    "role": "user",
-                    "content": message
-                }],
-                "stream": false
-            }
-            const mistralResponse = await axios.post(url, obj)
-            console.log(mistralResponse)
-            return mistralResponse
-        } catch(error) {
-            this.logger.error('Error ', error)
-            return { status:"Internal Server Error", message: 'Something went wrong'}
-        }
-    }
+    
 }
