@@ -44,7 +44,7 @@ export async function callMistralAI(message) {
         }
         const mistralResponse = await axios.post(url, obj)
         console.log(mistralResponse)
-        return mistralResponse
+        return mistralResponse.data
     } catch(error) {
         this.logger.error('Error ', error)
         return { status:"Internal Server Error", message: 'Something went wrong'}
