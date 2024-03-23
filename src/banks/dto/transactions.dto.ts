@@ -5,7 +5,7 @@ export interface TransactionsRequestDto {
 }
 
 export interface TransactionsResponseDto {
-    transactionDate: string,
+    transactionDate: Date,
     transactionType: string,
     amount: string,
     transactionNarration: string,
