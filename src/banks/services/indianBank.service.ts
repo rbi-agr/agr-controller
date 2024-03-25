@@ -198,14 +198,11 @@ function getCurrentDateTime() {
   return dateTimeString;
 }
 
-function formatResponseDate(dateString: string): string {
-  if (dateString.length !== 8) {
-      return dateString; // Invalid input length
-  }
+function formatResponseDate(dateString: string): Date {
   
   const day = dateString.substring(0, 2);
   const month = dateString.substring(2, 4);
   const year = dateString.substring(4, 8);
 
-  return `${year}-${month}-${day}`;
+  return new Date(`${year}-${month}-${day}`);
 }

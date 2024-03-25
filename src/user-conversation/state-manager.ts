@@ -504,12 +504,12 @@ export class ChatStateManager {
                     try {
                         // const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
                         const transactions = [{
-                            transactionDate: '2024-03-13',
+                            transactionDate: new Date('2024-03-13'),
                             transactionNarration: 'Excess wdl charges',
                             transactionType: 'DR',
                             amount: "1000"
                         }, {
-                            transactionDate: '2024-03-14',
+                            transactionDate: new Date('2024-03-14'),
                             transactionNarration: 'ATM AMC CHGS',
                             transactionType: 'DR',
                             amount: "1000"
@@ -536,17 +536,18 @@ export class ChatStateManager {
                                 return this.states(reqData, languageDetected, 5)
                             }
                         }
-                        transactions.forEach(async (transaction) => {
-                            await this.prisma.transactionDetails.create({
-                                data:{
-                                    sessionId: sessionId,
-                                    transactionTimeBank: transaction.transactionDate,
-                                    transactionNarration: transaction.transactionNarration,
-                                    transactionType: transaction.transactionType,
-                                    amount: transaction.amount
-                                }
-                            })
+                        const transactionsData = transactions.map(transaction => {
+                            return {
+                                sessionId: sessionId,
+                                transactionTimeBank: transaction.transactionDate,
+                                transactionNarration: transaction.transactionNarration,
+                                transactionType: transaction.transactionType,
+                                amount: transaction.amount
+                            }
                         });
+                        await this.prisma.transactionDetails.createMany({
+                            data: transactionsData
+                        })
                         const transactionOptions = transactions.map(transaction => {
                             return this.formatDate(transaction.transactionDate) + '|' + transaction.transactionNarration + '|' + transaction.amount
                         });
@@ -586,7 +587,17 @@ export class ChatStateManager {
                         }
                     })
                     if(reqData.message.text.toLowerCase() === 'none of the above') {
-                        if(existing_session.retriesLeft <= 0) {
+                        if(existing_session.retriesLeft > 0) {
+                            await this.prisma.sessions.update({
+                                where:{sessionId:reqData.session_id},
+                                data:{
+                                    retriesLeft: {
+                                        decrement: 1
+                                    },
+                                    state: 17
+                                }
+                            })
+                        } else {
                             await this.prisma.sessions.update({
                                 where:{ sessionId: reqData.session_id },
                                 data:{
@@ -595,15 +606,6 @@ export class ChatStateManager {
                             })
                             return this.states(reqData, languageDetected, 99)
                         }
-                        await this.prisma.sessions.update({
-                            where:{sessionId:reqData.session_id},
-                            data:{
-                                retriesLeft: {
-                                    decrement: 1
-                                },
-                                state: 17
-                            }
-                        })
                         const state4Response = [{
                             status: "Success",
                             session_id: reqData.session_id,
@@ -1140,7 +1142,7 @@ export class ChatStateManager {
                         })
                         
                         const transactionOptions = uneducated_transaction.map(transaction => {
-                            return this.formatDate(transaction.transactionTimeBank.toISOString()) + '|' + transaction.transactionNarration + '|' + transaction.amount
+                            return this.formatDate(transaction.transactionTimeBank) + '|' + transaction.transactionNarration + '|' + transaction.amount
                         });
                         
                         const success_r4= [{
@@ -1383,8 +1385,7 @@ export class ChatStateManager {
         }
     }
 
-    formatDate(isoDateString: string): string {
-        const date = new Date(isoDateString);
+    formatDate(date: Date): string {
         const options = { day: 'numeric', month: 'long', year: 'numeric' } as const;
         const formattedDate = date.toLocaleDateString('en-US', options);
         return formattedDate.replace(/(\d+)(st|nd|rd|th)/, '$1'); // Remove suffix from day
