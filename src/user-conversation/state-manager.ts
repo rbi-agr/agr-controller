@@ -31,11 +31,12 @@ export class ChatStateManager {
             })
             const message = reqData.message.text
 
-            //detect language here
+            //exclude the states not used for language detection
             const statesExcludedForLangDetect = [4, 9, 7, 14, 15];
+            
             const detectLang = !session || !statesExcludedForLangDetect.includes(session.state)
 
-            let languageDetected = undefined;
+            let languageDetected;
 
             if(detectLang) {
                 const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/language-detect`)
@@ -53,12 +54,19 @@ export class ChatStateManager {
                     return exitResponse
                 }
                 languageDetected = languageDetectedresponse?.language
+                //Check lang from adya
+                if(session && session?.languageByAdya!==languageDetected)
+                {
+                    languageDetected = session.languageByAdya
+                }
+                
+
                 
                 if(languageDetected !== 'en') {
                     if(languageDetected === 'hi' || languageDetected === 'or'|| languageDetected === 'ori'){
                         //convert the message to english
                         const translatedmessage = await this.PostRequestforTranslation(reqData.message.text,languageDetected,"en",`${process.env.BASEURL}/ai/language-translate`)
-                        console.log("translatedmessage..................",translatedmessage)
+                        
                         if(!translatedmessage.error){
                             //Convert the language to englidh into the reqdata
                             reqData ={...reqData,message:{"text":translatedmessage.translated}}
@@ -92,7 +100,19 @@ export class ChatStateManager {
                         id: session.userId
                     }
                 })
-                languageDetected = user.languageDetected
+                if(session && session?.languageByAdya!==languageDetected)
+                {
+                    languageDetected = session.languageByAdya
+                }
+                else if(reqData?.metadata && reqData.metadata.language!==languageDetected)
+                {
+                    //Case 0
+                    languageDetected = reqData.metadata.language
+                }
+                else{
+                    languageDetected = user.languageDetected
+                }
+                
             }
             //if it doesnt then create a session in db, check the language and then call states
             let state
@@ -234,8 +254,19 @@ export class ChatStateManager {
                             }
                         })
                     }
+                    else{
+                        user = await this.prisma.users.update({
+                            where:{
+                                phoneNumber: phoneNumber
+                            },
+                            data: {
+                                languageDetected: languageDetected
+                            }
+                        })
+                    }
                     //detect language here
                     const languageByAdya = reqData.metadata.language
+                    
                     const createdSession = await this.prisma.sessions.create({
                         data: {
                             user: {
@@ -877,7 +908,7 @@ export class ChatStateManager {
                     this.logger.info('inside case 10')
 
                     const state10Message = reqData.message.text;
-                    if(state10Message && state10Message.toLowerCase() === 'yes') {
+                    if(state10Message && state10Message.toLowerCase().includes('yes')) {
                         await this.prisma.sessions.update({
                             where: { sessionId: reqData.session_id },
                             data: {
@@ -885,7 +916,7 @@ export class ChatStateManager {
                             }
                         })
                         return this.states(reqData, languageDetected, 11)
-                    } else if((state10Message && state10Message.toLowerCase() === 'no')) {
+                    } else if((state10Message && state10Message.toLowerCase().includes('no'))) {
                         await this.prisma.sessions.update({
                             where: { sessionId: reqData.session_id },
                             data: {
@@ -1131,7 +1162,7 @@ export class ChatStateManager {
                     //Waiting for user response to educate him about other trasnactions
                     this.logger.info('inside case 16')
                     const userresponse = reqData.message.text
-                    if(userresponse && userresponse.toLowerCase()==="yes")
+                    if(userresponse && userresponse.toLowerCase().includes("yes"))
                     {
                         //Pass the remaining transaction list data
                         const uneducated_transaction = await this.prisma.transactionDetails.findMany({
@@ -1164,7 +1195,7 @@ export class ChatStateManager {
                         })
                         return success_r4
                     }
-                    else if(userresponse && userresponse.toLowerCase()==="no"){
+                    else if(userresponse && userresponse.toLowerCase().includes("no")){
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
                             data:{
@@ -1189,9 +1220,9 @@ export class ChatStateManager {
 
                     const state17Message = reqData.message.text;
                     let state17NextState;
-                    if(state17Message && state17Message.toLowerCase() === 'yes') {
+                    if(state17Message && state17Message.toLowerCase().includes('yes')) {
                         state17NextState = 6;
-                    } else if (state17Message && state17Message.toLowerCase() === 'no') {
+                    } else if (state17Message && state17Message.toLowerCase().includes('no')) {
                         state17NextState = 18;
                     }
                     else
@@ -1393,7 +1424,7 @@ export class ChatStateManager {
 
     async translatedResponse(response, languageDetected, translateOptions: boolean){
         try {
-            let translatedresponse
+            let translatedfinalresponse=[]
                 for(let e=0; e<response.length; e++)
                 {
                     let currentmessage = response[e]
@@ -1421,11 +1452,12 @@ export class ChatStateManager {
                                 }
                             }
                             console.log("HERE",translatedoption)
-                            
-                            return [{...currentmessage,message:messageTranslation,options:translatedoption}]
+                            translatedfinalresponse.push({...currentmessage,message:messageTranslation,options:translatedoption})
+                            continue;
                         }
                     console.log("Here")
-                    return [{...currentmessage,message:messageTranslation}]
+                    
+                    translatedfinalresponse.push({...currentmessage,message:messageTranslation})
                     }
                     else{
                         return[{
@@ -1435,6 +1467,7 @@ export class ChatStateManager {
                           }]
                     }
                 }
+                return translatedfinalresponse
         } catch (error) {
             return[{
                 status: "Internal Server Error",
