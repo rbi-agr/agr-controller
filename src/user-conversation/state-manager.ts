@@ -32,56 +32,68 @@ export class ChatStateManager {
             const message = reqData.message.text
 
             //detect language here
-            const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/language-detect`)
-            // const languageDetectedresponse = {
-            //     language: 'en',
-            //     error: null
-            // }
-            
-            if(languageDetectedresponse.error){
-                const exitResponse =  [{
-                    status: "Internal Server Error",
-                    message: "Error in language Detection",
-                    end_connection: true
-                }]
-                return exitResponse
-            }
-            const languageDetected = languageDetectedresponse?.language
-            
-            if(languageDetected !== 'en') {
-                if(languageDetected === 'hi' || languageDetected === 'or'|| languageDetected === 'ori'){
-                    //convert the message to english
-                    const translatedmessage = await this.PostRequestforTranslation(reqData.message.text,languageDetected,"en",`${process.env.BASEURL}/ai/language-translate`)
-                    console.log("translatedmessage..................",translatedmessage)
-                    if(!translatedmessage.error){
-                        //Convert the language to englidh into the reqdata
-                        reqData ={...reqData,message:{"text":translatedmessage.translated}}
-                    }
-                    else{
-                        return[{
-                            status: "Internal Server Error",
-                            "message": "Internal Server Error. Please try again later",
-                            "end_connection": true
-                          }]
-                    }
-                }else {
-                    //throw error stating to change the message language (User to enter the query)
-                    const lang_detected=[{
-                        status: "Success",
-                        session_id: reqData.session_id,
-                        "message": "Please enter you query in english, hindi or odia",
-                        "options": [],
-                        "end_connection": false,
-                        "prompt": "text_message",
-                        "metadata":{}
-                      }]
-                    // const msg = 'Please enter you query in english, hindi or odia'
-                    //return proper formatted response
-                    return lang_detected
-                }
-                
-            }
+            const statesExcludedForLangDetect = [4, 9, 7, 14, 15];
+            const detectLang = !session || !statesExcludedForLangDetect.includes(session.state)
 
+            let languageDetected = undefined;
+
+            if(detectLang) {
+                const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/language-detect`)
+                // const languageDetectedresponse = {
+                //     language: 'en',
+                //     error: null
+                // }
+                
+                if(languageDetectedresponse.error){
+                    const exitResponse =  [{
+                        status: "Internal Server Error",
+                        message: "Error in language Detection",
+                        end_connection: true
+                    }]
+                    return exitResponse
+                }
+                languageDetected = languageDetectedresponse?.language
+                
+                if(languageDetected !== 'en') {
+                    if(languageDetected === 'hi' || languageDetected === 'or'|| languageDetected === 'ori'){
+                        //convert the message to english
+                        const translatedmessage = await this.PostRequestforTranslation(reqData.message.text,languageDetected,"en",`${process.env.BASEURL}/ai/language-translate`)
+                        console.log("translatedmessage..................",translatedmessage)
+                        if(!translatedmessage.error){
+                            //Convert the language to englidh into the reqdata
+                            reqData ={...reqData,message:{"text":translatedmessage.translated}}
+                        }
+                        else{
+                            return[{
+                                status: "Internal Server Error",
+                                "message": "Something went wrong with language translation",
+                                "end_connection": true
+                            }]
+                        }
+                    }else {
+                        //throw error stating to change the message language (User to enter the query)
+                        const lang_detected=[{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": "Please enter you query in english, hindi or odia",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                        }]
+                        // const msg = 'Please enter you query in english, hindi or odia'
+                        //return proper formatted response
+                        return lang_detected
+                    }
+                }
+            } else {
+                const user = await this.prisma.users.findUnique({
+                    where: {
+                        id: session.userId
+                    }
+                })
+                languageDetected = user.languageDetected
+            }
             //if it doesnt then create a session in db, check the language and then call states
             let state
             if (!session) {
@@ -124,13 +136,23 @@ export class ChatStateManager {
             let response = await this.states(reqData, languageDetected, state)
             // Check if the language detected is "en"
             let messageTranslation=""
+
+            const updatedSession = await this.prisma.sessions.findUnique({
+                where:{
+                    sessionId:reqData.session_id
+                }
+            })
+            let translateOptions = true;
+            if(updatedSession.state == 4 || updatedSession.state == 14) {
+                translateOptions = false;
+            }
             
             if(languageDetected!=="en")
             {
                 //convert the message to Language detected and return
                 //Translator API
                 
-                let translatedresponse = await this.translatedResponse(response, languageDetected)
+                let translatedresponse = await this.translatedResponse(response, languageDetected, translateOptions)
                 console.log("translatedresponse",translatedresponse)
                 response=translatedresponse
             }
@@ -340,7 +362,7 @@ export class ChatStateManager {
                     //     error: null
                     // }
                     const intentResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
-                    if(intentResponse.error){
+                    if(intentResponse.statusCode == 400) {
                         const exitResponse =  [{
                             status: "Internal Server Error",
                             message: "Internal Server Error. Please try again later",
@@ -378,6 +400,7 @@ export class ChatStateManager {
                         where:{sessionId:reqData.session_id},
                         data:{
                             state:2,
+                            complaintCategoryId: intentResponse.categoryId,
                             complaintCategory: intentResponse.category,
                             complaintCategoryType: intentResponse.type,
                             complaintCategorySubType: intentResponse.subtype,
@@ -475,21 +498,21 @@ export class ChatStateManager {
 
                     const transactionsData: TransactionsRequestDto = {
                         accountNumber: session.bankAccountNumber,
-                        fromDate: session.startDate.toISOString(),
-                        toDate: session.endDate.toISOString()
+                        fromDate: session.startDate,
+                        toDate: session.endDate
                     }
                     try {
                         // const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
                         const transactions = [{
-                            transactionDate: '2024-03-13T00:00:00.000Z',
+                            transactionDate: new Date('2024-03-13'),
                             transactionNarration: 'Excess wdl charges',
                             transactionType: 'DR',
-                            amount: 1000
+                            amount: "1000"
                         }, {
-                            transactionDate: '2024-03-14T00:00:00.000Z',
+                            transactionDate: new Date('2024-03-14'),
                             transactionNarration: 'ATM AMC CHGS',
                             transactionType: 'DR',
-                            amount: 1000
+                            amount: "1000"
                         }]
                         if(transactions.length === 0) {
                             if(session.retriesLeft <= 0) {
@@ -513,19 +536,20 @@ export class ChatStateManager {
                                 return this.states(reqData, languageDetected, 5)
                             }
                         }
-                        transactions.forEach(async (transaction) => {
-                            await this.prisma.transactionDetails.create({
-                                data:{
-                                    sessionId: sessionId,
-                                    transactionTimeBank: transaction.transactionDate,
-                                    transactionNarration: transaction.transactionNarration,
-                                    transactionType: transaction.transactionType,
-                                    amount: transaction.amount
-                                }
-                            })
+                        const transactionsData = transactions.map(transaction => {
+                            return {
+                                sessionId: sessionId,
+                                transactionTimeBank: transaction.transactionDate,
+                                transactionNarration: transaction.transactionNarration,
+                                transactionType: transaction.transactionType,
+                                amount: transaction.amount
+                            }
                         });
+                        await this.prisma.transactionDetails.createMany({
+                            data: transactionsData
+                        })
                         const transactionOptions = transactions.map(transaction => {
-                            return this.formatDate(transaction.transactionDate) + '|' + transaction.transactionNarration + '|' + transaction.amount.toString()
+                            return this.formatDate(transaction.transactionDate) + '|' + transaction.transactionNarration + '|' + transaction.amount
                         });
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
@@ -563,7 +587,17 @@ export class ChatStateManager {
                         }
                     })
                     if(reqData.message.text.toLowerCase() === 'none of the above') {
-                        if(existing_session.retriesLeft <= 0) {
+                        if(existing_session.retriesLeft > 0) {
+                            await this.prisma.sessions.update({
+                                where:{sessionId:reqData.session_id},
+                                data:{
+                                    retriesLeft: {
+                                        decrement: 1
+                                    },
+                                    state: 17
+                                }
+                            })
+                        } else {
                             await this.prisma.sessions.update({
                                 where:{ sessionId: reqData.session_id },
                                 data:{
@@ -572,15 +606,6 @@ export class ChatStateManager {
                             })
                             return this.states(reqData, languageDetected, 99)
                         }
-                        await this.prisma.sessions.update({
-                            where:{sessionId:reqData.session_id},
-                            data:{
-                                retriesLeft: {
-                                    decrement: 1
-                                },
-                                state: 17
-                            }
-                        })
                         const state4Response = [{
                             status: "Success",
                             session_id: reqData.session_id,
@@ -985,7 +1010,7 @@ export class ChatStateManager {
                         complaintCategoryType: session.complaintCategoryType,
                         complaintCategorySubtype: session.complaintCategorySubtype,
                         amount: transactionForTicket.amount.toString(),
-                        transactionDate: transactionForTicket.transactionTimeBank.toISOString(),
+                        transactionDate: transactionForTicket.transactionTimeBank,
                         complaintDetails: complaintDetails
                     }
                     try {
@@ -1117,7 +1142,7 @@ export class ChatStateManager {
                         })
                         
                         const transactionOptions = uneducated_transaction.map(transaction => {
-                            return this.formatDate(transaction.transactionTimeBank.toISOString()) + '|' + transaction.transactionNarration + '|' + transaction.amount.toString()
+                            return this.formatDate(transaction.transactionTimeBank) + '|' + transaction.transactionNarration + '|' + transaction.amount
                         });
                         
                         const success_r4= [{
@@ -1128,7 +1153,7 @@ export class ChatStateManager {
                             "end_connection": false,
                             "prompt": "option_selection",
                             "metadata":{}
-                          }]
+                        }]
                         
                         //Update the state to 14
                         await this.prisma.sessions.update({
@@ -1360,14 +1385,13 @@ export class ChatStateManager {
         }
     }
 
-    formatDate(isoDateString: string): string {
-        const date = new Date(isoDateString);
+    formatDate(date: Date): string {
         const options = { day: 'numeric', month: 'long', year: 'numeric' } as const;
         const formattedDate = date.toLocaleDateString('en-US', options);
         return formattedDate.replace(/(\d+)(st|nd|rd|th)/, '$1'); // Remove suffix from day
     }
 
-    async translatedResponse(response, languageDetected){
+    async translatedResponse(response, languageDetected, translateOptions: boolean){
         try {
             let translatedresponse
                 for(let e=0; e<response.length; e++)
@@ -1378,7 +1402,7 @@ export class ChatStateManager {
                     if(!messageTranslationresp.error){
                         console.log("Translated",messageTranslationresp.translated)
                         let messageTranslation = messageTranslationresp.translated
-                        if(currentmessage.options.length>0){
+                        if(currentmessage.options && currentmessage.options.length>0 && translateOptions){
                             let translatedoption=[]
                             for(let o=0; o<currentmessage.options.length; o++){
                                 let op = currentmessage.options[o]

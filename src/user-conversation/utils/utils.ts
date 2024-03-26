@@ -6,7 +6,9 @@ import { ChatStateManager } from "../state-manager";
 export async function getEduMsg(bankNarration: any, amount: number) {
     const userprompt = `amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}}`
     const task = `this is the user query: Get me the reason for the charges: amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}} and how I can prevent them based on amount, bank narration, nature of charge and details provided`
-    return callMistralAI(task)
+    const mistralResponse =  await callMistralAI(task)
+    console.log('mistralResponse ', mistralResponse)
+    return mistralResponse
 }
 
 export async function getComplaintDetails(complaint: any) {

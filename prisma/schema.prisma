@@ -51,7 +51,7 @@ model Sessions {
   bankAccountNumber        String
   startDate                DateTime?
   endDate                  DateTime?
-  complaintCategoryId      String?
+  complaintCategoryId      Int?
   complaintCategory        String?
   complaintCategoryType    String?
   complaintCategorySubType String?
@@ -80,7 +80,7 @@ model TransactionDetails {
   sessionId            String   @unique
   session              Sessions @relation(fields: [sessionId], references: [sessionId])
   transactionId        String?
-  amount               Int?
+  amount               String?
   transactionType      String
   transactionTimeBank  DateTime
   transactionNarration String

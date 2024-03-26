@@ -21,10 +21,14 @@ export class IndianBankService {
     // TODO: Update endpoint when exposed by the bank
     const endpoint = `/transactions`;
 
+    // convert the date to the format DDMMYYYY
+    const fromDate = transactionsDto.fromDate.toISOString().split('T')[0].split('-').reverse().join('');
+    const toDate = transactionsDto.toDate.toISOString().split('T')[0].split('-').reverse().join('');
+
     const requestPayload = {
       Account_Number: transactionsDto.accountNumber,
-      From_Date: transactionsDto.fromDate,
-      To_Date: transactionsDto.toDate,
+      From_Date: fromDate,
+      To_Date: toDate,
     }
     
     const apiInteractionId = await this.getInteractionId();
@@ -39,7 +43,7 @@ export class IndianBankService {
     const headers = this.constructRequestHeaders(apiInteractionId)
 
     try {
-            const response = await axios.post(bankUrl + endpoint, requestPayload, {
+      const response = await axios.post(bankUrl + endpoint, requestPayload, {
         headers: headers
       })
       const transactions = response.data.TXN_CHGS_RESPONSE.body.payload.collection;
@@ -58,8 +62,9 @@ export class IndianBankService {
         }
       });
       const formattedTransactions: TransactionsResponseDto[] = transactions.map(transaction => {
+        const transactionDate = formatResponseDate(transaction.Valid_Date)
         return {
-          transactionDate: transaction.Valid_Date,
+          transactionDate: transactionDate,
           transactionType: transaction.Transaction_Type,
           amount: transaction.Amount,
           transactionNarration: transaction.Narration,
@@ -95,6 +100,9 @@ export class IndianBankService {
     // get current date and time in format DD-MM-YYYY HH:MM:SS
     const currentDateTime = getCurrentDateTime();
 
+    // get transaction date in format DD-MM-YYYY
+    const transactionDateInFormat = complaintDto.transactionDate.toISOString().split('T')[0].split('-').reverse().join('-');
+
     const requestPayload = {
       Request_Date_and_Time: currentDateTime,
       Customer_Account_Number: complaintDto.accountNumber,
@@ -104,7 +112,7 @@ export class IndianBankService {
       Complaint_category_type: complaintDto.complaintCategoryType,
       Complaint_category_subtype: complaintDto.complaintCategorySubtype,
       Amount: complaintDto.amount,
-      txn_Date: complaintDto.transactionDate,
+      txn_Date: transactionDateInFormat,
       Complaint_detail: complaintDto.complaintDetails,
     }
     const headers = this.constructRequestHeaders(apiInteractionId);
@@ -188,4 +196,13 @@ function getCurrentDateTime() {
   const dateTimeString = `${date}-${month}-${year} ${hours}:${minutes}:${seconds}`;
   
   return dateTimeString;
+}
+
+function formatResponseDate(dateString: string): Date {
+  
+  const day = dateString.substring(0, 2);
+  const month = dateString.substring(2, 4);
+  const year = dateString.substring(4, 8);
+
+  return new Date(`${year}-${month}-${day}`);
 }

@@ -1,11 +1,11 @@
 export interface TransactionsRequestDto {
     accountNumber: string;
-    fromDate: string;
-    toDate: string
+    fromDate: Date;
+    toDate: Date
 }
 
 export interface TransactionsResponseDto {
-    transactionDate: string,
+    transactionDate: Date,
     transactionType: string,
     amount: string,
     transactionNarration: string,
