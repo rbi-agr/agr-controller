@@ -45,17 +45,7 @@ export class ChatStateManager {
                 //     error: null
                 // }
                 //Update the language detected in Adya
-                if(session && reqData.metadata)
-                {
-                    await this.prisma.sessions.update({
-                        where:{
-                            sessionId: reqData.session_id
-                        },
-                        data:{
-                            languageByAdya: reqData.metadata.language
-                        }
-                    })
-                }
+                
                 if(languageDetectedresponse.error){
                     const exitResponse =  [{
                         status: "Internal Server Error",
@@ -97,14 +87,14 @@ export class ChatStateManager {
                         // const msg = 'Please enter you query in english, hindi or odia'
                         //return proper formatted response
                         //Check lang from adya
-                    if(session && session?.languageByAdya!==languageDetected)
-                    {
-                        languageDetected = session.languageByAdya
-                    }else if(reqData?.metadata && reqData.metadata.language!==languageDetected)
-                    {
-                        //Case 0
-                        languageDetected = reqData.metadata.language
-                    }
+                    // if(session && session?.languageByAdya!==languageDetected)
+                    // {
+                    //     languageDetected = session.languageByAdya
+                    // }else if(reqData?.metadata && reqData.metadata.language!==languageDetected)
+                    // {
+                    //     //Case 0
+                    //     languageDetected = reqData.metadata.language
+                    // }
                         return lang_detected
                     }
                 }
@@ -114,24 +104,14 @@ export class ChatStateManager {
                         id: session.userId
                     }
                 })
-                if(session && reqData.metadata)
-                {
-                    await this.prisma.sessions.update({
-                        where:{
-                            sessionId: reqData.session_id
-                        },
-                        data:{
-                            languageByAdya: reqData.metadata.language
-                        }
-                    })
-                }
-                if(session && session?.languageByAdya!==languageDetected)
-                {
-                    languageDetected = session.languageByAdya
-                }
-                else{
-                    languageDetected = user.languageDetected
-                }
+                languageDetected = user.languageDetected
+                // if(session && session?.languageByAdya!==languageDetected)
+                // {
+                //     languageDetected = session.languageByAdya
+                // }
+                // else{
+                    
+                // }
                 
             }
             //if it doesnt then create a session in db, check the language and then call states
