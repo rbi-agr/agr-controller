@@ -31,11 +31,12 @@ export class ChatStateManager {
             })
             const message = reqData.message.text
 
-            //detect language here
+            //exclude the states not used for language detection
             const statesExcludedForLangDetect = [4, 9, 7, 14, 15];
+            
             const detectLang = !session || !statesExcludedForLangDetect.includes(session.state)
 
-            let languageDetected = undefined;
+            let languageDetected;
 
             if(detectLang) {
                 const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/language-detect`)
@@ -43,6 +44,7 @@ export class ChatStateManager {
                 //     language: 'en',
                 //     error: null
                 // }
+                //Update the language detected in Adya
                 
                 if(languageDetectedresponse.error){
                     const exitResponse =  [{
@@ -53,12 +55,13 @@ export class ChatStateManager {
                     return exitResponse
                 }
                 languageDetected = languageDetectedresponse?.language
+                         
                 
                 if(languageDetected !== 'en') {
                     if(languageDetected === 'hi' || languageDetected === 'or'|| languageDetected === 'ori'){
                         //convert the message to english
                         const translatedmessage = await this.PostRequestforTranslation(reqData.message.text,languageDetected,"en",`${process.env.BASEURL}/ai/language-translate`)
-                        console.log("translatedmessage..................",translatedmessage)
+                        
                         if(!translatedmessage.error){
                             //Convert the language to englidh into the reqdata
                             reqData ={...reqData,message:{"text":translatedmessage.translated}}
@@ -83,6 +86,15 @@ export class ChatStateManager {
                         }]
                         // const msg = 'Please enter you query in english, hindi or odia'
                         //return proper formatted response
+                        //Check lang from adya
+                    // if(session && session?.languageByAdya!==languageDetected)
+                    // {
+                    //     languageDetected = session.languageByAdya
+                    // }else if(reqData?.metadata && reqData.metadata.language!==languageDetected)
+                    // {
+                    //     //Case 0
+                    //     languageDetected = reqData.metadata.language
+                    // }
                         return lang_detected
                     }
                 }
@@ -93,6 +105,14 @@ export class ChatStateManager {
                     }
                 })
                 languageDetected = user.languageDetected
+                // if(session && session?.languageByAdya!==languageDetected)
+                // {
+                //     languageDetected = session.languageByAdya
+                // }
+                // else{
+                    
+                // }
+                
             }
             //if it doesnt then create a session in db, check the language and then call states
             let state
@@ -234,8 +254,19 @@ export class ChatStateManager {
                             }
                         })
                     }
+                    else{
+                        user = await this.prisma.users.update({
+                            where:{
+                                phoneNumber: phoneNumber
+                            },
+                            data: {
+                                languageDetected: languageDetected
+                            }
+                        })
+                    }
                     //detect language here
                     const languageByAdya = reqData.metadata.language
+                    
                     const createdSession = await this.prisma.sessions.create({
                         data: {
                             user: {
@@ -365,7 +396,7 @@ export class ChatStateManager {
                     if(intentResponse.statusCode == 400) {
                         const exitResponse =  [{
                             status: "Internal Server Error",
-                            message: "Error in intent response",
+                            message: "Internal Server Error. Please try again later",
                             end_connection: true
                         }]
                         return exitResponse
@@ -387,7 +418,7 @@ export class ChatStateManager {
                         const intentFailRes = [{
                             status: "Success",
                             session_id: reqData.session_id,
-                            "message": "Please reframe your query.",
+                            "message": "Sorry, we could not classify your intent. Please reframe your query.",
                             "options": [],
                             "end_connection": false,
                             "prompt": "text_message",
@@ -573,7 +604,7 @@ export class ChatStateManager {
                         this.logger.error('error occured in state manager ', error)
                         const intentFailRes = [{
                             status: "Internal Server Error",
-                            message: "Something went wrong with Bank Servers",
+                            message: "Something went wrong with Bank Servers. Please try again later",
                             end_connection: true
                         }]
                         return intentFailRes
@@ -642,7 +673,7 @@ export class ChatStateManager {
                     const intentFailRes = [{
                         status: "Success",
                         session_id: reqData.session_id,
-                        "message": "No transactions found. Please select a different range",
+                        "message": "No transactions were found. Please select a different range",
                         "options": [],
                         "end_connection": false,
                         "prompt": "date_range",
@@ -710,7 +741,7 @@ export class ChatStateManager {
                                 this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
                                 const exitResponse =  [{
                                     status: "Internal Server Error",
-                                    message: "Internal Server Error",
+                                    message: "Internal Server Error. Please try again later",
                                     end_connection: true
                                 }]
                                 return exitResponse
@@ -756,7 +787,7 @@ export class ChatStateManager {
                         } else {
                             const educatingFailRes = [{
                                 status: "Internal Server Error",
-                                message: "We could not find the cause for this transaction. Please try later",
+                                message: "Sorry, We could not find the cause for this transaction. Please try later",
                                 end_connection: true
                             }]
                             await this.prisma.sessions.update({
@@ -773,7 +804,7 @@ export class ChatStateManager {
                         
                         const failRes = [{
                             status: "Bad Request",
-                            message: "No transaction selected",
+                            message: "No transaction selected. Please select a transaction to proceed",
                             end_connection: false
                         }]
                         return failRes
@@ -795,7 +826,7 @@ export class ChatStateManager {
                     const success_r3 = [{
                         status: "Success",
                         session_id: reqData.session_id,
-                        "message": "The transaction was not selected. Could you please restart the process from the beginning?",
+                        "message": "No transaction selected. Could you please restart the process from the beginning?",
                         "options": [],
                         "end_connection": true,
                         "prompt": "text_message",
@@ -867,7 +898,7 @@ export class ChatStateManager {
                     {
                         const intentFailRes = [{
                             status: "Internal Server Error",
-                            "message": "No Response from Mistral.AI",
+                            "message": "Internal Server Error. Please try again later",
                             "end_connection": false
                           }]
                         return intentFailRes
@@ -877,7 +908,7 @@ export class ChatStateManager {
                     this.logger.info('inside case 10')
 
                     const state10Message = reqData.message.text;
-                    if(state10Message && state10Message.toLowerCase() === 'yes') {
+                    if(state10Message && state10Message.toLowerCase().includes('yes')) {
                         await this.prisma.sessions.update({
                             where: { sessionId: reqData.session_id },
                             data: {
@@ -885,7 +916,7 @@ export class ChatStateManager {
                             }
                         })
                         return this.states(reqData, languageDetected, 11)
-                    } else if((state10Message && state10Message.toLowerCase() === 'no')) {
+                    } else if((state10Message && state10Message.toLowerCase().includes('no'))) {
                         await this.prisma.sessions.update({
                             where: { sessionId: reqData.session_id },
                             data: {
@@ -898,7 +929,7 @@ export class ChatStateManager {
                     {
                         return [{
                                 status: "Bad Request",
-                                message: "Invalid Query",
+                                message: "Invalid Query. Please try again",
                                 end_connection: true
                         }]
                     }
@@ -1131,7 +1162,7 @@ export class ChatStateManager {
                     //Waiting for user response to educate him about other trasnactions
                     this.logger.info('inside case 16')
                     const userresponse = reqData.message.text
-                    if(userresponse && userresponse.toLowerCase()==="yes")
+                    if(userresponse && userresponse.toLowerCase().includes("yes"))
                     {
                         //Pass the remaining transaction list data
                         const uneducated_transaction = await this.prisma.transactionDetails.findMany({
@@ -1164,7 +1195,7 @@ export class ChatStateManager {
                         })
                         return success_r4
                     }
-                    else if(userresponse && userresponse.toLowerCase()==="no"){
+                    else if(userresponse && userresponse.toLowerCase().includes("no")){
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
                             data:{
@@ -1178,7 +1209,7 @@ export class ChatStateManager {
                     {
                         return [{
                             status: "Bad Request",
-                            message: "Invalid Query",
+                            message: "Invalid Query. Please try again later",
                             end_connection: true
                     }]
                     }
@@ -1189,9 +1220,9 @@ export class ChatStateManager {
 
                     const state17Message = reqData.message.text;
                     let state17NextState;
-                    if(state17Message && state17Message.toLowerCase() === 'yes') {
+                    if(state17Message && state17Message.toLowerCase().includes('yes')) {
                         state17NextState = 6;
-                    } else if (state17Message && state17Message.toLowerCase() === 'no') {
+                    } else if (state17Message && state17Message.toLowerCase().includes('no')) {
                         state17NextState = 18;
                     }
                     else
@@ -1393,7 +1424,7 @@ export class ChatStateManager {
 
     async translatedResponse(response, languageDetected, translateOptions: boolean){
         try {
-            let translatedresponse
+            let translatedfinalresponse=[]
                 for(let e=0; e<response.length; e++)
                 {
                     let currentmessage = response[e]
@@ -1421,11 +1452,12 @@ export class ChatStateManager {
                                 }
                             }
                             console.log("HERE",translatedoption)
-                            
-                            return [{...currentmessage,message:messageTranslation,options:translatedoption}]
+                            translatedfinalresponse.push({...currentmessage,message:messageTranslation,options:translatedoption})
+                            continue;
                         }
                     console.log("Here")
-                    return [{...currentmessage,message:messageTranslation}]
+                    
+                    translatedfinalresponse.push({...currentmessage,message:messageTranslation})
                     }
                     else{
                         return[{
@@ -1435,6 +1467,7 @@ export class ChatStateManager {
                           }]
                     }
                 }
+                return translatedfinalresponse
         } catch (error) {
             return[{
                 status: "Internal Server Error",
