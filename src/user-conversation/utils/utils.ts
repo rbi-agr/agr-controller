@@ -16,7 +16,7 @@ export async function getComplaintDetails(complaint: any) {
     const userprompt = `complaint category: ${complaint.complaintCategory}, complaint category type: ${complaint.complaintCategoryType}, complaint category subtype: ${complaint.complaintCategorySubtype}, bank narration: "${complaint.narration}", nature of charge: "${complaint.natureOfCharge}", amount: {${complaint.amount}}`
     const task = `this is the user query: Based on the the complaint category: ${complaint.complaintCategory}, complaint category type: ${complaint.complaintCategoryType}, complaint category subtype: ${complaint.complaintCategorySubtype}, bank narration: "${complaint.narration}", nature of charge: "${complaint.natureOfCharge}", amount: {${complaint.amount}}, get me the short description of the complaint`
 
-    return callMistralAI(task)
+    return await callMistralAI(task)
 }
 
 export async function getDataFromLLM(userPrompt: string, task: string) {
