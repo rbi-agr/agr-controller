@@ -60,7 +60,7 @@ export class ChatStateManager {
                     else{
                         return[{
                             status: "Internal Server Error",
-                            "message": "Something went wrong with language translation",
+                            "message": "Internal Server Error. Please try again later",
                             "end_connection": true
                           }]
                     }
@@ -343,7 +343,7 @@ export class ChatStateManager {
                     if(intentResponse.error){
                         const exitResponse =  [{
                             status: "Internal Server Error",
-                            message: "Error in intent response",
+                            message: "Internal Server Error. Please try again later",
                             end_connection: true
                         }]
                         return exitResponse
@@ -365,7 +365,7 @@ export class ChatStateManager {
                         const intentFailRes = [{
                             status: "Success",
                             session_id: reqData.session_id,
-                            "message": "Please reframe your query.",
+                            "message": "Sorry, we could not classify your intent. Please reframe your query.",
                             "options": [],
                             "end_connection": false,
                             "prompt": "text_message",
@@ -549,7 +549,7 @@ export class ChatStateManager {
                         this.logger.error('error occured in state manager ', error)
                         const intentFailRes = [{
                             status: "Internal Server Error",
-                            message: "Something went wrong with Bank Servers",
+                            message: "Something went wrong with Bank Servers. Please try again later",
                             end_connection: true
                         }]
                         return intentFailRes
@@ -617,7 +617,7 @@ export class ChatStateManager {
                     const intentFailRes = [{
                         status: "Success",
                         session_id: reqData.session_id,
-                        "message": "No transactions found. Please select a different range",
+                        "message": "No transactions were found. Please select a different range",
                         "options": [],
                         "end_connection": false,
                         "prompt": "date_range",
@@ -685,7 +685,7 @@ export class ChatStateManager {
                                 this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
                                 const exitResponse =  [{
                                     status: "Internal Server Error",
-                                    message: "Internal Server Error",
+                                    message: "Internal Server Error. Please try again later",
                                     end_connection: true
                                 }]
                                 return exitResponse
@@ -731,7 +731,7 @@ export class ChatStateManager {
                         } else {
                             const educatingFailRes = [{
                                 status: "Internal Server Error",
-                                message: "We could not find the cause for this transaction. Please try later",
+                                message: "Sorry, We could not find the cause for this transaction. Please try later",
                                 end_connection: true
                             }]
                             await this.prisma.sessions.update({
@@ -748,7 +748,7 @@ export class ChatStateManager {
                         
                         const failRes = [{
                             status: "Bad Request",
-                            message: "No transaction selected",
+                            message: "No transaction selected. Please select a transaction to proceed",
                             end_connection: false
                         }]
                         return failRes
@@ -770,7 +770,7 @@ export class ChatStateManager {
                     const success_r3 = [{
                         status: "Success",
                         session_id: reqData.session_id,
-                        "message": "The transaction was not selected. Could you please restart the process from the beginning?",
+                        "message": "No transaction selected. Could you please restart the process from the beginning?",
                         "options": [],
                         "end_connection": true,
                         "prompt": "text_message",
@@ -842,7 +842,7 @@ export class ChatStateManager {
                     {
                         const intentFailRes = [{
                             status: "Internal Server Error",
-                            "message": "No Response from Mistral.AI",
+                            "message": "Internal Server Error. Please try again later",
                             "end_connection": false
                           }]
                         return intentFailRes
@@ -873,7 +873,7 @@ export class ChatStateManager {
                     {
                         return [{
                                 status: "Bad Request",
-                                message: "Invalid Query",
+                                message: "Invalid Query. Please try again",
                                 end_connection: true
                         }]
                     }
@@ -1153,7 +1153,7 @@ export class ChatStateManager {
                     {
                         return [{
                             status: "Bad Request",
-                            message: "Invalid Query",
+                            message: "Invalid Query. Please try again later",
                             end_connection: true
                     }]
                     }
