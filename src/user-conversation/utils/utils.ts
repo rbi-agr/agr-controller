@@ -1,6 +1,13 @@
 import axios from "axios";
 import { ChatStateManager } from "../state-manager";
 
+export async function getCorrespondingNarration(bankNarration: any, narrationList: string[]) {
+    const userprompt = `narration from bank: "${bankNarration}", list of narrations: ${narrationList}`
+    const task = `this is the user query: Get me the corresponding narration from the list of narrations: ${narrationList} that matches the narration from bank: "${bankNarration}". If no match is found, return "No match found"`
+    const mistralResponse =  await callMistralAI(task)
+    console.log('mistralResponse ', mistralResponse)
+    return mistralResponse
+}
 
 
 export async function getEduMsg(bankNarration: any, amount: number) {

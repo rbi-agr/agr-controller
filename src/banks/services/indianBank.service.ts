@@ -18,15 +18,26 @@ export class IndianBankService {
     if (!bankUrl) {
       throw new Error('Bank URL not found');
     }
-    // TODO: Update endpoint when exposed by the bank
-    const endpoint = `/transactions`;
 
     // convert the date to the format DDMMYYYY
     const fromDate = transactionsDto.fromDate.toISOString().split('T')[0].split('-').reverse().join('');
     const toDate = transactionsDto.toDate.toISOString().split('T')[0].split('-').reverse().join('');
 
+    const accountType = transactionsDto.accountNumber.substring(0, 2);
+
+    let endpoint: string;
+    if(accountType == 'LN') {
+      endpoint = `/statement/v1/eq-ltxn-chrg`;
+    } else {
+      endpoint = `/statement/v1/eq-dtxn-chrg`;
+    }
+    const accountNumber = parseInt(transactionsDto.accountNumber.split('-')[1]);
+    if(!accountNumber) {
+      throw new Error('Invalid account number');
+    }
+
     const requestPayload = {
-      Account_Number: transactionsDto.accountNumber,
+      Account_Number: accountNumber,
       From_Date: fromDate,
       To_Date: toDate,
     }
@@ -102,6 +113,9 @@ export class IndianBankService {
 
     // get transaction date in format DD-MM-YYYY
     const transactionDateInFormat = complaintDto.transactionDate.toISOString().split('T')[0].split('-').reverse().join('-');
+
+    // convert the account number to integer
+    const accountNumber = parseInt(complaintDto.accountNumber.split('-')[1]);
 
     const requestPayload = {
       Request_Date_and_Time: currentDateTime,
@@ -193,7 +207,7 @@ function getCurrentDateTime() {
   const seconds = String(now.getSeconds()).padStart(2, '0');
   
   // Constructing the formatted date and time string
-  const dateTimeString = `${date}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+  const dateTimeString = `${date}${month}${year}${hours}${minutes}${seconds}`;
   
   return dateTimeString;
 }
