@@ -10,7 +10,7 @@ export class BanksService {
         private indianBankService: IndianBankService
     ) {}
 
-    async fetchTransactions(sessionId: string, data: TransactionsRequestDto, bankName: BankName): Promise<TransactionsResponseDto[]> {
+    async fetchTransactions(sessionId: string, data: TransactionsRequestDto, bankName: BankName): Promise<TransactionsResponseDto> {
 
         switch(bankName) {
             case BankName.INDIAN_BANK:

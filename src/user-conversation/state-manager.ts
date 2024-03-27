@@ -3,7 +3,7 @@ import { Injectable} from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import axios from "axios";
-import { getComplaintDetails, getEduMsg } from "./utils/utils";
+import { getComplaintDetails, getCorrespondingNarration, getEduMsg } from "./utils/utils";
 import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
 import { BankName } from "@prisma/client";
 import { response } from "express";
@@ -527,13 +527,21 @@ export class ChatStateManager {
                         }]
                     }
 
-                    const transactionsData: TransactionsRequestDto = {
+                    const transactionsReqData: TransactionsRequestDto = {
                         accountNumber: session.bankAccountNumber,
                         fromDate: session.startDate,
                         toDate: session.endDate
                     }
                     try {
-                        // const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
+                        // const transactionsResponse = await this.banksService.fetchTransactions(sessionId, transactionsReqData, BankName.INDIAN_BANK)
+                        // if(transactionsResponse.error) {
+                        //     return [{
+                        //         status: "Internal Server Error",
+                        //         message: `I received the following error from the bank: ${transactionsResponse.message}`,
+                        //         end_connection: true
+                        //     }]
+                        // }
+                        // const transactions = transactionsResponse.transactions
                         const transactions = [{
                             transactionDate: new Date('2024-03-13'),
                             transactionNarration: 'Excess wdl charges',
@@ -731,73 +739,93 @@ export class ChatStateManager {
                         // generate educating message
                         const bankNarrations = await this.prisma.bankNarrations.findMany();
 
-                        const correspondingNarration = bankNarrations.find(bankNarration => 
-                            state7TransactionNarration.toLowerCase().includes(bankNarration.narration.toLowerCase())
-                        )
-                        if(correspondingNarration) {
-                            const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount)
-                            console.log("Educatingresponse........................",educatingMessageResponse)
-                            if(educatingMessageResponse.error){
+                        let correspondingNarration;
+                        const transactionNarrationLower = state7TransactionNarration.toLowerCase()
+
+                        bankNarrations.forEach((bankNarration) => {
+                            const bankNarrationLower = bankNarration.narration.toLowerCase()
+                            if(transactionNarrationLower.includes(bankNarrationLower)) {
+                                correspondingNarration = bankNarration
+                            }
+                        
+                        })
+                        if(!correspondingNarration) {
+                            const narrationsList = bankNarrations.map(bankNarration => bankNarration.narration)
+                            const narrationResponse = await getCorrespondingNarration(state7TransactionNarration, narrationsList)
+                            if(narrationResponse.error){
+                                this.logger.error('Error in fetching narration from Mistral AI: ', narrationResponse.error)
+                                const exitResponse =  [{
+                                    status: "Internal Server Error",
+                                    message: "Internal Server Error. Please try again later",
+                                    end_connection: true
+                                }]
+                                return exitResponse
+                            }
+                            correspondingNarration = JSON.parse(JSON.stringify(narrationResponse.message.content));
+                            if(correspondingNarration === "No match found") {
+                                const educatingFailRes = [{
+                                    status: "Internal Server Error",
+                                    message: "Sorry, We could not find the cause for this transaction. Please try later",
+                                    end_connection: true
+                                }]
+                                await this.prisma.sessions.update({
+                                    where: { sessionId: reqData.session_id },
+                                    data: {
+                                        state: 99
+                                    }
+                                })
+                                return educatingFailRes
+                            }
+                        }
+                        const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount)
+                        console.log("Educatingresponse........................",educatingMessageResponse)
+                        if(educatingMessageResponse.error){
                             this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
                             const exitResponse =  [{
-                            status: "Internal Server Error",
-                            message: "Internal Server Error. Please try again later",
-                            end_connection: true
-                            }]
-                            return exitResponse
-                            }
-                            const educatingMessage = JSON.parse(JSON.stringify(educatingMessageResponse.message.content));
-                                                        
-                            // const educatingMessage = correspondingNarration.natureOfCharge
-                            const educatingRes = [{
-                                status: "Success",
-                                session_id: reqData.session_id,
-                                message: educatingMessage,
-                                options: [],
-                                end_connection: false,
-                                prompt: "text_message",
-                                metadata: {}
-                            }]
-                            educatingRes.push({
-                                status: "Success",
-                                session_id: reqData.session_id,
-                                message: "Are you satisfied with the resolution provided?",
-                                options: ['Yes', 'No'],
-                                end_connection: false,
-                                prompt: "option_selection",
-                                metadata: {}
-                            })
-                            //On sending successfull response update state to 10
-                            await this.prisma.sessions.update({
-                                where: { sessionId: reqData.session_id },
-                                data: {
-                                    state: 10
-                                }
-                            })
-                            await this.prisma.transactionDetails.update({
-                                where:{
-                                    sessionId: reqData.session_id,
-                                    transactionNarration: state7TransactionNarration
-                                },
-                                data:{
-                                    isEducated:true
-                                }
-                            })
-                            return educatingRes
-                        } else {
-                            const educatingFailRes = [{
                                 status: "Internal Server Error",
-                                message: "Sorry, We could not find the cause for this transaction. Please try later",
+                                message: "Internal Server Error. Please try again later",
                                 end_connection: true
                             }]
-                            await this.prisma.sessions.update({
-                                where: { sessionId: reqData.session_id },
-                                data: {
-                                    state: 99
-                                }
-                            })
-                            return educatingFailRes
+                            return exitResponse
                         }
+                        const educatingMessage = JSON.parse(JSON.stringify(educatingMessageResponse.message.content));
+                                                    
+                        // const educatingMessage = correspondingNarration.natureOfCharge
+                        const educatingRes = [{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: educatingMessage,
+                            options: [],
+                            end_connection: false,
+                            prompt: "text_message",
+                            metadata: {}
+                        }]
+                        educatingRes.push({
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "Are you satisfied with the resolution provided?",
+                            options: ['Yes', 'No'],
+                            end_connection: false,
+                            prompt: "option_selection",
+                            metadata: {}
+                        })
+                        //On sending successfull response update state to 10
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 10
+                            }
+                        })
+                        await this.prisma.transactionDetails.update({
+                            where:{
+                                sessionId: reqData.session_id,
+                                transactionNarration: state7TransactionNarration
+                            },
+                            data:{
+                                isEducated:true
+                            }
+                        })
+                        return educatingRes
                     } else {
                         
                         this.logger.info("Selected transaction not found")
@@ -1046,6 +1074,13 @@ export class ChatStateManager {
                     }
                     try {
                         // const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
+                        // if(ticketResponse.error) {
+                        //     return [{
+                        //         status: "Internal Server Error",
+                        //         message: `I received the following error from the bank: ${ticketResponse.message}`,
+                        //         end_connection: true
+                        //     }]
+                        // }
                         const ticketResponse = {
                             ticketNumber: '123456'
                         }
