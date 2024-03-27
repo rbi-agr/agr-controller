@@ -34,7 +34,7 @@ export class ChatStateManager {
             //exclude the states not used for language detection
             const statesExcludedForLangDetect = [4, 9, 7, 14, 15];
             
-            const detectLang = !session || !statesExcludedForLangDetect.includes(session.state)
+            const detectLang = !session || !statesExcludedForLangDetect.includes(session.state) || (session.state == 4 && !message.includes("|"))
 
             let languageDetected;
 
@@ -172,7 +172,7 @@ export class ChatStateManager {
                 //convert the message to Language detected and return
                 //Translator API
                 
-                let translatedresponse = await this.translatedResponse(response, languageDetected, translateOptions)
+                let translatedresponse = await this.translatedResponse(response, languageDetected)
                 console.log("translatedresponse",translatedresponse)
                 response=translatedresponse
             }
@@ -617,7 +617,7 @@ export class ChatStateManager {
                             sessionId:reqData.session_id
                         }
                     })
-                    if(reqData.message.text.toLowerCase() === 'none of the above') {
+                    if(!reqData.message.text.includes("|")) {
                         if(existing_session.retriesLeft > 0) {
                             await this.prisma.sessions.update({
                                 where:{sessionId:reqData.session_id},
@@ -738,16 +738,16 @@ export class ChatStateManager {
                             const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount)
                             console.log("Educatingresponse........................",educatingMessageResponse)
                             if(educatingMessageResponse.error){
-                                this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
-                                const exitResponse =  [{
-                                    status: "Internal Server Error",
-                                    message: "Internal Server Error. Please try again later",
-                                    end_connection: true
-                                }]
-                                return exitResponse
+                            this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
+                            const exitResponse =  [{
+                            status: "Internal Server Error",
+                            message: "Internal Server Error. Please try again later",
+                            end_connection: true
+                            }]
+                            return exitResponse
                             }
                             const educatingMessage = JSON.parse(JSON.stringify(educatingMessageResponse.message.content));
-                            
+                                                        
                             // const educatingMessage = correspondingNarration.natureOfCharge
                             const educatingRes = [{
                                 status: "Success",
@@ -1422,7 +1422,7 @@ export class ChatStateManager {
         return formattedDate.replace(/(\d+)(st|nd|rd|th)/, '$1'); // Remove suffix from day
     }
 
-    async translatedResponse(response, languageDetected, translateOptions: boolean){
+    async translatedResponse(response, languageDetected){
         try {
             let translatedfinalresponse=[]
                 for(let e=0; e<response.length; e++)
@@ -1433,22 +1433,26 @@ export class ChatStateManager {
                     if(!messageTranslationresp.error){
                         console.log("Translated",messageTranslationresp.translated)
                         let messageTranslation = messageTranslationresp.translated
-                        if(currentmessage.options && currentmessage.options.length>0 && translateOptions){
+                        if(currentmessage.options && currentmessage.options.length>0){
                             let translatedoption=[]
                             for(let o=0; o<currentmessage.options.length; o++){
                                 let op = currentmessage.options[o]
-                                let translatedoptionresp = await this.PostRequestforTranslation(op,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
-                                console.log("Translatedoption", translatedoptionresp)
-                                if(!translatedoptionresp.error){
-                                    translatedoption.push(translatedoptionresp.translated)
-                                }
-                                else
-                                {
-                                    return[{
-                                        status: "Internal Server Error",
-                                        "message": "Something went wrong with language translation",
-                                        "end_connection": true
-                                    }]
+                                if(!op.includes('|')) {
+                                    let translatedoptionresp = await this.PostRequestforTranslation(op,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
+                                    console.log("Translatedoption", translatedoptionresp)
+                                    if(!translatedoptionresp.error){
+                                        translatedoption.push(translatedoptionresp.translated)
+                                    }
+                                    else
+                                    {
+                                        return[{
+                                            status: "Internal Server Error",
+                                            "message": "Something went wrong with language translation",
+                                            "end_connection": true
+                                        }]
+                                    }
+                                } else {
+                                    translatedoption.push(op)
                                 }
                             }
                             console.log("HERE",translatedoption)
