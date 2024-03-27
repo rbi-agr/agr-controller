@@ -52,7 +52,7 @@ export async function callMistralAI(message) {
             "stream": false
         }
         const mistralResponse = await axios.post(url, obj)
-        console.log(mistralResponse)
+        // console.log(mistralResponse)
         return mistralResponse.data
     } catch(error) {
         this.logger.error('Error ', error)
