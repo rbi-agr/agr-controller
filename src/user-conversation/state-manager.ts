@@ -414,7 +414,7 @@ export class ChatStateManager {
                         const intentFailRes = [{
                             status: "Success",
                             session_id: reqData.session_id,
-                            "message": "Sorry, we could not classify your intent. Please reframe your query.",
+                            "message": "Sorry I could not understand you. Please reframe your concern.",
                             "options": [],
                             "end_connection": false,
                             "prompt": "text_message",
@@ -776,6 +776,7 @@ export class ChatStateManager {
                                 return educatingFailRes
                             }
                         }
+                        
                         const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount)
                         console.log("Educatingresponse........................",educatingMessageResponse)
                         if(educatingMessageResponse.error){
@@ -787,18 +788,38 @@ export class ChatStateManager {
                         }]
                         return exitResponse
                         }
-                        const educatingMessage = JSON.parse(JSON.stringify(educatingMessageResponse.message.content));
-                        
+                        const educatingMessage = JSON.parse(educatingMessageResponse.message.content);
+                                                        
                         // const educatingMessage = correspondingNarration.natureOfCharge
+                        const edumsg = `Reason:-\n ${educatingMessage.response.reason}`
+                        console.log(edumsg)
+                        let moreinfo = educatingMessage.response.prevention_methods
+                        let additionalInfoString = 'Additional information:-\n'
+                        for(let m=0; m<moreinfo.length; m++) {
+                            additionalInfoString += '- '+moreinfo[m] + '\n'
+                        }
+                        
+                        
                         const educatingRes = [{
                             status: "Success",
                             session_id: reqData.session_id,
-                            message: educatingMessage,
+                            message: edumsg,
                             options: [],
                             end_connection: false,
                             prompt: "text_message",
                             metadata: {}
                         }]
+
+                        educatingRes.push({
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: additionalInfoString,
+                            options: [],
+                            end_connection: false,
+                            prompt: "text_message",
+                            metadata: {}
+                        })
+
                         educatingRes.push({
                             status: "Success",
                             session_id: reqData.session_id,
@@ -808,6 +829,7 @@ export class ChatStateManager {
                             prompt: "option_selection",
                             metadata: {}
                         })
+                        
                         //On sending successfull response update state to 10
                         await this.prisma.sessions.update({
                             where: { sessionId: reqData.session_id },
