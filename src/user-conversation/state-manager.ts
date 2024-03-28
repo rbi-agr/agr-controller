@@ -405,26 +405,41 @@ export class ChatStateManager {
                         //intent did not classify
 
                         //add a retry in the db max 3 tries
-                        if(sessionForIntent) {
-                            await this.prisma.sessions.update({
-                                data: {
-                                  retriesLeft: sessionForIntent.retriesLeft - 1,
-                                },
-                                where: {
-                                  sessionId: reqData.session_id,
-                                },
-                              })
+                        
+                        //Response from RAG API, if the intent is not classified
+                        const intentRagResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/documents/fetch-rag-response`)
+                        if(intentRagResponse.statusCode!=200)
+                        {
+                            if(sessionForIntent) {
+                                await this.prisma.sessions.update({
+                                    data: {
+                                      retriesLeft: sessionForIntent.retriesLeft - 1,
+                                    },
+                                    where: {
+                                      sessionId: reqData.session_id,
+                                    },
+                                  })
+                            }
+                            return[{
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                "message": "Sorry I could not understand you. Please reframe your concern",
+                                "options": [],
+                                "end_connection": false,
+                                "prompt": "text_message",
+                                "metadata":{}
+                              }]
                         }
-                        const intentFailRes = [{
+                        return[{
                             status: "Success",
                             session_id: reqData.session_id,
-                            "message": "Sorry, we could not classify your intent. Please reframe your query.",
+                            "message": intentRagResponse.message,
                             "options": [],
                             "end_connection": false,
                             "prompt": "text_message",
                             "metadata":{}
                           }]
-                        return intentFailRes
+                        
                         
                     }
                     await this.prisma.sessions.update({
