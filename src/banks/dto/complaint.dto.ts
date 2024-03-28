@@ -11,5 +11,7 @@ export interface ComplaintRequestDto {
 }
 
 export interface ComplaintResponseDto {
-    ticketNumber: string
+    error: boolean;
+    message?: string;
+    ticketNumber?: string;
 }
