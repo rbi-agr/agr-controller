@@ -1,19 +1,12 @@
 import axios from "axios";
 import { ChatStateManager } from "../state-manager";
 
-export async function getCorrespondingNarration(bankNarration: any, narrationList: string[]) {
-    const userprompt = `narration from bank: "${bankNarration}", list of narrations: ${narrationList}`
-    const task = `this is the user query: Get me the corresponding narration from the list of narrations: ${narrationList} that matches the narration from bank: "${bankNarration}". If no match is found, return "No match found"`
-    const mistralResponse =  await callMistralAI(task)
-    console.log('mistralResponse ', mistralResponse)
-    return mistralResponse
-}
 
 
 export async function getEduMsg(bankNarration: any, amount: number) {
     // const userprompt = `amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}}`
     // const task = `this is the user query: Get me the reason for the charges: amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}} and how I can prevent them based on amount, bank narration, nature of charge and details provided`
-    const task2 = `this is the context:- amount: ${amount}, narration: "${bankNarration.narration}",nature of charge: "${bankNarration.natureOfCharge}", details:{${bankNarration.details}}  task:- get me the reason of deduction and a list of ways for preventing them based on amount, bank narration, nature of charge and details provided. Make sure to give the response in the following format:\"response\":{ \"reason\":<reason>, \"prevention_methods\": [\"\", \"\"] }`
+    const task2 = `this is the context:- amount: ${amount}, narration: "${bankNarration.narration}",nature of charge: "${bankNarration.natureOfCharge}", details:{${bankNarration.details}}  task:- get me the reason of deduction and a list of ways for preventing them based on amount, bank narration, nature of charge and details provided. Make sure to give the response in the following  JSON format:- {response:{reason:<reason>, prevention_methods: [<method 1>, <method 2>]}. Make sure to keep the response crisp, and human friendly i.e conversational, and do not add any other message or direction or description. }`
     const mistralResponse =  await callMistralAI(task2)
     console.log('mistralResponse ', mistralResponse)
     return mistralResponse
@@ -53,7 +46,7 @@ export async function callMistralAI(message) {
             "stream": false
         }
         const mistralResponse = await axios.post(url, obj)
-        // console.log(mistralResponse)
+        console.log(mistralResponse)
         return mistralResponse.data
     } catch(error) {
         this.logger.error('Error ', error)
