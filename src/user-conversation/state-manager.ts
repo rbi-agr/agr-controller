@@ -430,6 +430,12 @@ export class ChatStateManager {
                                 "metadata":{}
                               }]
                         }
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:0
+                            }
+                        })
                         return[{
                             status: "Success",
                             session_id: reqData.session_id,
@@ -438,9 +444,15 @@ export class ChatStateManager {
                             "end_connection": false,
                             "prompt": "text_message",
                             "metadata":{}
+                          },{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": "Can I help you with anything else?",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
                           }]
-                        
-                        
                     }
                     await this.prisma.sessions.update({
                         where:{sessionId:reqData.session_id},
