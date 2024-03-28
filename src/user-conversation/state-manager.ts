@@ -408,7 +408,7 @@ export class ChatStateManager {
                         
                         //Response from RAG API, if the intent is not classified
                         const intentRagResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/documents/fetch-rag-response`)
-                        if(intentRagResponse.statusCode!=200)
+                        if(intentRagResponse.statusCode && intentRagResponse.statusCode!=200)
                         {
                             if(sessionForIntent) {
                                 await this.prisma.sessions.update({
@@ -433,7 +433,7 @@ export class ChatStateManager {
                         return[{
                             status: "Success",
                             session_id: reqData.session_id,
-                            "message": intentRagResponse.message,
+                            "message": intentRagResponse.response,
                             "options": [],
                             "end_connection": false,
                             "prompt": "text_message",
