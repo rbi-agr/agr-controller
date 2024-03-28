@@ -37,7 +37,7 @@ export class ChatStateManager {
             const detectLang = !session || !statesExcludedForLangDetect.includes(session.state) || (session.state == 4 && !message.includes("|"))
 
             let languageDetected;
-
+            
             if(detectLang) {
                 const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/language-detect`)
                 // const languageDetectedresponse = {
@@ -86,17 +86,18 @@ export class ChatStateManager {
                         }]
                         // const msg = 'Please enter you query in english, hindi or odia'
                         //return proper formatted response
-                        //Check lang from adya
-                    // if(session && session?.languageByAdya!==languageDetected)
-                    // {
-                    //     languageDetected = session.languageByAdya
-                    // }else if(reqData?.metadata && reqData.metadata.language!==languageDetected)
-                    // {
-                    //     //Case 0
-                    //     languageDetected = reqData.metadata.language
-                    // }
+                        
                         return lang_detected
                     }
+                }
+                //Check lang from adya
+                if(session && session?.languageByAdya!==languageDetected)
+                {
+                    languageDetected = session.languageByAdya
+                }else if(reqData?.metadata && reqData.metadata.language!==languageDetected)
+                {
+                    //Case 0
+                    languageDetected = reqData.metadata.language
                 }
             } else {
                 const user = await this.prisma.users.findUnique({
@@ -104,14 +105,14 @@ export class ChatStateManager {
                         id: session.userId
                     }
                 })
-                languageDetected = user.languageDetected
-                // if(session && session?.languageByAdya!==languageDetected)
-                // {
-                //     languageDetected = session.languageByAdya
-                // }
-                // else{
-                    
-                // }
+                // languageDetected = user.languageDetected
+                if(session && session?.languageByAdya!==languageDetected)
+                {
+                    languageDetected = session.languageByAdya
+                }
+                else{
+                    languageDetected = user.languageDetected
+                }
                 
             }
             //if it doesnt then create a session in db, check the language and then call states
@@ -162,11 +163,6 @@ export class ChatStateManager {
                     sessionId:reqData.session_id
                 }
             })
-            let translateOptions = true;
-            if(updatedSession.state == 4 || updatedSession.state == 14) {
-                translateOptions = false;
-            }
-            
             if(languageDetected!=="en")
             {
                 //convert the message to Language detected and return
@@ -526,33 +522,36 @@ export class ChatStateManager {
                             end_connection: true
                         }]
                     }
-
+                    let bankAccountNumber = session.bankAccountNumber
+                    if(!bankAccountNumber.includes('LN') || !bankAccountNumber.includes('OD') || !bankAccountNumber.includes('SB') || !bankAccountNumber.includes('CC')) {
+                        bankAccountNumber = 'LN-' + bankAccountNumber
+                    }
                     const transactionsReqData: TransactionsRequestDto = {
-                        accountNumber: session.bankAccountNumber,
+                        accountNumber: bankAccountNumber,
                         fromDate: session.startDate,
                         toDate: session.endDate
                     }
                     try {
-                        // const transactionsResponse = await this.banksService.fetchTransactions(sessionId, transactionsReqData, BankName.INDIAN_BANK)
-                        // if(transactionsResponse.error) {
-                        //     return [{
-                        //         status: "Internal Server Error",
-                        //         message: `I received the following error from the bank: ${transactionsResponse.message}`,
-                        //         end_connection: true
-                        //     }]
-                        // }
-                        // const transactions = transactionsResponse.transactions
-                        const transactions = [{
-                            transactionDate: new Date('2024-03-13'),
-                            transactionNarration: 'Excess wdl charges',
-                            transactionType: 'DR',
-                            amount: "1000"
-                        }, {
-                            transactionDate: new Date('2024-03-14'),
-                            transactionNarration: 'ATM AMC CHGS',
-                            transactionType: 'DR',
-                            amount: "1000"
-                        }]
+                        const transactionsResponse = await this.banksService.fetchTransactions(sessionId, transactionsReqData, BankName.INDIAN_BANK)
+                        if(transactionsResponse.error) {
+                            return [{
+                                status: "Internal Server Error",
+                                message: `I received the following error from the bank: ${transactionsResponse.message}`,
+                                end_connection: true
+                            }]
+                        }
+                        const transactions = transactionsResponse.transactions
+                        // const transactions = [{
+                        //     transactionDate: new Date('2024-03-13'),
+                        //     transactionNarration: 'Excess wdl charges',
+                        //     transactionType: 'DR',
+                        //     amount: "1000"
+                        // }, {
+                        //     transactionDate: new Date('2024-03-14'),
+                        //     transactionNarration: 'ATM AMC CHGS',
+                        //     transactionType: 'DR',
+                        //     amount: "1000"
+                        // }]
                         if(transactions.length === 0) {
                             if(session.retriesLeft <= 0) {
                                 await this.prisma.sessions.update({
@@ -780,16 +779,16 @@ export class ChatStateManager {
                         const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount)
                         console.log("Educatingresponse........................",educatingMessageResponse)
                         if(educatingMessageResponse.error){
-                            this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
-                            const exitResponse =  [{
-                                status: "Internal Server Error",
-                                message: "Internal Server Error. Please try again later",
-                                end_connection: true
-                            }]
-                            return exitResponse
+                        this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
+                        const exitResponse =  [{
+                        status: "Internal Server Error",
+                        message: "Internal Server Error. Please try again later",
+                        end_connection: true
+                        }]
+                        return exitResponse
                         }
                         const educatingMessage = JSON.parse(JSON.stringify(educatingMessageResponse.message.content));
-                                                    
+                        
                         // const educatingMessage = correspondingNarration.natureOfCharge
                         const educatingRes = [{
                             status: "Success",
@@ -1073,17 +1072,17 @@ export class ChatStateManager {
                         complaintDetails: complaintDetails
                     }
                     try {
-                        // const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
-                        // if(ticketResponse.error) {
-                        //     return [{
-                        //         status: "Internal Server Error",
-                        //         message: `I received the following error from the bank: ${ticketResponse.message}`,
-                        //         end_connection: true
-                        //     }]
-                        // }
-                        const ticketResponse = {
-                            ticketNumber: '123456'
+                        const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
+                        if(ticketResponse.error) {
+                                return [{
+                                        status: "Internal Server Error",
+                                        message: `I received the following error from the bank: ${ticketResponse.message}`,
+                                        end_connection: true
+                                }]
                         }
+                        // const ticketResponse = {
+                        // ticketNumber: '123456'
+                        // }
                         await this.prisma.sessions.update({
                             where: {
                                 sessionId: reqData.session_id

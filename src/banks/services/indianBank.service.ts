@@ -206,6 +206,8 @@ export class IndianBankService {
     };
     // check if these values are present
     for (const key in headers) {
+      if(key == 'Override-Flag' || key == 'Recovery-Flag' || key == 'HealthCheck')
+        continue;
       if (!headers[key]) {
         throw new Error(`Header ${key} not found`);
       }
