@@ -3,7 +3,7 @@ import { Injectable} from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import axios from "axios";
-import { getComplaintDetails, getEduMsg } from "./utils/utils";
+import { getComplaintDetails, getCorrespondingNarration, getEduMsg } from "./utils/utils";
 import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
 import { BankName } from "@prisma/client";
 import { response } from "express";
@@ -37,7 +37,7 @@ export class ChatStateManager {
             const detectLang = !session || !statesExcludedForLangDetect.includes(session.state) || (session.state == 4 && !message.includes("|"))
 
             let languageDetected;
-
+            
             if(detectLang) {
                 const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/language-detect`)
                 // const languageDetectedresponse = {
@@ -86,17 +86,18 @@ export class ChatStateManager {
                         }]
                         // const msg = 'Please enter you query in english, hindi or odia'
                         //return proper formatted response
-                        //Check lang from adya
-                    // if(session && session?.languageByAdya!==languageDetected)
-                    // {
-                    //     languageDetected = session.languageByAdya
-                    // }else if(reqData?.metadata && reqData.metadata.language!==languageDetected)
-                    // {
-                    //     //Case 0
-                    //     languageDetected = reqData.metadata.language
-                    // }
+                        
                         return lang_detected
                     }
+                }
+                //Check lang from adya
+                if(session && session?.languageByAdya!==languageDetected)
+                {
+                    languageDetected = session.languageByAdya
+                }else if(reqData?.metadata && reqData.metadata.language!==languageDetected)
+                {
+                    //Case 0
+                    languageDetected = reqData.metadata.language
                 }
             } else {
                 const user = await this.prisma.users.findUnique({
@@ -104,14 +105,14 @@ export class ChatStateManager {
                         id: session.userId
                     }
                 })
-                languageDetected = user.languageDetected
-                // if(session && session?.languageByAdya!==languageDetected)
-                // {
-                //     languageDetected = session.languageByAdya
-                // }
-                // else{
-                    
-                // }
+                // languageDetected = user.languageDetected
+                if(session && session?.languageByAdya!==languageDetected)
+                {
+                    languageDetected = session.languageByAdya
+                }
+                else{
+                    languageDetected = user.languageDetected
+                }
                 
             }
             //if it doesnt then create a session in db, check the language and then call states
@@ -162,11 +163,6 @@ export class ChatStateManager {
                     sessionId:reqData.session_id
                 }
             })
-            let translateOptions = true;
-            if(updatedSession.state == 4 || updatedSession.state == 14) {
-                translateOptions = false;
-            }
-            
             if(languageDetected!=="en")
             {
                 //convert the message to Language detected and return
@@ -553,25 +549,36 @@ export class ChatStateManager {
                             end_connection: true
                         }]
                     }
-
-                    const transactionsData: TransactionsRequestDto = {
-                        accountNumber: session.bankAccountNumber,
+                    let bankAccountNumber = session.bankAccountNumber
+                    if(!bankAccountNumber.includes('LN') || !bankAccountNumber.includes('OD') || !bankAccountNumber.includes('SB') || !bankAccountNumber.includes('CC')) {
+                        bankAccountNumber = 'LN-' + bankAccountNumber
+                    }
+                    const transactionsReqData: TransactionsRequestDto = {
+                        accountNumber: bankAccountNumber,
                         fromDate: session.startDate,
                         toDate: session.endDate
                     }
                     try {
-                        // const transactions = await this.banksService.fetchTransactions(sessionId, transactionsData, BankName.INDIAN_BANK)
-                        const transactions = [{
-                            transactionDate: new Date('2024-03-13'),
-                            transactionNarration: 'Excess wdl charges',
-                            transactionType: 'DR',
-                            amount: "1000"
-                        }, {
-                            transactionDate: new Date('2024-03-14'),
-                            transactionNarration: 'ATM AMC CHGS',
-                            transactionType: 'DR',
-                            amount: "1000"
-                        }]
+                        const transactionsResponse = await this.banksService.fetchTransactions(sessionId, transactionsReqData, BankName.INDIAN_BANK)
+                        if(transactionsResponse.error) {
+                            return [{
+                                status: "Internal Server Error",
+                                message: `I received the following error from the bank: ${transactionsResponse.message}`,
+                                end_connection: true
+                            }]
+                        }
+                        const transactions = transactionsResponse.transactions
+                        // const transactions = [{
+                        //     transactionDate: new Date('2024-03-13'),
+                        //     transactionNarration: 'Excess wdl charges',
+                        //     transactionType: 'DR',
+                        //     amount: "1000"
+                        // }, {
+                        //     transactionDate: new Date('2024-03-14'),
+                        //     transactionNarration: 'ATM AMC CHGS',
+                        //     transactionType: 'DR',
+                        //     amount: "1000"
+                        // }]
                         if(transactions.length === 0) {
                             if(session.retriesLeft <= 0) {
                                 await this.prisma.sessions.update({
@@ -758,94 +765,115 @@ export class ChatStateManager {
                         // generate educating message
                         const bankNarrations = await this.prisma.bankNarrations.findMany();
 
-                        const correspondingNarration = bankNarrations.find(bankNarration => 
-                            state7TransactionNarration.toLowerCase().includes(bankNarration.narration.toLowerCase())
-                        )
-                        if(correspondingNarration) {
-                            const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount)
-                            console.log("Educatingresponse........................",educatingMessageResponse)
-                            if(educatingMessageResponse.error){
-                            this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
-                            const exitResponse =  [{
-                            status: "Internal Server Error",
-                            message: "Internal Server Error. Please try again later",
-                            end_connection: true
-                            }]
-                            return exitResponse
-                            }
-                            const educatingMessage = JSON.parse(educatingMessageResponse.message.content);
-                                                        
-                            // const educatingMessage = correspondingNarration.natureOfCharge
-                            const edumsg = `Reason:-\n ${educatingMessage.response.reason}`
-                            console.log(edumsg)
-                            let moreinfo = educatingMessage.response.prevention_methods
-                            let additionalInfoString = 'Additional information:-\n'
-                            for(let m=0; m<moreinfo.length; m++) {
-                                additionalInfoString += '- '+moreinfo[m] + '\n'
-                            }
-                            
-                            
-                            const educatingRes = [{
-                                status: "Success",
-                                session_id: reqData.session_id,
-                                message: edumsg,
-                                options: [],
-                                end_connection: false,
-                                prompt: "text_message",
-                                metadata: {}
-                            }]
+                        let correspondingNarration;
+                        const transactionNarrationLower = state7TransactionNarration.toLowerCase()
 
-                            educatingRes.push({
-                                status: "Success",
-                                session_id: reqData.session_id,
-                                message: additionalInfoString,
-                                options: [],
-                                end_connection: false,
-                                prompt: "text_message",
-                                metadata: {}
-                            })
-
-                            educatingRes.push({
-                                status: "Success",
-                                session_id: reqData.session_id,
-                                message: "Are you satisfied with the resolution provided?",
-                                options: ['Yes', 'No'],
-                                end_connection: false,
-                                prompt: "option_selection",
-                                metadata: {}
-                            })
-                            
-                            //On sending successfull response update state to 10
-                            await this.prisma.sessions.update({
-                                where: { sessionId: reqData.session_id },
-                                data: {
-                                    state: 10
-                                }
-                            })
-                            await this.prisma.transactionDetails.update({
-                                where:{
-                                    sessionId: reqData.session_id,
-                                    transactionNarration: state7TransactionNarration
-                                },
-                                data:{
-                                    isEducated:true
-                                }
-                            })
-                            return educatingRes
-                        } else {
-                            const educatingFailRes = [{
-                                status: "Internal Server Error",
-                                message: "Sorry, We could not find the cause for this transaction. Please try later",
-                                end_connection: true
-                            }]
-                            await this.prisma.sessions.update({
-                                where: { sessionId: reqData.session_id },
-                                data: {
-                                    state: 99
-                                }
-                            })
-                            return educatingFailRes
+                        bankNarrations.forEach((bankNarration) => {
+                            const bankNarrationLower = bankNarration.narration.toLowerCase()
+                            if(transactionNarrationLower.includes(bankNarrationLower)) {
+                                correspondingNarration = bankNarration
+                            }
+                        
+                        })
+                        if(!correspondingNarration) {
+                            const narrationsList = bankNarrations.map(bankNarration => bankNarration.narration)
+                            const narrationResponse = await getCorrespondingNarration(state7TransactionNarration, narrationsList)
+                            if(narrationResponse.error){
+                                this.logger.error('Error in fetching narration from Mistral AI: ', narrationResponse.error)
+                                const exitResponse =  [{
+                                    status: "Internal Server Error",
+                                    message: "Internal Server Error. Please try again later",
+                                    end_connection: true
+                                }]
+                                return exitResponse
+                            }
+                            correspondingNarration = JSON.parse(JSON.stringify(narrationResponse.message.content));
+                            if(correspondingNarration === "No match found") {
+                                const educatingFailRes = [{
+                                    status: "Internal Server Error",
+                                    message: "Sorry, We could not find the cause for this transaction. Please try later",
+                                    end_connection: true
+                                }]
+                                await this.prisma.sessions.update({
+                                    where: { sessionId: reqData.session_id },
+                                    data: {
+                                        state: 99
+                                    }
+                                })
+                                return educatingFailRes
+                            }
                         }
+                        
+                        const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount)
+                        console.log("Educatingresponse........................",educatingMessageResponse)
+                        if(educatingMessageResponse.error){
+                        this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
+                        const exitResponse =  [{
+                        status: "Internal Server Error",
+                        message: "Internal Server Error. Please try again later",
+                        end_connection: true
+                        }]
+                        return exitResponse
+                        }
+                        const educatingMessage = JSON.parse(educatingMessageResponse.message.content);
+                                                        
+                        // const educatingMessage = correspondingNarration.natureOfCharge
+                        const edumsg = `Reason:-\n ${educatingMessage.response.reason}`
+                        console.log(edumsg)
+                        let moreinfo = educatingMessage.response.prevention_methods
+                        let additionalInfoString = 'Additional information:-\n'
+                        for(let m=0; m<moreinfo.length; m++) {
+                            additionalInfoString += '- '+moreinfo[m] + '\n'
+                        }
+                        
+                        
+                        const educatingRes = [{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: edumsg,
+                            options: [],
+                            end_connection: false,
+                            prompt: "text_message",
+                            metadata: {}
+                        }]
+
+                        educatingRes.push({
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: additionalInfoString,
+                            options: [],
+                            end_connection: false,
+                            prompt: "text_message",
+                            metadata: {}
+                        })
+
+                        educatingRes.push({
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "Are you satisfied with the resolution provided?",
+                            options: ['Yes', 'No'],
+                            end_connection: false,
+                            prompt: "option_selection",
+                            metadata: {}
+                        })
+                        
+                        //On sending successfull response update state to 10
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 10
+                            }
+                        })
+                        await this.prisma.transactionDetails.update({
+                            where:{
+                                sessionId: reqData.session_id,
+                                transactionNarration: state7TransactionNarration
+                            },
+                            data:{
+                                isEducated:true
+                            }
+                        })
+                        return educatingRes
                     } else {
                         
                         this.logger.info("Selected transaction not found")
@@ -1093,10 +1121,17 @@ export class ChatStateManager {
                         complaintDetails: complaintDetails
                     }
                     try {
-                        // const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
-                        const ticketResponse = {
-                            ticketNumber: '123456'
+                        const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
+                        if(ticketResponse.error) {
+                                return [{
+                                        status: "Internal Server Error",
+                                        message: `I received the following error from the bank: ${ticketResponse.message}`,
+                                        end_connection: true
+                                }]
                         }
+                        // const ticketResponse = {
+                        // ticketNumber: '123456'
+                        // }
                         await this.prisma.sessions.update({
                             where: {
                                 sessionId: reqData.session_id

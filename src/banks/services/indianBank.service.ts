@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BankName, InteractionType } from '@prisma/client';
 import axios from 'axios';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { TransactionsRequestDto, TransactionsResponseDto } from '../dto/transactions.dto';
+import { Transaction, TransactionsRequestDto, TransactionsResponseDto } from '../dto/transactions.dto';
 import { ComplaintRequestDto, ComplaintResponseDto } from '../dto/complaint.dto';
 import * as constants from '../utils/bankConstants';
 
@@ -12,9 +12,9 @@ export class IndianBankService {
     private prisma: PrismaService,
   ) {}
 
-  async fetchTransactions(sessionId: string, transactionsDto: TransactionsRequestDto): Promise<TransactionsResponseDto[]> {
+  async fetchTransactions(sessionId: string, transactionsDto: TransactionsRequestDto): Promise<TransactionsResponseDto> {
 
-    const bankUrl = process.env.INDIAN_BANK_URL;
+    const bankUrl = constants.indianBankUrl;
     if (!bankUrl) {
       throw new Error('Bank URL not found');
     }
@@ -57,10 +57,7 @@ export class IndianBankService {
       const response = await axios.post(bankUrl + endpoint, requestPayload, {
         headers: headers
       })
-      const transactions = response.data.TXN_CHGS_RESPONSE.body.payload.collection;
-
       const responseHeaders = response.headers;
-
       await this.prisma.bankInteractions.update({
         where: {
           id: bankInteraction.id
@@ -72,7 +69,18 @@ export class IndianBankService {
           }
         }
       });
-      const formattedTransactions: TransactionsResponseDto[] = transactions.map(transaction => {
+      if(response.data.ErrorResponse) {
+        const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
+        return {
+          error: true,
+          message: errDesc,
+          transactions: []
+        }
+      }
+      const mainResponse = response.data.LoanMainStatement_Response ?? response.data.MainStatement_Response
+      const transactions = mainResponse?.Body?.Payload?.Collection ?? [];
+
+      const formattedTransactions: Transaction[] = transactions.map(transaction => {
         const transactionDate = formatResponseDate(transaction.Valid_Date)
         return {
           transactionDate: transactionDate,
@@ -81,10 +89,13 @@ export class IndianBankService {
           transactionNarration: transaction.Narration,
         }
       });
-      return formattedTransactions
+      return {
+        error: false,
+        transactions: formattedTransactions
+      }
 
     } catch (error) {
-            throw new Error(error.response?.data ?? error.message);
+      throw new Error(error.response?.data ?? error.message);
     }
   }
 
@@ -106,7 +117,7 @@ export class IndianBankService {
     });
 
     // TODO: Update endpoint when exposed by the bank
-    const endpoint = `/uat-indian-bankapi/enterprise/rbih/v1/add-complaint-cgrs`;
+    const endpoint = `/chatbot/v1/ct-complaint-cgrs`;
 
     // get current date and time in format DD-MM-YYYY HH:MM:SS
     const currentDateTime = getCurrentDateTime();
@@ -119,7 +130,7 @@ export class IndianBankService {
 
     const requestPayload = {
       Request_Date_and_Time: currentDateTime,
-      Customer_Account_Number: complaintDto.accountNumber,
+      Customer_Account_Number: accountNumber,
       Customer_Mobile_Number: complaintDto.mobileNumber,
       Customer_Cat_ID: complaintDto.complaintCategoryId,
       Complaint_category: complaintDto.complaintCategory,
@@ -148,10 +159,18 @@ export class IndianBankService {
           }
         }
       });
-      const ticketNumber = response.data.body.payload.Ticket_No;
-      return {
-          ticketNumber: ticketNumber
+      if(response.data.ErrorResponse) {
+        const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
+        return {
+          error: true,
+          message: errDesc,
         }
+      }
+      const ticketNumber = response.data.CGRSRegistration_Response?.Body?.Payload?.data?.Ticket_Number;
+      return {
+          error: false,
+          ticketNumber: ticketNumber
+      }
     } catch (error) {
       throw new Error(error.response?.data ?? error.message);
     }
@@ -165,7 +184,7 @@ export class IndianBankService {
     });
     // convert to 9 digit string
     const interactionNumber = (numberOfInteractions % 1000000000 + 1).toString().padStart(9, '0');
-    const apiInteractionId = process.env.INDIAN_BANK_CHANNEL_VALUE + Date.now().toString() + interactionNumber;
+    const apiInteractionId = constants.indianBankChannelValue + Date.now().toString() + interactionNumber;
     return apiInteractionId;
   }
 
@@ -174,17 +193,21 @@ export class IndianBankService {
     const headers = {
       'X-IB-Client-Id': constants.indianBankClientId,
       'X-IB-Client-Secret': constants.indianBankClientSecret,
-      'Channel': constants.indianBankChannelName,
+      'Channel': constants.indianBankChannel,
       'X-Client-Certificate': constants.indianBankClientCertificate,
       'X-API-Interaction-ID': apiInteractionId,
-      'HealthCheck': 'FALSE',
-      // 'HealthType': ,
+      'Override-Flag': 0,
+      'Recovery-Flag': '0',
+      'HealthCheck': false,
+      'HealthType': 'GWY',
       'Branch-Number': constants.indianBankBranchNumber,
       'Teller-Number': constants.indianBankTellerNumber,
       'Terminal-Number': constants.indianBankTerminalNumber,
     };
     // check if these values are present
     for (const key in headers) {
+      if(key == 'Override-Flag' || key == 'Recovery-Flag' || key == 'HealthCheck')
+        continue;
       if (!headers[key]) {
         throw new Error(`Header ${key} not found`);
       }
