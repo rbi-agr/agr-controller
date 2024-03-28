@@ -426,6 +426,12 @@ export class ChatStateManager {
                                 "metadata":{}
                               }]
                         }
+                        await this.prisma.sessions.update({
+                            where:{sessionId:reqData.session_id},
+                            data:{
+                                state:19
+                            }
+                        })
                         return[{
                             status: "Success",
                             session_id: reqData.session_id,
@@ -434,9 +440,15 @@ export class ChatStateManager {
                             "end_connection": false,
                             "prompt": "text_message",
                             "metadata":{}
+                          },{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": "Can I help you with anything else?",
+                            "options": ["Yes","No"],
+                            "end_connection": false,
+                            "prompt": "option_selection",
+                            "metadata":{}
                           }]
-                        
-                        
                     }
                     await this.prisma.sessions.update({
                         where:{sessionId:reqData.session_id},
@@ -1332,6 +1344,43 @@ export class ChatStateManager {
                         "metadata": {}
                     }]
                     return state18SuccessResponse
+                case 19:
+                    const state19Message = reqData.message.text;
+                    if(state19Message && state19Message.toLowerCase().includes('yes')) {
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 0
+                            }
+                        })
+                        return [{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": "Please enter your query again",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                          }]
+                        
+                    } else if((state19Message && state19Message.toLowerCase().includes('no'))) {
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 13
+                            }
+                        })
+                        return this.states(reqData, languageDetected, 13)
+                    }
+                    else
+                    {
+                        return [{
+                                status: "Bad Request",
+                                message: "Invalid Query. Please try again later",
+                                end_connection: true
+                        }]
+                    }
+                    break;
                 case 99:
                     //End connection
                     this.logger.info('inside case 99')
