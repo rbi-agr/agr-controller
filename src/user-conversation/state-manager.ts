@@ -792,7 +792,7 @@ export class ChatStateManager {
                             }
                         }
                         
-                        const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount)
+                        const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount.split('.')[0])
                         console.log("Educatingresponse........................",educatingMessageResponse)
                         if(educatingMessageResponse.error){
                         this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
