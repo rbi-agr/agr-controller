@@ -55,7 +55,7 @@ export class ChatStateManager {
                     return exitResponse
                 }
                 languageDetected = languageDetectedresponse?.language
-                         
+                        
                 
                 if(languageDetected !== 'en') {
                     if(languageDetected === 'hi' || languageDetected === 'or'|| languageDetected === 'ori'){
@@ -94,7 +94,7 @@ export class ChatStateManager {
                 if(session && session?.languageByAdya!==languageDetected)
                 {
                     languageDetected = session.languageByAdya
-                }else if(reqData?.metadata && reqData.metadata.language!==languageDetected)
+                }else if(reqData?.metadata?.language && reqData.metadata.language!==languageDetected)
                 {
                     //Case 0
                     languageDetected = reqData.metadata.language
@@ -444,7 +444,7 @@ export class ChatStateManager {
                             status: "Success",
                             session_id: reqData.session_id,
                             "message": "Can I help you with anything else?",
-                            "options": ["Yes","No"],
+                            "options": ['Yes, I want to ask further', 'No, thankyou'],
                             "end_connection": false,
                             "prompt": "option_selection",
                             "metadata":{}
@@ -500,7 +500,7 @@ export class ChatStateManager {
                                 status: "Success",
                                 session_id: reqData.session_id,
                                 "message": "Do you remember the date of transaction?",
-                                "options": ['Yes', 'No'],
+                                "options": ['Yes, I remember', "No, I don't remember"],
                                 "end_connection": false,
                                 "prompt": "option_selection",
                                 "metadata": {}
@@ -675,7 +675,7 @@ export class ChatStateManager {
                             status: "Success",
                             session_id: reqData.session_id,
                             "message": "Do you remember the date of transaction?",
-                            "options": ['Yes', 'No'],
+                            "options": ['Yes, I remember', "No, I don't remember"],
                             "end_connection": false,
                             "prompt": "option_selection",
                             "metadata": {}
@@ -851,7 +851,7 @@ export class ChatStateManager {
                             status: "Success",
                             session_id: reqData.session_id,
                             message: "Are you satisfied with the resolution provided?",
-                            options: ['Yes', 'No'],
+                            options: ['Yes, I am satisfied', 'No, I am not satisfied'],
                             end_connection: false,
                             prompt: "option_selection",
                             metadata: {}
@@ -1025,7 +1025,7 @@ export class ChatStateManager {
                             status: "Success",
                             session_id: reqData.session_id,
                             "message": "Do you want to know about the other transactions too?",
-                            "options": ["Yes", "No"],
+                            "options": ["Yes, I want to know", "No, I don't want to know"],
                             "end_connection": false,
                             "prompt": "option_selection",
                             "metadata":{}
@@ -1345,6 +1345,7 @@ export class ChatStateManager {
                     }]
                     return state18SuccessResponse
                 case 19:
+                    this.logger.info('inside case 19')
                     const state19Message = reqData.message.text;
                     if(state19Message && state19Message.toLowerCase().includes('yes')) {
                         await this.prisma.sessions.update({
@@ -1356,7 +1357,7 @@ export class ChatStateManager {
                         return [{
                             status: "Success",
                             session_id: reqData.session_id,
-                            "message": "Please enter your query again",
+                            "message": "Please enter your query",
                             "options": [],
                             "end_connection": false,
                             "prompt": "text_message",
