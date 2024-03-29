@@ -549,12 +549,8 @@ export class ChatStateManager {
                             end_connection: true
                         }]
                     }
-                    let bankAccountNumber = session.bankAccountNumber
-                    if(!bankAccountNumber.includes('LN') || !bankAccountNumber.includes('OD') || !bankAccountNumber.includes('SB') || !bankAccountNumber.includes('CC')) {
-                        bankAccountNumber = 'LN-' + bankAccountNumber
-                    }
                     const transactionsReqData: TransactionsRequestDto = {
-                        accountNumber: bankAccountNumber,
+                        accountNumber: session.bankAccountNumber,
                         fromDate: session.startDate,
                         toDate: session.endDate
                     }
