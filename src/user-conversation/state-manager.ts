@@ -1042,10 +1042,10 @@ export class ChatStateManager {
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
                             data:{
-                                state:13
+                                state:15
                             }
                         })
-                        const res = await this.states(reqData, languageDetected, 13)
+                        const res = await this.states(reqData, languageDetected, 15)
                         return res
                     }
                     break;
@@ -1278,10 +1278,10 @@ export class ChatStateManager {
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
                             data:{
-                                state:13
+                                state:15
                             }
                         })
-                        const res = await this.states(reqData, languageDetected, 13)
+                        const res = await this.states(reqData, languageDetected, 15)
                         return res
                     }
                     else 
@@ -1364,10 +1364,10 @@ export class ChatStateManager {
                         await this.prisma.sessions.update({
                             where: { sessionId: reqData.session_id },
                             data: {
-                                state: 13
+                                state: 15
                             }
                         })
-                        return this.states(reqData, languageDetected, 13)
+                        return this.states(reqData, languageDetected, 15)
                     }
                     else
                     {
