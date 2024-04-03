@@ -922,14 +922,20 @@ export class ChatStateManager {
                     // console.log('mistral response ', mistralResponse)
                     // const dateData = mistralResponse.data.message.content
                     // console.log('dateData ', dateData)
-                    const datesResponse = {
-                        transaction_startdate: '13/03/2024',
-                        transaction_enddate: '14/03/2024',
-                        error: null
-                    }
+                    // const datesResponse = {
+                    //     transaction_startdate: '13/03/2024',
+                    //     transaction_enddate: '14/03/2024',
+                    //     error: null
+                    // }
                     //Store it in db
-                    const startDateParts = datesResponse.transaction_startdate.split('/');
-                    const endDateParts = datesResponse.transaction_enddate.split('/');
+                    const userMessageJson = JSON.parse(userMessage)
+
+                    let startDateParts = userMessageJson.startDate.split('/');
+                    let endDateParts = userMessageJson.endDate.split('/');
+                    if(startDateParts.length == 1) {
+                        startDateParts = userMessageJson.startDate.split('-');
+                        endDateParts = userMessageJson.endDate.split('-');
+                    }
                     const startDate = new Date(`${startDateParts[2]}-${startDateParts[1]}-${startDateParts[0]}`);
                     const endDate = new Date(`${endDateParts[2]}-${endDateParts[1]}-${endDateParts[0]}`);
 
@@ -948,33 +954,22 @@ export class ChatStateManager {
                     // Convert to ISO 8601 format
                     const isoStartDate = startDate.toISOString();
                     const isoEndDate = endDate.toISOString();
-                    if (datesResponse){
-                        await this.prisma.sessions.update({
-                            where:{sessionId:reqData.session_id},
-                            data:{
-                                startDate:isoStartDate,
-                                endDate:isoEndDate
-                            }
-                        })
-                        await this.prisma.sessions.update({
-                            where:{sessionId:reqData.session_id},
-                            data:{
-                                state:2
-                            }
-                        })
-                        const success_resp= this.states(reqData, languageDetected,2)
-                        return success_resp
-                        
-                    }
-                    else
-                    {
-                        const intentFailRes = [{
-                            status: "Internal Server Error",
-                            "message": "Internal Server Error. Please try again later",
-                            "end_connection": false
-                          }]
-                        return intentFailRes
-                    }
+
+                    await this.prisma.sessions.update({
+                        where:{sessionId:reqData.session_id},
+                        data:{
+                            startDate:isoStartDate,
+                            endDate:isoEndDate
+                        }
+                    })
+                    await this.prisma.sessions.update({
+                        where:{sessionId:reqData.session_id},
+                        data:{
+                            state:2
+                        }
+                    })
+                    const success_resp= this.states(reqData, languageDetected,2)
+                    return success_resp    
                 case 10:
                     //Redirect to state 11 or 12 based on answer
                     this.logger.info('inside case 10')
