@@ -929,8 +929,13 @@ export class ChatStateManager {
                     // }
                     //Store it in db
                     const userMessageJson = JSON.parse(userMessage)
-                    const startDateParts = userMessageJson.startDate.split('/');
-                    const endDateParts = userMessageJson.endDate.split('/');
+
+                    let startDateParts = userMessageJson.startDate.split('/');
+                    let endDateParts = userMessageJson.endDate.split('/');
+                    if(startDateParts.length == 1) {
+                        startDateParts = userMessageJson.startDate.split('-');
+                        endDateParts = userMessageJson.endDate.split('-');
+                    }
                     const startDate = new Date(`${startDateParts[2]}-${startDateParts[1]}-${startDateParts[0]}`);
                     const endDate = new Date(`${endDateParts[2]}-${endDateParts[1]}-${endDateParts[0]}`);
 
