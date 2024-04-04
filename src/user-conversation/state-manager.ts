@@ -1144,10 +1144,11 @@ export class ChatStateManager {
                         await this.prisma.sessions.update({
                             where: { sessionId: reqData.session_id },
                             data: {
-                                state: 99
+                                state: 20
                             }
                         })
-                        return [{
+
+                        const ticketRes = [{
                             status: "Success",
                             session_id: reqData.session_id,
                             message: `Your issue has been registered in the CGRS system with this ticket ID: ${ticketResponse.ticketNumber}. You can track the status of your issue on this link: ${constants.CGRSLink}`,
@@ -1156,6 +1157,18 @@ export class ChatStateManager {
                             prompt: "text_message",
                             metadata: {}
                         }]
+
+                        ticketRes.push({
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "Please select Yes to continue.",
+                            options: ['Yes'],
+                            end_connection: false,
+                            prompt: "option_selection",
+                            metadata: {}
+                        })
+
+                        return ticketRes
                     } catch (error) {
                         this.logger.error('Error in raising ticket: ', error)
                         return [{
@@ -1380,6 +1393,26 @@ export class ChatStateManager {
                         }]
                     }
                     break;
+                case 20:
+                    this.logger.info('inside case 16')
+                    const userresponseToEnd = reqData.message.text
+                    if(userresponseToEnd && userresponseToEnd.toLowerCase().includes("yes")){
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 99
+                            }
+                        })
+                    }
+                    return [{
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        "message": "",
+                        "options": [],
+                        "end_connection": true,
+                        "prompt": "text_message",
+                        "metadata":{}
+                      }]
                 case 99:
                     //End connection
                     this.logger.info('inside case 99')
