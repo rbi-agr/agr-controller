@@ -1126,10 +1126,20 @@ export class ChatStateManager {
                     }
                     else
                     {
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 20
+                            }
+                        })
                         return [{
-                                status: "Bad Request",
-                                message: "Invalid Query. Please try again",
-                                end_connection: true
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "Something went wrong. Please select Yes to end the conversation.",
+                            options: ['Yes, end the conversation'],
+                            end_connection: false,
+                            prompt: "option_selection",
+                            metadata: {}
                         }]
                     }
                 case 11:
@@ -1350,12 +1360,21 @@ export class ChatStateManager {
                         
                     }
                     else{
-                        const failRes = [{
-                            status: "Bad Request",
-                            message: "No transaction selected",
-                            end_connection: false
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 20
+                            }
+                        })
+                        return [{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "No transactions selected. Please select Yes to end the conversation.",
+                            options: ['Yes, end the conversation'],
+                            end_connection: false,
+                            prompt: "option_selection",
+                            metadata: {}
                         }]
-                        return failRes
                     }
                     msg = 'Select the transaction from the list'
                     break;
@@ -1427,11 +1446,21 @@ export class ChatStateManager {
                     }
                     else 
                     {
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 20
+                            }
+                        })
                         return [{
-                            status: "Bad Request",
-                            message: "Invalid Query. Please try again",
-                            end_connection: false
-                    }]
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "No transactions selected. Please select Yes to end the conversation.",
+                            options: ['Yes, end the conversation'],
+                            end_connection: false,
+                            prompt: "option_selection",
+                            metadata: {}
+                        }]
                     }
                     break;
                 case 17:
