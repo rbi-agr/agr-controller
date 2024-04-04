@@ -1562,7 +1562,7 @@ export class ChatStateManager {
                     return [{
                         status: "Success",
                         session_id: reqData.session_id,
-                        "message": "",
+                        "message": "Thank You",
                         "options": [],
                         "end_connection": true,
                         "prompt": "text_message",
