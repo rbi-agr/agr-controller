@@ -399,57 +399,76 @@ export class ChatStateManager {
                     }
                     if (!intentResponse.category || !intentResponse.subtype || !intentResponse.type) {
                         //intent did not classify
-
-                        //add a retry in the db max 3 tries
-                        
-                        //Response from RAG API, if the intent is not classified
-                        const intentRagResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/documents/fetch-rag-response`)
-                        if(intentRagResponse.statusCode && intentRagResponse.statusCode!=200)
-                        {
-                            if(sessionForIntent) {
-                                await this.prisma.sessions.update({
-                                    data: {
-                                      retriesLeft: sessionForIntent.retriesLeft - 1,
-                                    },
-                                    where: {
-                                      sessionId: reqData.session_id,
-                                    },
-                                  })
-                            }
-                            return[{
-                                status: "Success",
-                                session_id: reqData.session_id,
-                                "message": "Sorry I could not understand you. Please reframe your concern",
-                                "options": [],
-                                "end_connection": false,
-                                "prompt": "text_message",
-                                "metadata":{}
-                              }]
+                        if(sessionForIntent) {
+                            await this.prisma.sessions.update({
+                                data: {
+                                  retriesLeft: sessionForIntent.retriesLeft - 1,
+                                },
+                                where: {
+                                  sessionId: reqData.session_id,
+                                },
+                              })
                         }
-                        await this.prisma.sessions.update({
-                            where:{sessionId:reqData.session_id},
-                            data:{
-                                state:19
-                            }
-                        })
                         return[{
                             status: "Success",
                             session_id: reqData.session_id,
-                            "message": intentRagResponse.response,
+                            "message": "Sorry I could not understand you. Please reframe your concern",
                             "options": [],
                             "end_connection": false,
                             "prompt": "text_message",
                             "metadata":{}
-                          },{
-                            status: "Success",
-                            session_id: reqData.session_id,
-                            "message": "Can I help you with anything else?",
-                            "options": ['Yes, I want to ask further', 'No, thankyou'],
-                            "end_connection": false,
-                            "prompt": "option_selection",
-                            "metadata":{}
                           }]
                     }
+                        //add a retry in the db max 3 tries
+                        
+                        //Response from RAG API, if the intent is not classified
+                    //     const intentRagResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/documents/fetch-rag-response`)
+                    //     if(intentRagResponse.statusCode && intentRagResponse.statusCode!=200)
+                    //     {
+                    //         if(sessionForIntent) {
+                    //             await this.prisma.sessions.update({
+                    //                 data: {
+                    //                   retriesLeft: sessionForIntent.retriesLeft - 1,
+                    //                 },
+                    //                 where: {
+                    //                   sessionId: reqData.session_id,
+                    //                 },
+                    //               })
+                    //         }
+                    //         return[{
+                    //             status: "Success",
+                    //             session_id: reqData.session_id,
+                    //             "message": "Sorry I could not understand you. Please reframe your concern",
+                    //             "options": [],
+                    //             "end_connection": false,
+                    //             "prompt": "text_message",
+                    //             "metadata":{}
+                    //           }]
+                    //     }
+                    //     await this.prisma.sessions.update({
+                    //         where:{sessionId:reqData.session_id},
+                    //         data:{
+                    //             state:19
+                    //         }
+                    //     })
+                    //     return[{
+                    //         status: "Success",
+                    //         session_id: reqData.session_id,
+                    //         "message": intentRagResponse.response,
+                    //         "options": [],
+                    //         "end_connection": false,
+                    //         "prompt": "text_message",
+                    //         "metadata":{}
+                    //       },{
+                    //         status: "Success",
+                    //         session_id: reqData.session_id,
+                    //         "message": "Can I help you with anything else?",
+                    //         "options": ['Yes, I want to ask further', 'No, thankyou'],
+                    //         "end_connection": false,
+                    //         "prompt": "option_selection",
+                    //         "metadata":{}
+                    //       }]
+                    // }
                     await this.prisma.sessions.update({
                         where:{sessionId:reqData.session_id},
                         data:{
@@ -1155,7 +1174,7 @@ export class ChatStateManager {
                             status: "Success",
                             session_id: reqData.session_id,
                             message: "Please select Yes to continue.",
-                            options: ['Yes'],
+                            options: ['Yes, I am satisfied', 'No, I am not satisfied'],
                             end_connection: false,
                             prompt: "option_selection",
                             metadata: {}
