@@ -50,8 +50,8 @@ export class ChatStateManager {
                 if(languageDetectedresponse.error){
                     const exitResponse =  [{
                         status: "Internal Server Error",
-                        message: "Error in language Detection",
-                        end_connection: true
+                        message: "Error in language detection",
+                        end_connection: false
                     }]
                     return exitResponse
                 }
@@ -71,7 +71,7 @@ export class ChatStateManager {
                             return[{
                                 status: "Internal Server Error",
                                 "message": "Something went wrong with language translation",
-                                "end_connection": true
+                                "end_connection": false
                             }]
                         }
                     }else {
@@ -126,8 +126,22 @@ export class ChatStateManager {
                     const intentFailRes = [{
                         "status": "Bad Request",
                         message: "Maximum retries limit reached. Please try again later.",
-                        end_connection: true
+                        end_connection: false
+                    }, {
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                        options: ['Yes, end the conversation'],
+                        end_connection: false,
+                        prompt: "option_selection",
+                        metadata: {}
                     }]
+                    await this.prisma.sessions.update({
+                        where: { sessionId: reqData.session_id },
+                        data: {
+                            state: 20
+                        }
+                    })
                     return intentFailRes
                 } 
                 if(message.length === 0) {
@@ -169,7 +183,7 @@ export class ChatStateManager {
                 //convert the message to Language detected and return
                 //Translator API
                 
-                let translatedresponse = await this.translatedResponse(response, languageDetected)
+                let translatedresponse = await this.translatedResponse(response, languageDetected, reqData.session_id)
                 console.log("translatedresponse",translatedresponse)
                 response=translatedresponse
             }
@@ -346,8 +360,22 @@ export class ChatStateManager {
                         const intentFailRes = [{
                             "status": "Bad Request",
                             message: "Maximum retries limit reached. Please try again later.",
-                            end_connection: true
+                            end_connection: false
+                        }, {
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                            options: ['Yes, end the conversation'],
+                            end_connection: false,
+                            prompt: "option_selection",
+                            metadata: {}
                         }]
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 20
+                            }
+                        })
                         return intentFailRes
                     } 
                     if(messageForIntent.length === 0) {
@@ -394,11 +422,25 @@ export class ChatStateManager {
                         const exitResponse =  [{
                             status: "Internal Server Error",
                             message: "Internal Server Error. Please try again later",
-                            end_connection: true
+                            end_connection: false
+                        }, {
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                            options: ['Yes, end the conversation'],
+                            end_connection: false,
+                            prompt: "option_selection",
+                            metadata: {}
                         }]
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 20
+                            }
+                        })
                         return exitResponse
                     }
-                    if (!intentResponse.category || !intentResponse.subtype || !intentResponse.type) {
+                    if (!intentResponse.cat_id || !intentResponse.category || !intentResponse.subtype || !intentResponse.type) {
                         //intent did not classify
                         if(sessionForIntent) {
                             await this.prisma.sessions.update({
@@ -418,7 +460,7 @@ export class ChatStateManager {
                             "end_connection": false,
                             "prompt": "text_message",
                             "metadata":{}
-                          }]
+                        }]
                     }
                         //add a retry in the db max 3 tries
                         
@@ -474,7 +516,7 @@ export class ChatStateManager {
                         where:{sessionId:reqData.session_id},
                         data:{
                             state:2,
-                            complaintCategoryId: intentResponse.categoryId,
+                            complaintCategoryId: intentResponse.cat_id,
                             complaintCategory: intentResponse.category,
                             complaintCategoryType: intentResponse.type,
                             complaintCategorySubType: intentResponse.subtype,
@@ -577,10 +619,24 @@ export class ChatStateManager {
                     try {
                         const transactionsResponse = await this.banksService.fetchTransactions(sessionId, transactionsReqData, BankName.INDIAN_BANK)
                         if(transactionsResponse.error) {
+                            await this.prisma.sessions.update({
+                                where: { sessionId: reqData.session_id },
+                                data: {
+                                    state: 20
+                                }
+                            })
                             return [{
                                 status: "Internal Server Error",
                                 message: `I received the following error from the bank: ${transactionsResponse.message}`,
-                                end_connection: true
+                                end_connection: false
+                            }, {
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                                options: ['Yes, end the conversation'],
+                                end_connection: false,
+                                prompt: "option_selection",
+                                metadata: {}
                             }]
                         }
                         const transactions = transactionsResponse.transactions
@@ -655,8 +711,22 @@ export class ChatStateManager {
                         const intentFailRes = [{
                             status: "Internal Server Error",
                             message: "Something went wrong with Bank Servers. Please try again later",
-                            end_connection: true
+                            end_connection: false
+                        }, {
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                            options: ['Yes, end the conversation'],
+                            end_connection: false,
+                            prompt: "option_selection",
+                            metadata: {}
                         }]
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 20
+                            }
+                        })
                         return intentFailRes
                     }
                 case 4:
@@ -799,8 +869,22 @@ export class ChatStateManager {
                                 const exitResponse =  [{
                                     status: "Internal Server Error",
                                     message: "Internal Server Error. Please try again later",
-                                    end_connection: true
+                                    end_connection: false
+                                }, {
+                                    status: "Success",
+                                    session_id: reqData.session_id,
+                                    message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                                    options: ['Yes, end the conversation'],
+                                    end_connection: false,
+                                    prompt: "option_selection",
+                                    metadata: {}
                                 }]
+                                await this.prisma.sessions.update({
+                                    where: { sessionId: reqData.session_id },
+                                    data: {
+                                        state: 20
+                                    }
+                                })
                                 return exitResponse
                             }
                             correspondingNarration = JSON.parse(JSON.stringify(narrationResponse.message.content));
@@ -808,12 +892,20 @@ export class ChatStateManager {
                                 const educatingFailRes = [{
                                     status: "Internal Server Error",
                                     message: "Sorry, We could not find the cause for this transaction. Please try later",
-                                    end_connection: true
+                                    end_connection: false
+                                }, {
+                                    status: "Success",
+                                    session_id: reqData.session_id,
+                                    message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                                    options: ['Yes, end the conversation'],
+                                    end_connection: false,
+                                    prompt: "option_selection",
+                                    metadata: {}
                                 }]
                                 await this.prisma.sessions.update({
                                     where: { sessionId: reqData.session_id },
                                     data: {
-                                        state: 99
+                                        state: 20
                                     }
                                 })
                                 return educatingFailRes
@@ -833,8 +925,22 @@ export class ChatStateManager {
                             const exitResponse =  [{
                                 status: "Internal Server Error",
                                 message: "Internal Server Error. Please try again later",
-                                end_connection: true
+                                end_connection: false
+                            }, {
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                                options: ['Yes, end the conversation'],
+                                end_connection: false,
+                                prompt: "option_selection",
+                                metadata: {}
                             }]
+                            await this.prisma.sessions.update({
+                                where: { sessionId: reqData.session_id },
+                                data: {
+                                    state: 20
+                                }
+                            })
                             return exitResponse
                         }
                         const educatingMessage = JSON.parse(educatingMessageResponse.message.content);
@@ -1085,7 +1191,8 @@ export class ChatStateManager {
                             id:session.userId
                         }
                     })
-                    if(session.complaintCategory == undefined 
+                    if(session.complaintCategoryId == undefined 
+                        || session.complaintCategory == undefined 
                         || session.complaintCategoryType == undefined
                         || session.complaintCategorySubType == undefined) {
                         return [{
@@ -1322,8 +1429,8 @@ export class ChatStateManager {
                     {
                         return [{
                             status: "Bad Request",
-                            message: "Invalid Query. Please try again later",
-                            end_connection: true
+                            message: "Invalid Query. Please try again",
+                            end_connection: false
                     }]
                     }
                     break;
@@ -1343,7 +1450,7 @@ export class ChatStateManager {
                         return [{
                             status: "Bad Request",
                             message: "Invalid Query",
-                            end_connection: true
+                            end_connection: false
                     }]
                     }
                     await this.prisma.sessions.update({
@@ -1408,12 +1515,12 @@ export class ChatStateManager {
                         return [{
                                 status: "Bad Request",
                                 message: "Invalid Query. Please try again later",
-                                end_connection: true
+                                end_connection: false
                         }]
                     }
                     break;
                 case 20:
-                    this.logger.info('inside case 16')
+                    this.logger.info('inside case 20')
                     const userresponseToEnd = reqData.message.text
                     if(userresponseToEnd && userresponseToEnd.toLowerCase().includes("yes")){
                         await this.prisma.sessions.update({
@@ -1593,7 +1700,7 @@ export class ChatStateManager {
         return formattedDate.replace(/(\d+)(st|nd|rd|th)/, '$1'); // Remove suffix from day
     }
 
-    async translatedResponse(response, languageDetected){
+    async translatedResponse(response, languageDetected, sessionId){
         try {
             let translatedfinalresponse=[]
                 for(let e=0; e<response.length; e++)
@@ -1616,10 +1723,24 @@ export class ChatStateManager {
                                     }
                                     else
                                     {
-                                        return[{
+                                        await this.prisma.sessions.update({
+                                            where: { sessionId },
+                                            data: {
+                                                state: 20
+                                            }
+                                        })
+                                        return [{
                                             status: "Internal Server Error",
                                             "message": "Something went wrong with language translation",
-                                            "end_connection": true
+                                            end_connection: false
+                                        }, {
+                                            status: "Success",
+                                            session_id: sessionId,
+                                            message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                                            options: ['Yes, end the conversation'],
+                                            end_connection: false,
+                                            prompt: "option_selection",
+                                            metadata: {}
                                         }]
                                     }
                                 } else {
@@ -1634,21 +1755,49 @@ export class ChatStateManager {
                     
                     translatedfinalresponse.push({...currentmessage,message:messageTranslation})
                     }
-                    else{
-                        return[{
+                    else {
+                        await this.prisma.sessions.update({
+                            where: { sessionId },
+                            data: {
+                                state: 20
+                            }
+                        })
+                        return [{
                             status: "Internal Server Error",
                             "message": "Something went wrong with language translation",
-                            "end_connection": true
-                          }]
+                            end_connection: false
+                        }, {
+                            status: "Success",
+                            session_id: sessionId,
+                            message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                            options: ['Yes, end the conversation'],
+                            end_connection: false,
+                            prompt: "option_selection",
+                            metadata: {}
+                        }]
                     }
                 }
                 return translatedfinalresponse
         } catch (error) {
-            return[{
+            await this.prisma.sessions.update({
+                where: { sessionId },
+                data: {
+                    state: 20
+                }
+            })
+            return [{
                 status: "Internal Server Error",
                 "message": "Something went wrong with language translation",
-                "end_connection": true
-              }]
+                end_connection: false
+            }, {
+                status: "Success",
+                session_id: sessionId,
+                message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                options: ['Yes, end the conversation'],
+                end_connection: false,
+                prompt: "option_selection",
+                metadata: {}
+            }]
         }
     }
     // close socket connection code
