@@ -224,14 +224,21 @@ export class ChatStateManager {
                     }
                 })
             })
-            
             return response
         } catch (error) {
             this.logger.error('error occured in state manager ', error)
             return [{
                 status: "Internal Server Error",
                 message: "Something went wrong. Please try again later",
-                end_connection: true
+                end_connection: false
+            }, {
+                status: "Success",
+                session_id: reqData.session_id,
+                message: "Please refresh to restart the conversation",
+                options: [],
+                end_connection: false,
+                prompt: "option_selection",
+                metadata: {}
             }]
         }
     }
@@ -1562,7 +1569,7 @@ export class ChatStateManager {
                     return [{
                         status: "Success",
                         session_id: reqData.session_id,
-                        "message": "",
+                        "message": "Thank you",
                         "options": [],
                         "end_connection": true,
                         "prompt": "text_message",
@@ -1585,7 +1592,23 @@ export class ChatStateManager {
             return msg
         } catch (error) {
             this.logger.error('error occured in state manager ', error)
-            return error
+            await this.prisma.sessions.update({
+                where: { sessionId: reqData.session_id },
+                data: { state: 20 }
+            })
+            return [{
+                "status": "Internal Server Error",
+                message: "Something went wrong. Please try again later",
+                end_connection: false
+            },{
+                status: "Success",
+                session_id: reqData.session_id,
+                message: "Please refresh to restart the conversation or select Yes to end the conversation.",
+                options: ['Yes, end the conversation'],
+                end_connection: false,
+                prompt: "option_selection",
+                metadata: {}
+            }]
         }
     }
 
