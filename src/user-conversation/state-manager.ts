@@ -1153,7 +1153,7 @@ export class ChatStateManager {
                             session_id: reqData.session_id,
                             message: `Your issue has been registered in the CGRS system with this ticket ID: ${ticketResponse.ticketNumber}. You can track the status of your issue on this link: ${constants.CGRSLink}`,
                             options: [],
-                            end_connection: true,
+                            end_connection: false,
                             prompt: "text_message",
                             metadata: {}
                         }]
@@ -1161,8 +1161,8 @@ export class ChatStateManager {
                         ticketRes.push({
                             status: "Success",
                             session_id: reqData.session_id,
-                            message: "Please select Yes to continue.",
-                            options: ['Yes'],
+                            message: "Please select Yes to end the conversation.",
+                            options: ['Yes, end the conversation'],
                             end_connection: false,
                             prompt: "option_selection",
                             metadata: {}
