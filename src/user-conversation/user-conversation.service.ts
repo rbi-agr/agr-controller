@@ -2,12 +2,16 @@ import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSo
 import { Socket } from 'socket.io';
 import { ChatStateManager } from './state-manager';
 import { LoggerService } from 'src/logger/logger.service';
+import { UseGuards } from '@nestjs/common';
+import { WsJwtGuard } from 'src/auth/ws-jwt/ws-jwt.guard';
+import { SocketAuthMiddleware } from 'src/auth/ws-middleware';
 
 @WebSocketGateway({
   cors: {
     origin: '*',
   },
 })
+@UseGuards(WsJwtGuard)
 export class UserConversationService {
   private readonly clients: Map<string, Socket> = new Map();
   constructor(
@@ -51,6 +55,10 @@ export class UserConversationService {
         await this.closeConnection(sessionId)
       }
     }
+  }
+
+  afterInit(client: Socket) {
+    client.use(SocketAuthMiddleware())
   }
 
   async preprocess (headers, req) {

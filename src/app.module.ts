@@ -8,6 +8,9 @@ import { AiProcessingModule } from './ai-processing/ai-processing.module';
 import { UserConversationModule } from './user-conversation/user-conversation.module';
 import { BanksModule } from './banks/banks.module';
 import { PrismaService } from './prisma/prisma.service';
+import { AuthModule } from './auth/auth.module';
+import { APP_GUARD } from '@nestjs/core';
+import { WsJwtGuard } from './auth/ws-jwt/ws-jwt.guard';
 
 @Module({
   imports: [
@@ -19,8 +22,12 @@ import { PrismaService } from './prisma/prisma.service';
     AiProcessingModule,
     UserConversationModule,
     BanksModule,
+    AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService, PrismaService, {
+    provide: APP_GUARD,
+    useClass: WsJwtGuard
+  }],
 })
 export class AppModule {}
