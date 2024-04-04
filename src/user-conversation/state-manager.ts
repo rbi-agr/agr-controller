@@ -9,6 +9,7 @@ import { BankName } from "@prisma/client";
 import { response } from "express";
 import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
+import * as constants from "./utils/constants";
 
 @Injectable()
 export class ChatStateManager {
@@ -818,17 +819,23 @@ export class ChatStateManager {
                                 return educatingFailRes
                             }
                         }
+                        // get bank account type
+                        const state7Session = await this.prisma.sessions.findUnique({
+                            where: { sessionId: reqData.session_id }
+                        });
+                        const accountNumber = state7Session.bankAccountNumber;
+                        const accountType = accountNumber.substring(0, 2);
                         
-                        const educatingMessageResponse = await getEduMsg(correspondingNarration, state7TransactionAmount.split('.')[0])
+                        const educatingMessageResponse = await getEduMsg(correspondingNarration, accountType, state7TransactionAmount.split('.')[0])
                         console.log("Educatingresponse........................",educatingMessageResponse)
                         if(educatingMessageResponse.error){
-                        this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
-                        const exitResponse =  [{
-                        status: "Internal Server Error",
-                        message: "Internal Server Error. Please try again later",
-                        end_connection: true
-                        }]
-                        return exitResponse
+                            this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
+                            const exitResponse =  [{
+                                status: "Internal Server Error",
+                                message: "Internal Server Error. Please try again later",
+                                end_connection: true
+                            }]
+                            return exitResponse
                         }
                         const educatingMessage = JSON.parse(educatingMessageResponse.message.content);
                                                         
@@ -1133,11 +1140,11 @@ export class ChatStateManager {
                     try {
                         const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
                         if(ticketResponse.error) {
-                                return [{
-                                        status: "Internal Server Error",
-                                        message: `I received the following error from the bank: ${ticketResponse.message}`,
-                                        end_connection: true
-                                }]
+                            return [{
+                                status: "Internal Server Error",
+                                message: `I received the following error from the bank: ${ticketResponse.message}`,
+                                end_connection: true
+                            }]
                         }
                         // const ticketResponse = {
                         // ticketNumber: '123456'
@@ -1163,9 +1170,9 @@ export class ChatStateManager {
                         const ticketRes = [{
                             status: "Success",
                             session_id: reqData.session_id,
-                            message: "Ticket raised successfully with ticket number " + ticketResponse.ticketNumber,
+                            message: `Your issue has been registered in the CGRS system with this ticket ID: ${ticketResponse.ticketNumber}. You can track the status of your issue on this link: ${constants.CGRSLink}`,
                             options: [],
-                            end_connection: true,
+                            end_connection: false,
                             prompt: "text_message",
                             metadata: {}
                         }]
@@ -1173,8 +1180,8 @@ export class ChatStateManager {
                         ticketRes.push({
                             status: "Success",
                             session_id: reqData.session_id,
-                            message: "Please select Yes to continue.",
-                            options: ['Yes, I am satisfied', 'No, I am not satisfied'],
+                            message: "Please select Yes to end the conversation.",
+                            options: ['Yes, end the conversation'],
                             end_connection: false,
                             prompt: "option_selection",
                             metadata: {}
