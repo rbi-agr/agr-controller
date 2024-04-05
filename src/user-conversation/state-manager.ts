@@ -459,10 +459,16 @@ export class ChatStateManager {
                                 },
                               })
                         }
+                        let reframeMsg
+                        if(reqData.message.text.toLowerCase().includes('excess')) {
+                            reframeMsg = 'Please explain you query in detail'
+                        } else {
+                            reframeMsg = 'Sorry I could not understand you. Please refram you concern.'
+                        }
                         return[{
                             status: "Success",
                             session_id: reqData.session_id,
-                            "message": "Sorry I could not understand you. Please reframe your concern",
+                            "message": reframeMsg,
                             "options": [],
                             "end_connection": false,
                             "prompt": "text_message",
