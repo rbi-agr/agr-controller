@@ -460,10 +460,10 @@ export class ChatStateManager {
                               })
                         }
                         let reframeMsg
-                        if(reqData.message.text.toLowerCase().includes('excess')) {
+                        if(reqData.message.text.toLowerCase().includes('bank charges')) {
                             reframeMsg = 'Please explain you query in detail'
                         } else {
-                            reframeMsg = 'Sorry I could not understand you. Please refram you concern.'
+                            reframeMsg = 'Sorry I could not understand you. Please reframe you concern.'
                         }
                         return[{
                             status: "Success",
