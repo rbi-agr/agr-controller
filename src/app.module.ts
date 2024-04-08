@@ -25,9 +25,6 @@ import { WsJwtGuard } from './auth/ws-jwt/ws-jwt.guard';
     AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService, {
-    provide: APP_GUARD,
-    useClass: WsJwtGuard
-  }],
+  providers: [AppService, PrismaService],
 })
 export class AppModule {}

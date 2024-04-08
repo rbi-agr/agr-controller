@@ -58,7 +58,7 @@ export class UserConversationService {
   }
 
   afterInit(client: Socket) {
-    client.use(SocketAuthMiddleware())
+    client.use(SocketAuthMiddleware() as any)
   }
 
   async preprocess (headers, req) {
