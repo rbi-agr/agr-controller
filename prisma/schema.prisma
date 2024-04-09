@@ -23,20 +23,20 @@ datasource db {
 }
 
 model Token {
-  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id     String @id @default(uuid()) @db.Uuid
   token  String
   bankId String
 }
 
 model Users {
-  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id               String     @id @default(uuid()) @db.Uuid
   phoneNumber      String     @unique //try making this as pk
   languageDetected String
   sessions         Sessions[]
 }
 
 model Sessions {
-  id                       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                       String               @id @default(uuid()) @db.Uuid
   sessionId                String               @db.Uuid @unique
   userId                   String               @db.Uuid
   user                     Users                @relation(fields: [userId], references: [id])
@@ -62,7 +62,7 @@ model Sessions {
 }
 
 model Messages {
-  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                 String   @id @default(uuid()) @db.Uuid
   userId             String   @db.Uuid
   sessionId          String   @db.Uuid
   languageDetected   String
@@ -76,7 +76,7 @@ model Messages {
 }
 
 model TransactionDetails {
-  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                   String   @id @default(uuid()) @db.Uuid
   sessionId            String   @db.Uuid
   session              Sessions @relation(fields: [sessionId], references: [sessionId])
   transactionId        String?
@@ -88,7 +88,7 @@ model TransactionDetails {
 }
 
 model BankInteractions {
-  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id              String          @id @default(uuid()) @db.Uuid
   sessionId       String          @db.Uuid
   session         Sessions        @relation(fields: [sessionId], references: [sessionId])
   bankName        BankName
@@ -98,7 +98,7 @@ model BankInteractions {
 }
 
 model BankNarrations {
-  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id              String     @id @default(uuid()) @db.Uuid
   narration       String
   natureOfCharge  String
   details         String
