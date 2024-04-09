@@ -19,7 +19,7 @@ COPY env.example .env
 
 # Generate Prisma client
 RUN prisma generate
-RUN prisma migrate deploy
+RUN #prisma migrate deploy
 
 # Build nest file
 RUN npm run build
