@@ -1,4 +1,4 @@
-import { Body, Controller, HttpStatus, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post, Res } from '@nestjs/common';
 import { BanksService } from './banks.service';
 import { LoggerService } from 'src/logger/logger.service';
 
@@ -29,5 +29,15 @@ export class BankController {
             this.logger.error("Error occured while generating token ", error)
             return error
         }
+    }
+
+    @Post('create-narration')
+    createNarration(@Body() body) {
+        return this.banksService.createNarrationsForIndianBank(body)
+    }
+
+    @Get('all-narrations')
+    getAllNarations(){
+        return this.banksService.getAllNarations()
     }
 }

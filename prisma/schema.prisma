@@ -18,28 +18,28 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
+  provider = "postgres"
   url      = env("DATABASE_URL")
 }
 
 model BankToken {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String @id @default(uuid()) @db.Uuid
   token     String?
   bankName  BankName @unique
   bankId    String   @unique
 }
 
 model Users {
-  id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  id               String     @id @default(uuid()) @db.Uuid
   phoneNumber      String     @unique //try making this as pk
   languageDetected String
   sessions         Sessions[]
 }
 
 model Sessions {
-  id                       String               @id @default(auto()) @map("_id") @db.ObjectId
-  sessionId                String               @unique
-  userId                   String               @db.ObjectId
+  id                       String               @id @default(uuid()) @db.Uuid
+  sessionId                String               @db.Uuid @unique
+  userId                   String               @db.Uuid
   user                     Users                @relation(fields: [userId], references: [id])
   ticketRaised             Boolean              @default(false)
   ticketId                 String?
@@ -63,9 +63,9 @@ model Sessions {
 }
 
 model Messages {
-  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId             String   @db.ObjectId
-  sessionId          String   @unique
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @db.Uuid
+  sessionId          String   @db.Uuid
   languageDetected   String
   sender             String
   message            String
@@ -77,8 +77,8 @@ model Messages {
 }
 
 model TransactionDetails {
-  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
-  sessionId            String   @unique
+  id                   String   @id @default(uuid()) @db.Uuid
+  sessionId            String   @db.Uuid
   session              Sessions @relation(fields: [sessionId], references: [sessionId])
   transactionId        String?
   amount               String?
@@ -89,8 +89,8 @@ model TransactionDetails {
 }
 
 model BankInteractions {
-  id              String          @id @default(auto()) @map("_id") @db.ObjectId
-  sessionId       String          @unique
+  id              String          @id @default(uuid()) @db.Uuid
+  sessionId       String          @db.Uuid
   session         Sessions        @relation(fields: [sessionId], references: [sessionId])
   bankName        BankName
   interactionType InteractionType
@@ -99,7 +99,7 @@ model BankInteractions {
 }
 
 model BankNarrations {
-  id              String     @id @default(auto()) @map("_id") @db.ObjectId
+  id              String     @id @default(uuid()) @db.Uuid
   narration       String
   natureOfCharge  String
   details         String

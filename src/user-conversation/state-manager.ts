@@ -213,7 +213,7 @@ export class ChatStateManager {
                 await this.prisma.messages.create({
                     data:{
                         sessionId: reqData.session_id,
-                        userId: '567f1f77bcf86cd799439544',
+                        userId: 'db5084e1-babf-4a83-953f-f14b1f9a9e89',
                         sender:"chatbot",
                         message: e?.message||"",
                         messageTranslation:messageTranslation||"",
@@ -846,9 +846,15 @@ export class ChatStateManager {
                     if(state7TransactionNarration && state7TransactionNarration.length > 0) {
 
                         // set selected transaction
-                        const transactionDetails = await this.prisma.transactionDetails.findUnique({
+                        const tsession = await this.prisma.sessions.findUnique({
+                            where: {
+                                sessionId: reqData.session_id
+                            }
+                        })
+                        const transactionDetails = await this.prisma.transactionDetails.findFirst({
                             where: {
                                 sessionId: reqData.session_id,
+                                // id: tsession.id,
                                 transactionNarration: state7TransactionNarration
                             }
                         })
@@ -999,7 +1005,7 @@ export class ChatStateManager {
                         })
                         
                         //On sending successfull response update state to 10
-                        await this.prisma.sessions.update({
+                        let usession = await this.prisma.sessions.update({
                             where: { sessionId: reqData.session_id },
                             data: {
                                 state: 10
@@ -1007,8 +1013,7 @@ export class ChatStateManager {
                         })
                         await this.prisma.transactionDetails.update({
                             where:{
-                                sessionId: reqData.session_id,
-                                transactionNarration: state7TransactionNarration
+                                id: transactionDetails.id
                             },
                             data:{
                                 isEducated:true
@@ -1669,7 +1674,7 @@ export class ChatStateManager {
               };
             this.logger.info('API for Post Request')
             const response = await axios.post(apiUrl,requestBody)
-            
+            console.log('lan res ', response.data)
             return response.data
         } catch (error) {
             this.logger.error('Error in calling this API', error)

@@ -214,6 +214,28 @@ export class IndianBankService {
     }
     return headers;
   }
+
+  async createNarrations(body) {
+    try {
+      return await this.prisma.bankNarrations.create({
+        data: {
+          narration: body.narration,     
+          natureOfCharge: body.natureOfCharge,
+          details: body.details       
+        }
+      })
+    } catch (error){
+      throw new Error(error.response?.data ?? error.message);
+    }
+  }
+
+  async getAllNarrations() {
+    try {
+      return await this.prisma.bankNarrations.findMany()
+    } catch (error){
+      throw new Error(error.response?.data ?? error.message);
+    }
+  }
 }
 
 function getCurrentDateTime() {

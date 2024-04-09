@@ -49,4 +49,20 @@ export class BanksService {
                 return this.indianBankService.registerComplaint(sessionId, data);
         }
     }
+
+    async createNarrationsForIndianBank(body) {
+        try {
+            return await this.indianBankService.createNarrations(body)
+        } catch(error) {
+            throw new Error(error.response?.data ?? error.message);
+        }
+    }
+
+    async getAllNarations() {
+        try {
+            return await this.indianBankService.getAllNarrations()
+        } catch(error) {
+            throw new Error(error.response?.data ?? error.message);
+        }
+    }
 }
