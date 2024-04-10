@@ -22,10 +22,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Token {
-  id     String @id @default(uuid()) @db.Uuid
-  token  String
-  bankId String
+model BankToken {
+  id        String @id @default(uuid()) @db.Uuid
+  token     String?
+  bankName  BankName @unique
+  bankId    String   @unique
 }
 
 model Users {
