@@ -6,6 +6,7 @@ import { ComplaintRequestDto, ComplaintResponseDto } from './dto/complaint.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 // import jwt from 'jsonwebtoken';
 import * as jwtConstants from '../auth/utils/constants';
+import { AddBankDto } from './dto/addBank.dto';
 
 var jwt = require('jsonwebtoken');
 
@@ -16,7 +17,9 @@ export class BanksService {
         private prismaService: PrismaService
     ) {}
 
-    async addBank(bankId: string, bankName: BankName, tokenSecret: string) {
+    async addBank(addBankDto: AddBankDto, authHeader: string) {
+        const { bankId, bankName } = addBankDto;
+        const tokenSecret = getTokenSecret(authHeader)
         if(tokenSecret !== jwtConstants.jwtSecret) {
             throw new UnauthorizedException("Invalid token secret")
         }
@@ -31,7 +34,8 @@ export class BanksService {
         return token;
     }
 
-    async updateToken(bankId: string, tokenSecret: string) {
+    async updateToken(bankId: string, authHeader: string) {
+        const tokenSecret = getTokenSecret(authHeader)
         if(tokenSecret !== jwtConstants.jwtSecret) {
             throw new UnauthorizedException("Invalid token secret")
         }
@@ -49,7 +53,8 @@ export class BanksService {
         return token;
     }
 
-    async getBankToken(bankId: string, tokenSecret: string) {
+    async getBankToken(bankId: string, authHeader: string) {
+        const tokenSecret = getTokenSecret(authHeader)
         if(tokenSecret !== jwtConstants.jwtSecret) {
             throw new UnauthorizedException("Invalid token secret")
         }
@@ -93,4 +98,17 @@ export class BanksService {
             throw new Error(error.response?.data ?? error.message);
         }
     }
+}
+
+function getTokenSecret(authHeader) {
+    if(!authHeader) {
+        throw new UnauthorizedException("Token secret not provided")
+    }
+    // get secret from authorization header having basic auth username as secret
+    const encodedTokenSecret = authHeader.split(' ')[1]
+            
+    // decode the secret
+    let tokenSecret = Buffer.from(encodedTokenSecret, 'base64').toString('ascii')
+    tokenSecret = tokenSecret.split(':')[0]
+    return tokenSecret;
 }

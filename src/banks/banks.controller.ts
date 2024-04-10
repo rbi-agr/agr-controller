@@ -1,7 +1,9 @@
-import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Req, Res } from '@nestjs/common';
 import { BanksService } from './banks.service';
 import { LoggerService } from 'src/logger/logger.service';
 import { BankName } from '@prisma/client';
+import { getPrismaErrorStatusAndMessage } from 'src/utils/utils';
+import { AddBankDto } from './dto/addBank.dto';
 
 @Controller('banks')
 export class BankController {
@@ -13,17 +15,13 @@ export class BankController {
     @Post('add-bank')
     async addBank(
         @Req() req,
-        @Body() body: { bankId: string, bankName: BankName},
+        @Body() addBankDto: AddBankDto,
         @Res() res
     ) {
         try {
             this.logger.info("Inside add bank")
-            const { bankId, bankName } = body;
 
-            // get secret from authorization header having basic auth username as secret
-            const tokenSecret = req.headers.authorization.split(' ')[1]
-
-            const token = await this.banksService.addBank(bankId, bankName, tokenSecret)
+            const token = await this.banksService.addBank(addBankDto, req.headers.authorization)
             this.logger.info("Bank added successfully")
             res.status(HttpStatus.OK).json({
                 message: "Bank added successfully",
@@ -33,22 +31,24 @@ export class BankController {
             })
         } catch (error) {
             this.logger.error("Error occured while adding bank ", error)
-            return error
+            const { errorMessage, statusCode } = getPrismaErrorStatusAndMessage(error);
+            res.status(statusCode).json({
+                statusCode,
+                message: errorMessage || "Failed to add bank.",
+            });
         }
     }
 
     @Get('token/:bankId')
     async getBankToken(
         @Req() req,
-        @Param("bankId") bankId: string,
+        @Param("bankId", ParseUUIDPipe) bankId: string,
         @Res() res
     ) {
         try {
             this.logger.info("Inside get bank token")
-            // get secret from authorization header having basic auth username as secret
-            const secret = req.headers.authorization.split(' ')[1]
 
-            const token = await this.banksService.getBankToken(bankId, secret)
+            const token = await this.banksService.getBankToken(bankId, req.headers.authorization)
             this.logger.info("Token fetched successfully")
             res.status(HttpStatus.OK).json({
                 message: "Token fetched successfully",
@@ -58,24 +58,24 @@ export class BankController {
             })
         } catch (error) {
             this.logger.error("Error occured while fetching token ", error)
-            return error
+            const { errorMessage, statusCode } = getPrismaErrorStatusAndMessage(error);
+            res.status(statusCode).json({
+                statusCode,
+                message: errorMessage || "Failed to fetch token.",
+            });
         }
     }
 
-    @Patch('token')
+    @Patch('token/:bankId')
     async updateToken(
         @Req() req,
-        @Body() body: { bankId: string, bankName: string },
+        @Param("bankId", ParseUUIDPipe) bankId: string,
         @Res() res
     ) {
         try {
             this.logger.info("Inside update token")
-            const { bankId } = body;
 
-            // get secret from authorization header having basic auth username as secret
-            const tokenSecret = req.headers.authorization.split(' ')[1]
-
-            const token = await this.banksService.updateToken(bankId, tokenSecret)
+            const token = await this.banksService.updateToken(bankId, req.headers.authorization)
             this.logger.info("Token updated successfully")
             res.status(HttpStatus.OK).json({
                 message: "Token updated successfully",
@@ -85,7 +85,11 @@ export class BankController {
             })
         } catch (error) {
             this.logger.error("Error occured while updating token ", error)
-            return error
+            const { errorMessage, statusCode } = getPrismaErrorStatusAndMessage(error);
+            res.status(statusCode).json({
+                statusCode,
+                message: errorMessage || "Failed to update token.",
+            });
         }
     }
 
