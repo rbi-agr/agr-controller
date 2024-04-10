@@ -16,7 +16,22 @@ export class BanksService {
         private prismaService: PrismaService
     ) {}
 
-    async generateToken(bankId: string, tokenSecret: string) {
+    async addBank(bankId: string, bankName: BankName, tokenSecret: string) {
+        if(tokenSecret !== jwtConstants.jwtSecret) {
+            throw new UnauthorizedException("Invalid token secret")
+        }
+        const token = jwt.sign({ bankId }, jwtConstants.jwtSecret)
+        await this.prismaService.bankToken.create({
+            data: {
+                bankId,
+                bankName,
+                token
+            }
+        });
+        return token;
+    }
+
+    async updateToken(bankId: string, tokenSecret: string) {
         if(tokenSecret !== jwtConstants.jwtSecret) {
             throw new UnauthorizedException("Invalid token secret")
         }
@@ -32,6 +47,19 @@ export class BanksService {
             data: { token }
         })
         return token;
+    }
+
+    async getBankToken(bankId: string, tokenSecret: string) {
+        if(tokenSecret !== jwtConstants.jwtSecret) {
+            throw new UnauthorizedException("Invalid token secret")
+        }
+        const bank = await this.prismaService.bankToken.findUnique({
+            where: { bankId }
+        })
+        if(!bank) {
+            throw new UnauthorizedException("Bank not found")
+        }
+        return bank.token;
     }
 
     async fetchTransactions(sessionId: string, data: TransactionsRequestDto, bankName: BankName): Promise<TransactionsResponseDto> {

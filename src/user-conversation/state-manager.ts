@@ -844,13 +844,6 @@ export class ChatStateManager {
                     const state7TransactionAmount = transaction.split('|')[2];
 
                     if(state7TransactionNarration && state7TransactionNarration.length > 0) {
-
-                        // set selected transaction
-                        const tsession = await this.prisma.sessions.findUnique({
-                            where: {
-                                sessionId: reqData.session_id
-                            }
-                        })
                         const transactionDetails = await this.prisma.transactionDetails.findFirst({
                             where: {
                                 sessionId: reqData.session_id,
