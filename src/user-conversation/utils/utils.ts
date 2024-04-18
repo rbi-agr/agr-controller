@@ -1,5 +1,9 @@
 import axios from "axios";
-import { ChatStateManager } from "../state-manager";
+import { StructuredOutputParser } from "langchain/output_parsers";
+import { RunnableSequence } from "@langchain/core/runnables";
+import { z } from "zod";
+import { CustomLLM } from './customLLM';
+import { PromptTemplate } from "@langchain/core/prompts";
 
 export async function getCorrespondingNarration(bankNarration: any, narrationList: string[]) {
     const userprompt = `narration from bank: "${bankNarration}", list of narrations: ${narrationList}`
@@ -13,10 +17,33 @@ export async function getCorrespondingNarration(bankNarration: any, narrationLis
 export async function getEduMsg(bankNarration: any, accountType: string, amount: number) {
     // const userprompt = `amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}}`
     // const task = `this is the user query: Get me the reason for the charges: amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}} and how I can prevent them based on amount, bank narration, nature of charge and details provided`
-    const task2 = `this is the context:- amount: ₹${amount}, bank account type: ${accountType},  narration: "${bankNarration.narration}",nature of charge: "${bankNarration.natureOfCharge}", details:{${bankNarration.details}}  task:- get me the reason of deduction and a list of ways for preventing them based on amount, bank narration, nature of charge and details provided. Make sure to give the response in the following stringified JSON format:- {"response":{"reason":<reason>, "prevention_methods": [<method 1>, <method 2>]}}. Make sure to keep the response crisp, and human friendly i.e conversational, and do not add any other message or direction or description. Give the response strictly in the format given`
-    const mistralResponse =  await callMistralAI(task2)
-    console.log('mistralResponse ', mistralResponse)
-    return mistralResponse
+    const task2 = `this is the context:- amount: ₹${amount}, bank account type: ${accountType},  narration: "${bankNarration.narration}",nature of charge: "${bankNarration.natureOfCharge}", details:{${bankNarration.details}}  task:- give me the possible reason of deduction in detail and a list of ways for preventing them based on amount, bank narration, nature of charge and details provided. Make sure to keep the response crisp, and human friendly i.e conversational`
+    
+    const parser = StructuredOutputParser.fromZodSchema(
+        z.object({
+            response: z.object({
+                reason: z.string(),
+                prevention_methods: z.array(z.string())
+            })
+        })
+    );
+    const chain = RunnableSequence.from([
+        PromptTemplate.fromTemplate(
+        "{query}\n{format_instructions}"
+        ),
+        new CustomLLM({}),
+        parser,
+    ]);
+    // console.log(parser.getFormatInstructions());
+
+    const educatingMessage = await chain.invoke({
+        query: task2,
+        format_instructions: parser.getFormatInstructions(),
+    });
+
+    // const mistralResponse =  await callMistralAI(task2)
+    // console.log('mistralResponse ', mistralResponse)
+    return educatingMessage
 }
 
 export async function getComplaintDetails(complaint: any) {

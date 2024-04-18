@@ -937,34 +937,9 @@ export class ChatStateManager {
                         const accountNumber = state7Session.bankAccountNumber;
                         const accountType = accountNumber.substring(0, 2);
                         
-                        const educatingMessageResponse = await getEduMsg(correspondingNarration, accountType, state7TransactionAmount.split('.')[0])
-                        console.log("Educatingresponse........................",educatingMessageResponse)
-                        if(educatingMessageResponse.error){
-                            this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
-                            const exitResponse =  [{
-                                status: "Internal Server Error",
-                                message: "Internal Server Error. Please try again later",
-                                end_connection: false
-                            }, {
-                                status: "Success",
-                                session_id: reqData.session_id,
-                                message: "Please refresh to restart the conversation or select yes to end the conversation.",
-                                options: ['Yes, end the conversation'],
-                                end_connection: false,
-                                prompt: "option_selection",
-                                metadata: {}
-                            }]
-                            await this.prisma.sessions.update({
-                                where: { sessionId: reqData.session_id },
-                                data: {
-                                    state: 20
-                                }
-                            })
-                            return exitResponse
-                        }
-                        const educatingMessage = JSON.parse(educatingMessageResponse.message.content);
-                                                        
-                        // const educatingMessage = correspondingNarration.natureOfCharge
+                        const educatingMessage = await getEduMsg(correspondingNarration, accountType, state7TransactionAmount.split('.')[0])
+                        console.log("Educatingresponse........................",educatingMessage)
+
                         const edumsg = `Reason:-\n ${educatingMessage.response.reason}`
                         console.log(edumsg)
                         let moreinfo = educatingMessage.response.prevention_methods
