@@ -10,6 +10,7 @@ import { response } from "express";
 import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 import * as constants from "./utils/constants";
+import * as Sentry from '@sentry/node'
 
 @Injectable()
 export class ChatStateManager {
@@ -226,6 +227,7 @@ export class ChatStateManager {
             })
             return response
         } catch (error) {
+            Sentry.captureException(error)
             this.logger.error('error occured in state manager ', error)
             return [{
                 status: "Internal Server Error",
