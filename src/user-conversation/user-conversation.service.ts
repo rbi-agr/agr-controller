@@ -1,6 +1,7 @@
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { ChatStateManager } from './state-manager';
+import { RuleEngine } from './rule-engine';
 import { LoggerService } from 'src/logger/logger.service';
 
 @WebSocketGateway({
@@ -13,6 +14,7 @@ export class UserConversationService {
   constructor(
     private readonly chatStateManager: ChatStateManager,
     private readonly  logger: LoggerService,
+    private ruleEngine: RuleEngine
   ) { }
 
   @WebSocketServer()
@@ -55,7 +57,7 @@ export class UserConversationService {
 
   async preprocess (headers, req) {
     try {
-      const fres = await this.chatStateManager.preprocessData(headers, req)
+      const fres = await this.ruleEngine.preprocessDataForMultipleUseCases(headers, req)
       return fres
     } catch (error) {
       this.logger.error('error occured in state manager ', error)

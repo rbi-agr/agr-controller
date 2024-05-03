@@ -37,9 +37,10 @@ model Users {
 
 model Sessions {
   id                       String               @id @default(uuid()) @db.Uuid
-  sessionId                String               @db.Uuid @unique
+  sessionId                String               @unique @db.Uuid
   userId                   String               @db.Uuid
   user                     Users                @relation(fields: [userId], references: [id])
+  useCase                  String?
   ticketRaised             Boolean              @default(false)
   ticketId                 String?
   ticketRaisedTime         DateTime?
@@ -98,10 +99,10 @@ model BankInteractions {
 }
 
 model BankNarrations {
-  id              String     @id @default(uuid()) @db.Uuid
-  narration       String
-  natureOfCharge  String
-  details         String
+  id             String @id @default(uuid()) @db.Uuid
+  narration      String
+  natureOfCharge String
+  details        String
 }
 
 //naration-educative text
