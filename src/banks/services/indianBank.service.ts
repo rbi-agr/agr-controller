@@ -15,15 +15,19 @@ export class IndianBankService {
   async fetchTransactions(sessionId: string, transactionsDto: TransactionsRequestDto): Promise<TransactionsResponseDto> {
 
     const bankUrl = constants.indianBankUrl;
+    console.log("Indian bank url: ", bankUrl)
     if (!bankUrl) {
       throw new Error('Bank URL not found');
     }
-
+    console.log("transactionsDto: ", transactionsDto)
     // convert the date to the format DDMMYYYY
     const fromDate = transactionsDto.fromDate.toISOString().split('T')[0].split('-').reverse().join('');
     const toDate = transactionsDto.toDate.toISOString().split('T')[0].split('-').reverse().join('');
+    console.log("fromDate: ", fromDate)
+    console.log("toDate: ", toDate)
 
     const accountType = transactionsDto.accountNumber.substring(0, 2);
+    console.log("accountType: ", accountType)
 
     let endpoint: string;
     if(accountType == 'LN') {
@@ -32,6 +36,7 @@ export class IndianBankService {
       endpoint = `/statement/v1/eq-dtxn-chrg`;
     }
     const accountNumber = parseInt(transactionsDto.accountNumber.split('-')[1]);
+    console.log("accountNumber: ", accountNumber)
     if(!accountNumber) {
       throw new Error('Invalid account number');
     }
@@ -41,8 +46,11 @@ export class IndianBankService {
       From_Date: fromDate,
       To_Date: toDate,
     }
+    console.log("requestPayload: ", requestPayload)
     
     const apiInteractionId = await this.getInteractionId();
+    console.log("apiInteractionId: ", apiInteractionId)
+
 
     const bankInteraction = await this.prisma.bankInteractions.create({
       data: {
@@ -52,8 +60,10 @@ export class IndianBankService {
       }
     });
     const headers = this.constructRequestHeaders(apiInteractionId)
+    console.log("headers: ", headers)
 
     try {
+      console.log("bankUrl + endpoint: ", bankUrl + endpoint)
       const response = await axios.post(bankUrl + endpoint, requestPayload, {
         headers: headers
       })
@@ -69,6 +79,7 @@ export class IndianBankService {
           }
         }
       });
+      console.log("response.data: ", response.data)
       if(response.data.ErrorResponse) {
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
         return {
@@ -78,7 +89,9 @@ export class IndianBankService {
         }
       }
       const mainResponse = response.data.LoanMainStatement_Response ?? response.data.MainStatement_Response
+      console.log("mainResponse: ", mainResponse)
       const transactions = mainResponse?.Body?.Payload?.Collection ?? [];
+      console.log("transactions: ", transactions)
 
       const formattedTransactions: Transaction[] = transactions.map(transaction => {
         const transactionDate = formatResponseDate(transaction.Valid_Date)
@@ -105,8 +118,10 @@ export class IndianBankService {
     if (!bankUrl) {
       throw new Error('Bank URL not found');
     }
+    console.log("Indian bank url: ", bankUrl)
 
     const apiInteractionId = await this.getInteractionId();
+    console.log("apiInteractionId: ", apiInteractionId)
 
     const bankInteraction = await this.prisma.bankInteractions.create({
       data: {
@@ -116,7 +131,6 @@ export class IndianBankService {
       }
     });
 
-    // TODO: Update endpoint when exposed by the bank
     const endpoint = `/chatbot/v1/ct-complaint-cgrs`;
 
     // get current date and time in format DD-MM-YYYY HH:MM:SS
@@ -140,9 +154,11 @@ export class IndianBankService {
       txn_Date: transactionDateInFormat,
       Complaint_detail: complaintDto.complaintDetails,
     }
+    console.log("requestPayload: ", requestPayload)
     const headers = this.constructRequestHeaders(apiInteractionId);
 
     try {
+      console.log("bankUrl + endpoint: ", bankUrl + endpoint)
       const response = await axios.post(bankUrl + endpoint, requestPayload, {
         headers: headers
       });
@@ -159,6 +175,7 @@ export class IndianBankService {
           }
         }
       });
+      console.log("response.data: ", response.data)
       if(response.data.ErrorResponse) {
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
         return {
@@ -167,6 +184,7 @@ export class IndianBankService {
         }
       }
       const ticketNumber = response.data.CGRSRegistration_Response?.Body?.Payload?.data?.Ticket_Number;
+      console.log("ticketNumber: ", ticketNumber)
       return {
           error: false,
           ticketNumber: ticketNumber
