@@ -5,6 +5,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Transaction, TransactionsRequestDto, TransactionsResponseDto } from '../dto/transactions.dto';
 import { ComplaintRequestDto, ComplaintResponseDto } from '../dto/complaint.dto';
 import * as constants from '../utils/bankConstants';
+import { curlFetchTransactions, curlRegisterComplaint } from '../utils/indianBank/sendCurlRequest';
 
 @Injectable()
 export class IndianBankService {
@@ -64,9 +65,13 @@ export class IndianBankService {
 
     try {
       console.log("bankUrl + endpoint: ", bankUrl + endpoint)
-      const response = await axios.post(bankUrl + endpoint, requestPayload, {
-        headers: headers
-      })
+      // const response = await axios.post(bankUrl + endpoint, requestPayload, {
+      //   headers: headers
+      // })
+
+      // send curl request
+      const response = await curlFetchTransactions(bankUrl + endpoint, headers, requestPayload);
+
       const responseHeaders = response.headers;
       await this.prisma.bankInteractions.update({
         where: {
@@ -159,9 +164,11 @@ export class IndianBankService {
 
     try {
       console.log("bankUrl + endpoint: ", bankUrl + endpoint)
-      const response = await axios.post(bankUrl + endpoint, requestPayload, {
-        headers: headers
-      });
+      // const response = await axios.post(bankUrl + endpoint, requestPayload, {
+      //   headers: headers
+      // });
+      const response = await curlRegisterComplaint(bankUrl + endpoint, headers, requestPayload);
+
       const responseHeaders = response.headers;
 
       await this.prisma.bankInteractions.update({
