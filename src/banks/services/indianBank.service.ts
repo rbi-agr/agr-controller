@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { BankName, InteractionType } from '@prisma/client';
 import axios from 'axios';
+import https from 'https';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Transaction, TransactionsRequestDto, TransactionsResponseDto } from '../dto/transactions.dto';
 import { ComplaintRequestDto, ComplaintResponseDto } from '../dto/complaint.dto';
 import * as constants from '../utils/bankConstants';
+import { LoanAccountBalanceRequestDto, LoanAccountBalanceResponseDto } from '../dto/loanbalance.dto';
 
 @Injectable()
 export class IndianBankService {
@@ -55,7 +57,8 @@ export class IndianBankService {
 
     try {
       const response = await axios.post(bankUrl + endpoint, requestPayload, {
-        headers: headers
+        headers: headers,
+        httpsAgent: new https.Agent({ rejectUnauthorized: false })
       })
       const responseHeaders = response.headers;
       await this.prisma.bankInteractions.update({
@@ -116,7 +119,6 @@ export class IndianBankService {
       }
     });
 
-    // TODO: Update endpoint when exposed by the bank
     const endpoint = `/chatbot/v1/ct-complaint-cgrs`;
 
     // get current date and time in format DD-MM-YYYY HH:MM:SS
@@ -144,7 +146,8 @@ export class IndianBankService {
 
     try {
       const response = await axios.post(bankUrl + endpoint, requestPayload, {
-        headers: headers
+        headers: headers,
+        httpsAgent: new https.Agent({ rejectUnauthorized: false })
       });
       const responseHeaders = response.headers;
 
@@ -171,6 +174,80 @@ export class IndianBankService {
           error: false,
           ticketNumber: ticketNumber
       }
+    } catch (error) {
+      throw new Error(error.response?.data ?? error.message);
+    }
+  }
+
+  async getLoanAccountBalance(sessionId: string, accountDto: LoanAccountBalanceRequestDto): Promise<LoanAccountBalanceResponseDto> {
+
+    const bankUrl = constants.indianBankUrl;
+    if (!bankUrl) {
+      throw new Error('Bank URL not found');
+    }
+
+    const accountNumber = parseInt(accountDto.accountNumber.split('-')[1]);
+    if(!accountNumber) {
+      throw new Error('Invalid account number');
+    }
+
+    const requestPayload = {
+      Account_Number: accountNumber
+    }
+    
+    const apiInteractionId = await this.getInteractionId();
+
+    const bankInteraction = await this.prisma.bankInteractions.create({
+      data: {
+        sessionId: sessionId,
+        bankName: BankName.INDIAN_BANK,
+        interactionType: InteractionType.LOAN_ACCOUNT_BALANCE,
+      }
+    });
+    const headers = this.constructRequestHeaders(apiInteractionId)
+
+    const endpoint = `/enquiry/v1/eq-ln-dtl`;
+
+    try {
+      const response = await axios.post(bankUrl + endpoint, requestPayload, {
+        headers: headers
+      })
+      const responseHeaders = response.headers;
+      await this.prisma.bankInteractions.update({
+        where: {
+          id: bankInteraction.id
+        },
+        data: {
+          metadata: {
+            'x-api-interaction-id': apiInteractionId,
+            'ib-gwy-id': responseHeaders['ib-gwy-id'],
+          }
+        }
+      });
+      if(response.data.ErrorResponse) {
+        const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
+        return {
+          error: true,
+          message: errDesc,
+          transactions: []
+        }
+      }
+      const mainResponse = response.data.LoanAcctEnq_Response
+      const accResponse = mainResponse?.Body?.Payload;
+
+      if(!accResponse) {
+        return {
+          error: true,
+          message: 'No account found'
+        }
+      }
+      return {
+        error: false,
+        totalOutstanding: accResponse.Bal,
+        principalOutstanding: accResponse.Npb,
+        interestPaid: accResponse.C_Y_Ytd_Int
+      }
+
     } catch (error) {
       throw new Error(error.response?.data ?? error.message);
     }

@@ -11,6 +11,7 @@ enum BankName {
 enum InteractionType {
   TRANSACTIONS
   COMPLAINT_REGISTRATION
+  LOAN_ACCOUNT_BALANCE
 }
 
 generator client {
