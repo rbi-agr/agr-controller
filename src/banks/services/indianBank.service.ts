@@ -5,6 +5,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Transaction, TransactionsRequestDto, TransactionsResponseDto } from '../dto/transactions.dto';
 import { ComplaintRequestDto, ComplaintResponseDto } from '../dto/complaint.dto';
 import * as constants from '../utils/bankConstants';
+import * as https from 'https'
 
 @Injectable()
 export class IndianBankService {
@@ -65,7 +66,8 @@ export class IndianBankService {
     try {
       console.log("bankUrl + endpoint: ", bankUrl + endpoint)
       const response = await axios.post(bankUrl + endpoint, requestPayload, {
-        headers: headers
+        headers: headers,
+        httpsAgent: new https.Agent({ rejectUnauthorized: false })
       })
       const responseHeaders = response.headers;
       await this.prisma.bankInteractions.update({
@@ -108,6 +110,7 @@ export class IndianBankService {
       }
 
     } catch (error) {
+      console.log("Error while fetching transactions: ", error.response?.data ?? error.message)
       throw new Error(error.response?.data ?? error.message);
     }
   }
@@ -160,7 +163,8 @@ export class IndianBankService {
     try {
       console.log("bankUrl + endpoint: ", bankUrl + endpoint)
       const response = await axios.post(bankUrl + endpoint, requestPayload, {
-        headers: headers
+        headers: headers,
+        httpsAgent: new https.Agent({ rejectUnauthorized: false })
       });
       const responseHeaders = response.headers;
 
@@ -190,6 +194,7 @@ export class IndianBankService {
           ticketNumber: ticketNumber
       }
     } catch (error) {
+      console.log("Error while registering complaint: ", error.response?.data ?? error.message)
       throw new Error(error.response?.data ?? error.message);
     }
   }
@@ -214,9 +219,9 @@ export class IndianBankService {
       'Channel': constants.indianBankChannel,
       'X-Client-Certificate': constants.indianBankClientCertificate,
       'X-API-Interaction-ID': apiInteractionId,
-      'Override-Flag': 0,
+      'Override-Flag': '0',
       'Recovery-Flag': '0',
-      'HealthCheck': false,
+      'HealthCheck': 'false',
       'HealthType': 'GWY',
       'Branch-Number': constants.indianBankBranchNumber,
       'Teller-Number': constants.indianBankTellerNumber,
