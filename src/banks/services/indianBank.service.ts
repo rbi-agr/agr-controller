@@ -136,29 +136,37 @@ export class IndianBankService {
 
     const endpoint = `/chatbot/v1/ct-complaint-cgrs`;
 
-    // get current date and time in format DD-MM-YYYY HH:MM:SS
+    // get current date and time in format DD/MM/YYYY
     const currentDateTime = getCurrentDateTime();
 
     // get transaction date in format DD-MM-YYYY
     const transactionDateInFormat = complaintDto.transactionDate.toISOString().split('T')[0].split('-').reverse().join('-');
 
     // convert the account number to integer
-    const accountNumber = parseInt(complaintDto.accountNumber.split('-')[1]);
+    const accountNumber = complaintDto.accountNumber.split('-')[1];
 
     const requestPayload = {
-      Request_Date_and_Time: currentDateTime,
-      Customer_Account_Number: accountNumber,
-      Customer_Mobile_Number: complaintDto.mobileNumber,
-      Customer_Cat_ID: complaintDto.complaintCategoryId,
-      Complaint_category: complaintDto.complaintCategory,
-      Complaint_category_type: complaintDto.complaintCategoryType,
-      Complaint_category_subtype: complaintDto.complaintCategorySubtype,
-      Amount: complaintDto.amount,
-      txn_Date: transactionDateInFormat,
-      Complaint_detail: complaintDto.complaintDetails,
+      CGRSRegistration_Request: {
+        Body: {
+          Payload: {
+            data: {
+              Request_Date_and_Time: currentDateTime,
+              Customer_Account_Number: accountNumber,
+              Customer_Mobile_Number: complaintDto.mobileNumber,
+              Customer_Cat_ID: complaintDto.complaintCategoryId,
+              Complaint_category: complaintDto.complaintCategory,
+              Complaint_category_type: complaintDto.complaintCategoryType,
+              Complaint_category_subtype: complaintDto.complaintCategorySubtype,
+              Amount: complaintDto.amount,
+              txn_Date: transactionDateInFormat,
+              Complaint_detail: complaintDto.complaintDetails,
+            }
+          }
+        }
+      }
     }
     console.log("requestPayload: ", requestPayload)
-    const headers = this.constructRequestHeaders(apiInteractionId);
+    const headers = this.constructRequestHeaders(apiInteractionId); 
 
     try {
       console.log("bankUrl + endpoint: ", bankUrl + endpoint)
@@ -189,6 +197,12 @@ export class IndianBankService {
       }
       const ticketNumber = response.data.CGRSRegistration_Response?.Body?.Payload?.data?.Ticket_Number;
       console.log("ticketNumber: ", ticketNumber)
+      if(!ticketNumber) {
+        return {
+          error: true,
+          message: 'Something went wrong while registering complaint',
+        }
+      }
       return {
           error: false,
           ticketNumber: ticketNumber
@@ -269,13 +283,8 @@ function getCurrentDateTime() {
   const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are zero based
   const year = now.getFullYear();
   
-  // Extracting time components
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  
   // Constructing the formatted date and time string
-  const dateTimeString = `${date}${month}${year}${hours}${minutes}${seconds}`;
+  const dateTimeString = `${date}/${month}/${year}`;
   
   return dateTimeString;
 }
