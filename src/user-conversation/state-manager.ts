@@ -1251,7 +1251,7 @@ export class ChatStateManager {
                     const complaint = {
                         complaintCategory: session.complaintCategory,
                         complaintCategoryType: session.complaintCategoryType,
-                        complaintCategorySubtype: session.complaintCategorySubtype,
+                        complaintCategorySubtype: session.complaintCategorySubType,
                         narration: transactionForTicket.transactionNarration,
                         natureOfCharge: correspondingBankNarration?.natureOfCharge,
                         amount: transactionForTicket.amount
@@ -1267,7 +1267,7 @@ export class ChatStateManager {
                         complaintCategoryId: session.complaintCategoryId,
                         complaintCategory: session.complaintCategory,
                         complaintCategoryType: session.complaintCategoryType,
-                        complaintCategorySubtype: session.complaintCategorySubtype,
+                        complaintCategorySubtype: session.complaintCategorySubType,
                         amount: transactionForTicket.amount.toString(),
                         transactionDate: transactionForTicket.transactionTimeBank,
                         complaintDetails: complaintDetails

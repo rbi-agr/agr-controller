@@ -153,7 +153,7 @@ export class IndianBankService {
               Request_Date_and_Time: currentDateTime,
               Customer_Account_Number: accountNumber,
               Customer_Mobile_Number: complaintDto.mobileNumber,
-              Customer_Cat_ID: complaintDto.complaintCategoryId,
+              Customer_Cat_ID: `${complaintDto.complaintCategoryId}`,
               Complaint_category: complaintDto.complaintCategory,
               Complaint_category_type: complaintDto.complaintCategoryType,
               Complaint_category_subtype: complaintDto.complaintCategorySubtype,
@@ -165,7 +165,8 @@ export class IndianBankService {
         }
       }
     }
-    console.log("requestPayload: ", requestPayload)
+    console.log("requestPayload: ", requestPayload.CGRSRegistration_Request.Body.Payload.data)
+    
     const headers = this.constructRequestHeaders(apiInteractionId); 
 
     try {
