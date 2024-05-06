@@ -5,7 +5,7 @@ export interface LoanAccountBalanceRequestDto {
 export interface LoanAccountBalanceResponseDto {
     error: boolean;
     message?: string;
-    totalOutstanding: string,
-    principalOutstanding: string,
-    interestPaid: string
+    totalOutstanding?: string,
+    principalOutstanding?: string,
+    interestPaid?: string
 }

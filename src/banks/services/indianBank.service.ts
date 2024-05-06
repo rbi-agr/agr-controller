@@ -228,8 +228,7 @@ export class IndianBankService {
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
         return {
           error: true,
-          message: errDesc,
-          transactions: []
+          message: errDesc
         }
       }
       const mainResponse = response.data.LoanAcctEnq_Response
@@ -238,7 +237,7 @@ export class IndianBankService {
       if(!accResponse) {
         return {
           error: true,
-          message: 'No account found'
+          message: 'Invalid account number'
         }
       }
       return {
@@ -273,9 +272,9 @@ export class IndianBankService {
       'Channel': constants.indianBankChannel,
       'X-Client-Certificate': constants.indianBankClientCertificate,
       'X-API-Interaction-ID': apiInteractionId,
-      'Override-Flag': 0,
+      'Override-Flag': '0',
       'Recovery-Flag': '0',
-      'HealthCheck': false,
+      'HealthCheck': 'false',
       'HealthType': 'GWY',
       'Branch-Number': constants.indianBankBranchNumber,
       'Teller-Number': constants.indianBankTellerNumber,
