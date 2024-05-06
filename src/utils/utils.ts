@@ -1,5 +1,4 @@
 import axios from "axios";
-import { ChatStateManager } from "../user-conversation/state-manager";
 
 export async function getCorrespondingNarration(bankNarration: any, narrationList: string[]) {
     const userprompt = `narration from bank: "${bankNarration}", list of narrations: ${narrationList}`

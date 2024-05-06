@@ -2,23 +2,22 @@
 import { Injectable } from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
-import axios from "axios";
-import { getComplaintDetails, getCorrespondingNarration, getEduMsg, PostRequest, PostRequestforTranslation } from "../utils/utils";
-import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
-import { BankName } from "@prisma/client";
-import { response } from "express";
-import { BanksService } from "src/banks/banks.service";
-import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
-import * as constants from "../utils/constants";
+import { PostRequest, PostRequestforTranslation } from "../utils/utils";
 import { ExcessBankCharges } from "../use-cases/excessBankCharges"
+import { LoanAccountStatus } from "src/use-cases/loanAccountStatus";
+import { NeftRtgsStatus } from "src/use-cases/neftRtgsStatus";
+import { ChequeBookStatus } from "src/use-cases/chequeBookStatus";
 
 @Injectable()
 export class RuleEngine {
     constructor(
         private readonly logger: LoggerService,
         private prisma: PrismaService,
-        private banksService: BanksService,
-        private exchessBankChargesService: ExcessBankCharges
+        private exchessBankChargesService: ExcessBankCharges,
+        private loanAccountStatus: LoanAccountStatus,
+        private neftRtgsStatus: NeftRtgsStatus,
+        private chequeBookStatus: ChequeBookStatus,
+
     ) { }
 
     async preprocessDataForMultipleUseCases(headers, reqData) {
@@ -84,7 +83,7 @@ export class RuleEngine {
                 }
                 // call 1st intent classifier that classifies the use case
                 //mocking the response here
-                const useCases = ["EXCESS_BANK_CHARGES", "LOAN_ENQUIRY", "CREDIT_CARD_NOT_DELIVERED", "DEBIT_CARD_PIN_RESET"]
+                const useCases = ["EXCESS_BANK_CHARGES", "LOAN_ACCOUNT_STATUS", "NEFT_RTGS_STATUS", "CHEQUE_BOOK_REQUEST"]
                 const index = Math.floor(Math.random() * (3 - 0)) + 0;
                 useCase = useCases[0]
 
@@ -136,6 +135,11 @@ export class RuleEngine {
 
             } else {
                 useCase = session.useCase
+                //add retries here
+                if(session.retriesLeft>0 && !useCase){
+                    //call rule-engine to get the useCase and decrease the number of retry
+                    //if use case isnt found decrease the number of retry and return asking to retry
+                }
             }
 
             let responses
@@ -143,14 +147,14 @@ export class RuleEngine {
                 case "EXCESS_BANK_CHARGES":
                     responses = await this.exchessBankChargesService.preprocessData(headers, reqData)
                     break;
-                case "LOAN_ENQUIRY":
-                    console.log("LOAN_ENQUIRY")
+                case "LOAN_ACCOUNT_STATUS":
+                    responses = await this.loanAccountStatus.preprocessData(headers, reqData)
                     break;
-                case "CREDIT_CARD_NOT_DELIVERED":
-                    console.log("CREDIT_CARD_NOT_DELIVERED")
+                case "NEFT_RTGS_STATUS":
+                    responses = await this.neftRtgsStatus.preprocessData(headers, reqData)
                     break;
-                case "DEBIT_CARD_PIN_RESET":
-                    console.log("DEBIT_CARD_PIN_RESET")
+                case "CHEQUE_BOOK_REQUEST":
+                    responses = await this.chequeBookStatus.preprocessData(headers, reqData)
                     break;
             }
             return responses
