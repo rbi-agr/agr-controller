@@ -59,6 +59,8 @@ model Sessions {
   complaintCategorySubType String?
   initialQuery             String
   selectedTransactionId    String?
+  intialSentiment          String?
+  finalSentiment           String?
   bankInteractions         BankInteractions[]
   transactions             TransactionDetails[]
 }

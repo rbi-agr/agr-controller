@@ -83,9 +83,14 @@ export class RuleEngine {
                 }
                 // call 1st intent classifier that classifies the use case
                 //mocking the response here
-                const useCases = ["EXCESS_BANK_CHARGES", "LOAN_ACCOUNT_STATUS", "NEFT_RTGS_STATUS", "CHEQUE_BOOK_REQUEST"]
-                const index = Math.floor(Math.random() * (3 - 0)) + 0;
-                useCase = useCases[0]
+
+                const ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/rule-engine`)
+                
+                useCase = ruleResponse.useCase
+
+
+                //call sentiment-analysis
+                const sentimentResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/sentiment-analysis`)
 
                 //create session
                 const metaData = reqData.metadata
@@ -129,6 +134,7 @@ export class RuleEngine {
                         initialQuery: message,
                         languageByAdya: languageByAdya,
                         useCase: useCase,
+                        intialSentiment: sentimentResponse,
                         retriesLeft: 3
                     }
                 })
@@ -144,16 +150,16 @@ export class RuleEngine {
 
             let responses
             switch (useCase) {
-                case "EXCESS_BANK_CHARGES":
+                case "OTHERS":
                     responses = await this.exchessBankChargesService.preprocessData(headers, reqData)
                     break;
-                case "LOAN_ACCOUNT_STATUS":
+                case "LOAN_ENQUIRY":
                     responses = await this.loanAccountStatus.preprocessData(headers, reqData)
                     break;
-                case "NEFT_RTGS_STATUS":
+                case "NEFT_RTGS":
                     responses = await this.neftRtgsStatus.preprocessData(headers, reqData)
                     break;
-                case "CHEQUE_BOOK_REQUEST":
+                case "CHEQUE_BOOK":
                     responses = await this.chequeBookStatus.preprocessData(headers, reqData)
                     break;
             }
