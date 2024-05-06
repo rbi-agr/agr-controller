@@ -10,6 +10,7 @@ import { response } from "express";
 import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 import * as constants from "../utils/constants"
+import { LoanAccountBalanceRequestDto } from "src/banks/dto/loanbalance.dto";
 
 @Injectable()
 export class LoanAccountStatus {
@@ -245,6 +246,37 @@ export class LoanAccountStatus {
     async states(reqData, languageDetected, state) {
         try {
             this.logger.info('Inside states')
+
+            const loanAccBalReq: LoanAccountBalanceRequestDto = {
+                accountNumber: reqData.metadata.accountNumber,
+            }
+
+            const loanAccBalResponse = await this.banksService.getLoanAccountBalance(reqData.session_id, reqData, BankName.INDIAN_BANK)
+            if(loanAccBalResponse.error) {
+                // await this.prisma.sessions.update({
+                //     where: { sessionId: reqData.session_id },
+                //     data: {
+                //         state: 20
+                //     }
+                // })
+                return [{
+                    status: "Internal Server Error",
+                    message: `I received the following error from the bank: ${loanAccBalResponse.message}`,
+                    end_connection: false
+                }, {
+                    status: "Success",
+                    session_id: reqData.session_id,
+                    message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                    options: ['Yes, end the conversation'],
+                    end_connection: false,
+                    prompt: "option_selection",
+                    metadata: {}
+                }]
+            }
+            const totalOutstanding = loanAccBalResponse.totalOutstanding
+            const principalOutstanding = loanAccBalResponse.principalOutstanding
+            const interestPaid = loanAccBalResponse.interestPaid
+            
         }  catch (error) {
             this.logger.error('error occured in state manager ', error)
             return [{
