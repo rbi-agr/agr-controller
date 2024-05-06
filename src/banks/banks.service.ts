@@ -3,6 +3,7 @@ import { IndianBankService } from './services/indianBank.service';
 import { BankName } from '@prisma/client';
 import { TransactionsRequestDto, TransactionsResponseDto } from './dto/transactions.dto';
 import { ComplaintRequestDto, ComplaintResponseDto } from './dto/complaint.dto';
+import { LoanAccountBalanceRequestDto } from './dto/loanbalance.dto';
 
 @Injectable()
 export class BanksService {
@@ -23,6 +24,13 @@ export class BanksService {
         switch(bankName) {
             case BankName.INDIAN_BANK:
                 return this.indianBankService.registerComplaint(sessionId, data);
+        }
+    }
+
+    async getLoanAccountBalance(sessionId: string, data: LoanAccountBalanceRequestDto, bankName: BankName) {
+        switch(bankName) {
+            case BankName.INDIAN_BANK:
+                return this.indianBankService.getLoanAccountBalance(sessionId, data);
         }
     }
 

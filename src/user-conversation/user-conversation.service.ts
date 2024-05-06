@@ -1,6 +1,5 @@
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
-import { ChatStateManager } from './state-manager';
 import { RuleEngine } from './rule-engine';
 import { LoggerService } from 'src/logger/logger.service';
 
@@ -12,7 +11,6 @@ import { LoggerService } from 'src/logger/logger.service';
 export class UserConversationService {
   private readonly clients: Map<string, Socket> = new Map();
   constructor(
-    private readonly chatStateManager: ChatStateManager,
     private readonly  logger: LoggerService,
     private ruleEngine: RuleEngine
   ) { }
