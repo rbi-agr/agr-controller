@@ -60,7 +60,9 @@ model Sessions {
   initialQuery             String
   selectedTransactionId    String?
   intialSentiment          String?
+  intialSentimentScore     Decimal?
   finalSentiment           String?
+  finalSentimentScore      Decimal?
   bankInteractions         BankInteractions[]
   transactions             TransactionDetails[]
 }
