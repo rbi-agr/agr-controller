@@ -82,7 +82,7 @@ export class LoanAccountStatus {
                 accountNumber: reqData.metadata.accountNumber,
             }
 
-            const loanAccBalResponse = await this.banksService.getLoanAccountBalance(reqData.session_id, reqData, BankName.INDIAN_BANK)
+            const loanAccBalResponse = await this.banksService.getLoanAccountBalance(reqData.session_id, loanAccBalReq, BankName.INDIAN_BANK)
             console.log('Loan account response ', loanAccBalResponse)
             if (loanAccBalResponse.error) {
                 // await this.prisma.sessions.update({
