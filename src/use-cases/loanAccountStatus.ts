@@ -108,15 +108,14 @@ export class LoanAccountStatus {
             const totalOutstanding = loanAccBalResponse.totalOutstanding
             const principalOutstanding = loanAccBalResponse.principalOutstanding
             const interestPaid = loanAccBalResponse.interestPaid
-            const response = {
-                totalOutstanding: totalOutstanding,
-                principalOutstanding: principalOutstanding,
-                interestPaid: interestPaid
-            }
+            const response = `totalOutstanding: ${totalOutstanding}\n
+                principalOutstanding: ${principalOutstanding}\n
+                interestPaid: ${interestPaid}`
+            
             const fres = [{
                 status: "Success",
                 session_id: sessionId,
-                message: JSON.stringify(response),
+                message: response,
                 options: [],
                 end_connection: false,
                 prompt: "text_message"
