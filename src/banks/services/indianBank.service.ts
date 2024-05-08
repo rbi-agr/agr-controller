@@ -247,7 +247,8 @@ export class IndianBankService {
 
     try {
       const response = await axios.post(bankUrl + endpoint, requestPayload, {
-        headers: headers
+        headers: headers,
+        httpsAgent: new https.Agent({ rejectUnauthorized: false })
       })
       const responseHeaders = response.headers;
       await this.prisma.bankInteractions.update({
@@ -262,6 +263,7 @@ export class IndianBankService {
         }
       });
       if(response.data.ErrorResponse) {
+        console.log("response.data.ErrorResponse: ", response.data.ErrorResponse)
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
         return {
           error: true,
@@ -269,7 +271,9 @@ export class IndianBankService {
         }
       }
       const mainResponse = response.data.LoanAcctEnq_Response
+      console.log("mainResponse: ", mainResponse)
       const accResponse = mainResponse?.Body?.Payload;
+      console.log("Payload: ", accResponse)
 
       if(!accResponse) {
         return {
