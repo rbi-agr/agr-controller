@@ -108,9 +108,9 @@ export class LoanAccountStatus {
             const totalOutstanding = loanAccBalResponse.totalOutstanding
             const principalOutstanding = loanAccBalResponse.principalOutstanding
             const interestPaid = loanAccBalResponse.interestPaid
-            const response = `totalOutstanding: ${totalOutstanding}\n
-                principalOutstanding: ${principalOutstanding}\n
-                interestPaid: ${interestPaid}`
+            const response = `Total Out-Standing: ${totalOutstanding}\n
+                Principal Out-Standing: ${principalOutstanding}\n
+                Interest Paid: ${interestPaid}`
             
             const fres = [{
                 status: "Success",
