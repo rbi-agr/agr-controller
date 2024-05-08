@@ -84,13 +84,20 @@ export class RuleEngine {
                 // call 1st intent classifier that classifies the use case
                 //mocking the response here
 
-                const ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/rule-engine`)
+                let ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
+                if(ruleResponse.error) {
+                    ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/rule-engine`)
+                } else {
+                    ruleResponse = {
+                        useCase: "OTHERS"
+                    }
+                }
                 
                 useCase = ruleResponse.useCase
 
 
                 //call sentiment-analysis
-                const sentimentResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/sentiment-analysis`)
+                const sentimentResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/sentiment-analysis`)
 
                 //create session
                 const metaData = reqData.metadata
