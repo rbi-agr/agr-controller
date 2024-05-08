@@ -27,6 +27,7 @@ CREATE TABLE "Sessions" (
     "id" UUID NOT NULL,
     "sessionId" UUID NOT NULL,
     "userId" UUID NOT NULL,
+    "useCase" TEXT,
     "ticketRaised" BOOLEAN NOT NULL DEFAULT false,
     "ticketId" TEXT,
     "ticketRaisedTime" TIMESTAMP(3),

@@ -2,17 +2,15 @@
 import { Injectable} from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
-import axios from "axios";
-import { getComplaintDetails, getCorrespondingNarration, getEduMsg } from "./utils/utils";
+import { formatDate, getComplaintDetails, getCorrespondingNarration, getEduMsg, PostRequest, PostRequestforTransactionDates, PostRequestforTranslation, translatedResponse, validstate } from "../utils/utils";
 import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
 import { BankName } from "@prisma/client";
-import { response } from "express";
 import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
-import * as constants from "./utils/constants";
+import * as constants from "../utils/constants"
 
 @Injectable()
-export class ChatStateManager {
+export class ExcessBankCharges {
     constructor(
         private readonly logger: LoggerService,
         private prisma: PrismaService,
@@ -40,7 +38,7 @@ export class ChatStateManager {
             let languageDetected;
             
             if(detectLang) {
-                const languageDetectedresponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/language-detect`)
+                const languageDetectedresponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/language-detect`)
                 // const languageDetectedresponse = {
                 //     language: 'en',
                 //     error: null
@@ -61,7 +59,7 @@ export class ChatStateManager {
                 if(languageDetected !== 'en') {
                     if(languageDetected === 'hi' || languageDetected === 'or'|| languageDetected === 'ori'){
                         //convert the message to english
-                        const translatedmessage = await this.PostRequestforTranslation(reqData.message.text,languageDetected,"en",`${process.env.BASEURL}/ai/language-translate`)
+                        const translatedmessage = await PostRequestforTranslation(reqData.message.text,languageDetected,"en",`${process.env.BASEURL}/ai/language-translate`)
                         
                         if(!translatedmessage.error){
                             //Convert the language to englidh into the reqdata
@@ -183,7 +181,7 @@ export class ChatStateManager {
                 //convert the message to Language detected and return
                 //Translator API
                 
-                let translatedresponse = await this.translatedResponse(response, languageDetected, reqData.session_id)
+                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id)
                 console.log("translatedresponse",translatedresponse)
                 response=translatedresponse
             }
@@ -255,47 +253,13 @@ export class ChatStateManager {
                     this.logger.info('inside case 0')
                     const message = reqData.message.text
                     sessionId = reqData.session_id
-                    const metaData = reqData.metadata
-                    const phoneNumber = String(metaData.phoneNumber)
-                    const accountNumber = metaData.accountNumber
-                    const dob = metaData.dob
-                    let user = await this.prisma.users.findUnique({
-                        where: {
-                            phoneNumber: phoneNumber
-                        }
-                    })
-                    if (!user) {
-                        user = await this.prisma.users.create({
-                            data: {
-                                phoneNumber: phoneNumber,
-                                languageDetected: languageDetected
-                            }
-                        })
-                    }
-                    else{
-                        user = await this.prisma.users.update({
-                            where:{
-                                phoneNumber: phoneNumber
-                            },
-                            data: {
-                                languageDetected: languageDetected
-                            }
-                        })
-                    }
+                    
                     //detect language here
                     const languageByAdya = reqData.metadata.language
                     
-                    const createdSession = await this.prisma.sessions.create({
-                        data: {
-                            user: {
-                                connect: { id: user.id } // Use the actual user ID here
-                            },
-                            sessionId: sessionId,
-                            state: 0,
-                            bankAccountNumber: accountNumber,
-                            initialQuery: message,
-                            languageByAdya: languageByAdya,
-                            retriesLeft: 3
+                    const createdSession = await this.prisma.sessions.findFirst({
+                        where: {
+                            sessionId: sessionId
                         }
                     })
                     if(createdSession) {
@@ -424,7 +388,7 @@ export class ChatStateManager {
                     //     type: 'type',
                     //     error: null
                     // }
-                    const intentResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
+                    const intentResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
                     if(intentResponse.statusCode == 400) {
                         const exitResponse =  [{
                             status: "Internal Server Error",
@@ -475,56 +439,7 @@ export class ChatStateManager {
                             "metadata":{}
                         }]
                     }
-                        //add a retry in the db max 3 tries
                         
-                        //Response from RAG API, if the intent is not classified
-                    //     const intentRagResponse = await this.PostRequest(reqData.message.text,`${process.env.BASEURL}/documents/fetch-rag-response`)
-                    //     if(intentRagResponse.statusCode && intentRagResponse.statusCode!=200)
-                    //     {
-                    //         if(sessionForIntent) {
-                    //             await this.prisma.sessions.update({
-                    //                 data: {
-                    //                   retriesLeft: sessionForIntent.retriesLeft - 1,
-                    //                 },
-                    //                 where: {
-                    //                   sessionId: reqData.session_id,
-                    //                 },
-                    //               })
-                    //         }
-                    //         return[{
-                    //             status: "Success",
-                    //             session_id: reqData.session_id,
-                    //             "message": "Sorry I could not understand you. Please reframe your concern",
-                    //             "options": [],
-                    //             "end_connection": false,
-                    //             "prompt": "text_message",
-                    //             "metadata":{}
-                    //           }]
-                    //     }
-                    //     await this.prisma.sessions.update({
-                    //         where:{sessionId:reqData.session_id},
-                    //         data:{
-                    //             state:19
-                    //         }
-                    //     })
-                    //     return[{
-                    //         status: "Success",
-                    //         session_id: reqData.session_id,
-                    //         "message": intentRagResponse.response,
-                    //         "options": [],
-                    //         "end_connection": false,
-                    //         "prompt": "text_message",
-                    //         "metadata":{}
-                    //       },{
-                    //         status: "Success",
-                    //         session_id: reqData.session_id,
-                    //         "message": "Can I help you with anything else?",
-                    //         "options": ['Yes, I want to ask further', 'No, thankyou'],
-                    //         "end_connection": false,
-                    //         "prompt": "option_selection",
-                    //         "metadata":{}
-                    //       }]
-                    // }
                     await this.prisma.sessions.update({
                         where:{sessionId:reqData.session_id},
                         data:{
@@ -542,15 +457,7 @@ export class ChatStateManager {
                 case 2:
                     //Check for all required fields
                     this.logger.info('inside case 2')
-                    if(!this.validstate(st, 2)){
-                        //Invalid state
-                        const FailRes = [{
-                            status: "Internal Server Error",
-                            "message": "Invalid state",
-                            "end_connection": false
-                          }]
-                        return FailRes
-                    }
+                    
                     //check for the required fields: transactionstartdate, enddate and bankaccount
                     
                     const intentSession = await this.prisma.sessions.findUnique({
@@ -699,7 +606,7 @@ export class ChatStateManager {
                             data: transactionsData
                         })
                         const transactionOptions = transactions.map(transaction => {
-                            return this.formatDate(transaction.transactionDate) + '|' + transaction.transactionNarration + '|' + transaction.amount
+                            return formatDate(transaction.transactionDate) + '|' + transaction.transactionNarration + '|' + transaction.amount
                         });
                         await this.prisma.sessions.update({
                             where:{sessionId:reqData.session_id},
@@ -1365,17 +1272,7 @@ export class ChatStateManager {
                 case 14:
                     //Select the transaction from the list
                     this.logger.info('inside case 14')
-                    //Updating the transaction iseducated value to true
-                    // await this.prisma.transactionDetails.update({
-                    //     where:{
-                    //         sessionId: reqData.session_id,
-                    //         transactionId: metaData.transactionId
-                    //     },
-                    //     data:{
-                    //         isEducated:true
-                    //     }
-                    // })
-                    //Send the user to state 7 for educating him
+                    
                     if(reqData.message.text)
                     {
                         await this.prisma.sessions.update({
@@ -1442,7 +1339,7 @@ export class ChatStateManager {
                         })
                         
                         const transactionOptions = uneducated_transaction.map(transaction => {
-                            return this.formatDate(transaction.transactionTimeBank) + '|' + transaction.transactionNarration + '|' + transaction.amount
+                            return formatDate(transaction.transactionTimeBank) + '|' + transaction.transactionNarration + '|' + transaction.amount
                         });
                         
                         const success_r4= [{
@@ -1635,251 +1532,4 @@ export class ChatStateManager {
         }
     }
 
-    async validstate(prevst: any, nextst: any) {
-        try {
-            this.logger.info('check valid state')
-            if (prevst && nextst) {
-                const flowArray = [
-                    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                    [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-                ]
-                const valid = flowArray[Number(prevst)][Number(nextst)]
-                if (valid) {
-                    return valid
-                }
-                return { statusCode: 404, message: 'States not in the flowmatrix. Please provide valid state' }
-
-            }
-            return { statusCode: 404, message: 'States not provided. Please provide valid state' }
-        } catch (error) {
-            this.logger.error('Error in checking this move ', error)
-            return { statusCode: 400, message: 'Error in this move', error: error }
-        }
-    }
-
-    async PostRequest(message: String,apiUrl: any) :Promise<any> {
-        try {
-            const requestBody = {
-                text: message,
-              };
-            this.logger.info('API for Post Request')
-            const response = await axios.post(apiUrl,requestBody)
-            console.log('lan res ', response.data)
-            return response.data
-        } catch (error) {
-            this.logger.error('Error in calling this API', error)
-            return { statusCode: 400, message: 'Error in calling this API', error: error }
-        }
-    }
-    async PostRequestforTranslation(message: String,source: String, target:String,apiUrl: any) :Promise<any> {
-        try {
-            const requestBody = {
-                source:source,
-                target: target,
-                text: message,
-              };
-            this.logger.info('API for Post Request for Translation')
-            const response = await axios.post(apiUrl,requestBody)
-            return response.data
-        } catch (error) {
-            console.log(error)
-            this.logger.error('Error in calling this API', error)
-            return { statusCode: 400, message: 'Error in calling this API', error: error }
-        }
-    }
-
-    async PostRequestforTransactionDates(message: String,apiUrl: any) :Promise<any> {
-        try {
-            const requestBody = {
-                userprompt: message,
-                task:"fetch me the start date and end date in format(mm-dd-yyyy example) in json format like:{'transaction_startdate': 'ISODate', 'transaction_enddate': 'ISODate'}"
-              };
-            this.logger.info('API for Post Request for TransactionDates')
-            const response = await axios.post(apiUrl,requestBody)
-            return response.data
-        } catch (error) {
-            this.logger.error('Error in checking this move ', error)
-            return { statusCode: 400, message: 'Error in this move', error: error }
-        }
-    }
-
-    async addRatingOverall(rating: number, sessionid: string): Promise<any>{
-        try{
-            this.logger.info("API for overall rating")
-            if(sessionid && rating){
-                const existing_session = await this.prisma.sessions.findUnique({
-                    where:{
-                        sessionId: sessionid
-                    }
-                })
-                if(existing_session)
-                {
-                    await this.prisma.sessions.update({
-                        where:{
-                            sessionId: sessionid
-                        },
-                        data:{
-                            experienceRating: rating
-                        }
-                    })
-                    return{
-                        status:"Success", 
-                        message: 'Overall experience updated successfully'
-                    }
-                }
-                return{
-                    status:"Internal Server Error", 
-                    message: 'No session found'
-                }
-                
-            }
-            else
-            {
-                return{
-                    status:"Internal Server Error", 
-                    message: 'Fields missing'
-                }
-            }
-        }
-        catch (error) {
-            this.logger.error('Error ', error)
-            return { status:"Internal Server Error", message: 'Something went wrong'}
-        }
-    }
-
-    formatDate(date: Date): string {
-        const options = { day: 'numeric', month: 'long', year: 'numeric' } as const;
-        const formattedDate = date.toLocaleDateString('en-US', options);
-        return formattedDate.replace(/(\d+)(st|nd|rd|th)/, '$1'); // Remove suffix from day
-    }
-
-    async translatedResponse(response, languageDetected, sessionId){
-        try {
-            let translatedfinalresponse=[]
-                for(let e=0; e<response.length; e++)
-                {
-                    let currentmessage = response[e]
-                    let messageTranslationresp= await this.PostRequestforTranslation(currentmessage.message,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
-                    
-                    if(!messageTranslationresp.error){
-                        console.log("Translated",messageTranslationresp.translated)
-                        let messageTranslation = messageTranslationresp.translated
-                        if(currentmessage.options && currentmessage.options.length>0){
-                            let translatedoption=[]
-                            for(let o=0; o<currentmessage.options.length; o++){
-                                let op = currentmessage.options[o]
-                                if(!op.includes('|')) {
-                                    let translatedoptionresp = await this.PostRequestforTranslation(op,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
-                                    console.log("Translatedoption", translatedoptionresp)
-                                    if(!translatedoptionresp.error){
-                                        translatedoption.push(translatedoptionresp.translated)
-                                    }
-                                    else
-                                    {
-                                        await this.prisma.sessions.update({
-                                            where: { sessionId },
-                                            data: {
-                                                state: 20
-                                            }
-                                        })
-                                        return [{
-                                            status: "Internal Server Error",
-                                            "message": "Something went wrong with language translation",
-                                            end_connection: false
-                                        }, {
-                                            status: "Success",
-                                            session_id: sessionId,
-                                            message: "Please refresh to restart the conversation or select yes to end the conversation.",
-                                            options: ['Yes, end the conversation'],
-                                            end_connection: false,
-                                            prompt: "option_selection",
-                                            metadata: {}
-                                        }]
-                                    }
-                                } else {
-                                    translatedoption.push(op)
-                                }
-                            }
-                            console.log("HERE",translatedoption)
-                            translatedfinalresponse.push({...currentmessage,message:messageTranslation,options:translatedoption})
-                            continue;
-                        }
-                    console.log("Here")
-                    
-                    translatedfinalresponse.push({...currentmessage,message:messageTranslation})
-                    }
-                    else {
-                        await this.prisma.sessions.update({
-                            where: { sessionId },
-                            data: {
-                                state: 20
-                            }
-                        })
-                        return [{
-                            status: "Internal Server Error",
-                            "message": "Something went wrong with language translation",
-                            end_connection: false
-                        }, {
-                            status: "Success",
-                            session_id: sessionId,
-                            message: "Please refresh to restart the conversation or select yes to end the conversation.",
-                            options: ['Yes, end the conversation'],
-                            end_connection: false,
-                            prompt: "option_selection",
-                            metadata: {}
-                        }]
-                    }
-                }
-                return translatedfinalresponse
-        } catch (error) {
-            await this.prisma.sessions.update({
-                where: { sessionId },
-                data: {
-                    state: 20
-                }
-            })
-            return [{
-                status: "Internal Server Error",
-                "message": "Something went wrong with language translation",
-                end_connection: false
-            }, {
-                status: "Success",
-                session_id: sessionId,
-                message: "Please refresh to restart the conversation or select yes to end the conversation.",
-                options: ['Yes, end the conversation'],
-                end_connection: false,
-                prompt: "option_selection",
-                metadata: {}
-            }]
-        }
-    }
-    // close socket connection code
-    // case to rate a session and close socket connections
-    //make sure to return response in the same language as of users query
-
-
-    //mistral - 1. startDate and endDate 2. Educative message 3. Generating Complaint Details 4. Get Neration from the bank list
-    
 }

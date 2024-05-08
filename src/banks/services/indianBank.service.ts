@@ -4,6 +4,7 @@ import axios from 'axios';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Transaction, TransactionsRequestDto, TransactionsResponseDto } from '../dto/transactions.dto';
 import { ComplaintRequestDto, ComplaintResponseDto } from '../dto/complaint.dto';
+import { LoanAccountBalanceRequestDto, LoanAccountBalanceResponseDto } from '../dto/loanbalance.dto';
 import * as constants from '../utils/bankConstants';
 import * as https from 'https'
 
@@ -210,6 +211,85 @@ export class IndianBankService {
       }
     } catch (error) {
       console.log("Error while registering complaint: ", error.response?.data ?? error.message)
+      throw new Error(error.response?.data ?? error.message);
+    }
+  }
+
+
+  async getLoanAccountBalance(sessionId: string, accountDto: LoanAccountBalanceRequestDto): Promise<LoanAccountBalanceResponseDto> {
+
+    const bankUrl = constants.indianBankUrl;
+    if (!bankUrl) {
+      throw new Error('Bank URL not found');
+    }
+
+    const accountNumber = parseInt(accountDto.accountNumber.split('-')[1]);
+    if(!accountNumber) {
+      throw new Error('Invalid account number');
+    }
+
+    const requestPayload = {
+      Account_Number: accountNumber
+    }
+
+    const apiInteractionId = await this.getInteractionId();
+
+    const bankInteraction = await this.prisma.bankInteractions.create({
+      data: {
+        sessionId: sessionId,
+        bankName: BankName.INDIAN_BANK,
+        interactionType: InteractionType.LOAN_ACCOUNT_BALANCE,
+      }
+    });
+    const headers = this.constructRequestHeaders(apiInteractionId)
+
+    const endpoint = `/enquiry/v1/eq-ln-dtl`;
+
+    try {
+      const response = await axios.post(bankUrl + endpoint, requestPayload, {
+        headers: headers,
+        httpsAgent: new https.Agent({ rejectUnauthorized: false })
+      })
+      const responseHeaders = response.headers;
+      await this.prisma.bankInteractions.update({
+        where: {
+          id: bankInteraction.id
+        },
+        data: {
+          metadata: {
+            'x-api-interaction-id': apiInteractionId,
+            'ib-gwy-id': responseHeaders['ib-gwy-id'],
+          }
+        }
+      });
+      if(response.data.ErrorResponse) {
+        console.log("response.data.ErrorResponse: ", response.data.ErrorResponse)
+        const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
+        return {
+          error: true,
+          message: errDesc
+        }
+      }
+      const mainResponse = response.data.LoanAcctEnq_Response
+      console.log("mainResponse: ", mainResponse)
+      const accResponse = mainResponse?.Body?.Payload;
+      console.log("Payload: ", accResponse)
+
+      if(!accResponse) {
+        return {
+          error: true,
+          message: 'Invalid account number'
+        }
+      }
+      return {
+        error: false,
+        totalOutstanding: accResponse.Bal,
+        principalOutstanding: accResponse.Npb,
+        interestPaid: accResponse.C_Y_Ytd_Int
+      }
+
+    } catch (error) {
+      console.log("Error while getting loan account balance: ", error.response?.data ?? error.message)
       throw new Error(error.response?.data ?? error.message);
     }
   }
