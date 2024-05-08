@@ -1079,12 +1079,24 @@ export class ChatStateManager {
                     // }
                     //Store it in db
                     const userMessageJson = JSON.parse(userMessage)
+                    let startDateParts;
+                    let endDateParts;
 
-                    let startDateParts = userMessageJson.startDate.split('/');
-                    let endDateParts = userMessageJson.endDate.split('/');
-                    if(startDateParts.length == 1) {
+                    if(userMessageJson.startDate.includes('/') && userMessageJson.endDate.includes('/')) {
+                        startDateParts = userMessageJson.startDate.split('/');
+                        endDateParts = userMessageJson.endDate.split('/');
+                    } else if(userMessageJson.startDate.includes('-') && userMessageJson.endDate.includes('-')) {
                         startDateParts = userMessageJson.startDate.split('-');
                         endDateParts = userMessageJson.endDate.split('-');
+                    } else {
+                        let day = userMessageJson.startDate.substring(0, 2);
+                        let month = userMessageJson.startDate.substring(2, 4);
+                        let year = userMessageJson.startDate.substring(4, 8);
+                        startDateParts = [day, month, year];
+                        day = userMessageJson.endDate.substring(0, 2);
+                        month = userMessageJson.endDate.substring(2, 4);
+                        year = userMessageJson.endDate.substring(4, 8);
+                        endDateParts = [day, month, year];
                     }
                     const startDate = new Date(`${startDateParts[2]}-${startDateParts[1]}-${startDateParts[0]}`);
                     const endDate = new Date(`${endDateParts[2]}-${endDateParts[1]}-${endDateParts[0]}`);
