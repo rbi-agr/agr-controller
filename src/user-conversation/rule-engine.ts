@@ -164,7 +164,8 @@ export class RuleEngine {
                 case "LOAN_ENQUIRY":
                     responses = await this.loanAccountStatus.preprocessData(headers, reqData)
                     break;
-                case "NEFT_RTGS":
+                case "RTGS":
+                case "NEFT":
                     responses = await this.neftRtgsStatus.preprocessData(headers, reqData)
                     break;
                 case "CHEQUE_BOOK":
