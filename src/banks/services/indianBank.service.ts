@@ -303,13 +303,19 @@ export class IndianBankService {
       throw new Error('Bank URL not found');
     }
 
-    const accountNumber = parseInt(chequebookDto.accountNumber.split('-')[1]);
+    const accountNumber = chequebookDto.accountNumber.split('-')[1];
     if(!accountNumber) {
       throw new Error('Invalid account number');
     }
 
     const requestPayload = {
-      Account_Number: accountNumber
+      ChequeBookTracking_Request: {
+        Body: {
+          Payload: {
+            AccountNumber: accountNumber
+          }
+        }
+      }
     }
 
     const apiInteractionId = await this.getInteractionId();
@@ -318,17 +324,18 @@ export class IndianBankService {
       data: {
         sessionId: sessionId,
         bankName: BankName.INDIAN_BANK,
-        interactionType: InteractionType.LOAN_ACCOUNT_BALANCE,
+        interactionType: InteractionType.CHEQUE_BOOK_STATUS,
       }
     });
     const headers = this.constructRequestHeaders(apiInteractionId)
 
     // TODO: Update endpoint when exposed by the bank
-    const endpoint = `/`;
+    const endpoint = `/cheque-service/v1/eq-chkbk-sts`;
 
     try {
       const response = await axios.post(bankUrl + endpoint, requestPayload, {
-        headers: headers
+        headers: headers,
+        httpsAgent: new https.Agent({ rejectUnauthorized: false })
       })
       const responseHeaders = response.headers;
       await this.prisma.bankInteractions.update({
@@ -343,21 +350,23 @@ export class IndianBankService {
         }
       });
       if(response.data.ErrorResponse) {
-        const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
+        const errDesc = response.data.ErrorResponse.additionalinfo?.excepText + ' - ' + response.data.ErrorResponse.additionalinfo?.excepMetaData
         return {
           error: true,
           message: errDesc
         }
       }
-      const mainResponse = response.data.ChequeStatusResponse
-      if(mainResponse.status = 'SUCCESS') {
+      const mainResponse = response.data.ChequeBookTracking_Response.Body.Payload;
+      if(mainResponse.Status = 'SUCCESS') {
         const trackingList = mainResponse?.TrackingList
         if(trackingList.length) {
-          const trackingDetail = trackingList[0].TrackingDetail;
+          const trackingDetail = trackingList[0];
+          const name = trackingDetail.Name;
           const trackingId = trackingDetail.TrackingID;
           const bookingDate = trackingDetail.BookingDate;
           return {
             error: false,
+            name: name,
             trackingId: trackingId,
             bookingDate: bookingDate
           }

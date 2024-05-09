@@ -12,6 +12,7 @@ enum InteractionType {
   TRANSACTIONS
   COMPLAINT_REGISTRATION
   LOAN_ACCOUNT_BALANCE
+  CHEQUE_BOOK_STATUS
 }
 
 generator client {
