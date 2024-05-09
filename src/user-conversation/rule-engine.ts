@@ -32,6 +32,7 @@ export class RuleEngine {
                 },
             })
 
+            let ruleResponse
 
             if (!session) {
                 //detect language
@@ -84,7 +85,7 @@ export class RuleEngine {
                 // call 1st intent classifier that classifies the use case
                 //mocking the response here
 
-                let ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
+                ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
                 if(ruleResponse.error) {
                     ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/rule-engine`)
                 } else {
@@ -153,6 +154,22 @@ export class RuleEngine {
                 if(session.retriesLeft>0 && !useCase){
                     //call rule-engine to get the useCase and decrease the number of retry
                     //if use case isnt found decrease the number of retry and return asking to retry
+                    ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
+                    if(ruleResponse.error) {
+                        ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/rule-engine`)
+                    } else {
+                        ruleResponse = {
+                            useCase: "OTHERS"
+                        }
+                    }
+                    await this.prisma.sessions.update({
+                        data: {
+                          retriesLeft: session.retriesLeft - 1,
+                        },
+                        where: {
+                          sessionId: reqData.session_id,
+                        },
+                      })
                 }
             }
 
@@ -164,7 +181,8 @@ export class RuleEngine {
                 case "LOAN_ENQUIRY":
                     responses = await this.loanAccountStatus.preprocessData(headers, reqData)
                     break;
-                case "NEFT_RTGS":
+                case "NEFT":
+                case "RTGS":
                     responses = await this.neftRtgsStatus.preprocessData(headers, reqData)
                     break;
                 case "CHEQUE_BOOK":
