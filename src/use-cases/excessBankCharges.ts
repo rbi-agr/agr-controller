@@ -33,7 +33,7 @@ export class ExcessBankCharges {
             //exclude the states not used for language detection
             const statesExcludedForLangDetect = [4, 9, 7, 14, 15];
             
-            const detectLang = !session || !statesExcludedForLangDetect.includes(session.state) || (session.state == 4 && !message.includes("|"))
+            const detectLang = reqData.metadata?.language !== 'en' && (!session || !statesExcludedForLangDetect.includes(session.state) || (session.state == 4 && !message.includes("|")))
 
             let languageDetected;
             
@@ -90,7 +90,7 @@ export class ExcessBankCharges {
                     }
                 }
                 //Check lang from adya
-                if(session && session?.languageByAdya!==languageDetected)
+                if(session && session?.languageByAdya && session?.languageByAdya!==languageDetected)
                 {
                     languageDetected = session.languageByAdya
                 }else if(reqData?.metadata?.language && reqData.metadata.language!==languageDetected)
@@ -105,7 +105,7 @@ export class ExcessBankCharges {
                     }
                 })
                 // languageDetected = user.languageDetected
-                if(session && session?.languageByAdya!==languageDetected)
+                if(session && session?.languageByAdya && session?.languageByAdya!==languageDetected)
                 {
                     languageDetected = session.languageByAdya
                 }
@@ -224,6 +224,7 @@ export class ExcessBankCharges {
             })
             return response
         } catch (error) {
+            console.log('error in state manager: ', error.message)
             this.logger.error('error occured in state manager ', error)
             return [{
                 status: "Internal Server Error",
@@ -1511,6 +1512,7 @@ export class ExcessBankCharges {
             }
             return msg
         } catch (error) {
+            console.log('error in state manager: ', error.message)
             this.logger.error('error occured in state manager ', error)
             await this.prisma.sessions.update({
                 where: { sessionId: reqData.session_id },
