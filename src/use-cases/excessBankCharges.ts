@@ -8,6 +8,7 @@ import { BankName } from "@prisma/client";
 import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 import * as constants from "../utils/constants"
+import { getTemplateResponse } from "./templatization";
 
 @Injectable()
 export class ExcessBankCharges {
@@ -844,7 +845,8 @@ export class ExcessBankCharges {
                         const accountNumber = state7Session.bankAccountNumber;
                         const accountType = accountNumber.substring(0, 2);
                         
-                        const educatingMessageResponse = await getEduMsg(correspondingNarration, accountType, state7TransactionAmount.split('.')[0])
+                        const educatingMessageResponse = await getTemplateResponse(correspondingNarration, accountType, state7TransactionAmount.split('.')[0], languageDetected, this.prisma);
+
                         console.log("Educatingresponse........................",educatingMessageResponse)
                         if(educatingMessageResponse.error){
                             this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
@@ -869,38 +871,50 @@ export class ExcessBankCharges {
                             })
                             return exitResponse
                         }
-                        const educatingMessage = JSON.parse(educatingMessageResponse.message.content);
-                                                        
-                        // const educatingMessage = correspondingNarration.natureOfCharge
-                        const edumsg = `Reason:-\n ${educatingMessage.response.reason}`
-                        console.log(edumsg)
-                        let moreinfo = educatingMessage.response.prevention_methods
-                        let additionalInfoString = 'Additional information:-\n'
-                        for(let m=0; m<moreinfo.length; m++) {
-                            additionalInfoString += '- '+moreinfo[m] + '\n'
+                        let educatingRes = [];
+                        if(educatingMessageResponse.message?.content) {
+                            const educatingMessage = JSON.parse(educatingMessageResponse.message.content);
+                                                            
+                            // const educatingMessage = correspondingNarration.natureOfCharge
+                            const edumsg = `Reason:-\n ${educatingMessage.response.reason}`
+                            console.log(edumsg)
+                            let moreinfo = educatingMessage.response.prevention_methods
+                            let additionalInfoString = 'Additional information:-\n'
+                            for(let m=0; m<moreinfo.length; m++) {
+                                additionalInfoString += '- '+moreinfo[m] + '\n'
+                            }
+                            educatingRes = [{
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                message: edumsg,
+                                options: [],
+                                end_connection: false,
+                                prompt: "text_message",
+                                metadata: {}
+                            }]
+                            educatingRes.push({
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                message: additionalInfoString,
+                                options: [],
+                                end_connection: false,
+                                prompt: "text_message",
+                                metadata: {}
+                            })
+                        } else {
+                            // template response
+                            for(let msg of educatingMessageResponse) {
+                                educatingRes.push({
+                                    status: "Success",
+                                    session_id: reqData.session_id,
+                                    message: msg,
+                                    options: [],
+                                    end_connection: false,
+                                    prompt: "text_message",
+                                    metadata: {}
+                                })
+                            }
                         }
-                        
-                        
-                        const educatingRes = [{
-                            status: "Success",
-                            session_id: reqData.session_id,
-                            message: edumsg,
-                            options: [],
-                            end_connection: false,
-                            prompt: "text_message",
-                            metadata: {}
-                        }]
-
-                        educatingRes.push({
-                            status: "Success",
-                            session_id: reqData.session_id,
-                            message: additionalInfoString,
-                            options: [],
-                            end_connection: false,
-                            prompt: "text_message",
-                            metadata: {}
-                        })
-
                         educatingRes.push({
                             status: "Success",
                             session_id: reqData.session_id,
