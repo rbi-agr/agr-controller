@@ -6,6 +6,7 @@ import { Transaction, TransactionsRequestDto, TransactionsResponseDto } from '..
 import { ComplaintRequestDto, ComplaintResponseDto } from '../dto/complaint.dto';
 import { LoanAccountBalanceRequestDto, LoanAccountBalanceResponseDto } from '../dto/loanbalance.dto';
 import * as constants from '../utils/bankConstants';
+import { ChequeBookStatusRequestDto, ChequeBookStatusResponseDto } from '../dto/chequeBook.dto';
 import * as https from 'https'
 
 @Injectable()
@@ -290,6 +291,93 @@ export class IndianBankService {
 
     } catch (error) {
       console.log("Error while getting loan account balance: ", error.response?.data ?? error.message)
+      throw new Error(error.response?.data ?? error.message);
+    }
+  }
+
+
+  async chequeBookStatus(sessionId: string, chequebookDto: ChequeBookStatusRequestDto): Promise<ChequeBookStatusResponseDto> {
+
+    const bankUrl = constants.indianBankUrl;
+    if (!bankUrl) {
+      throw new Error('Bank URL not found');
+    }
+
+    const accountNumber = chequebookDto.accountNumber.split('-')[1];
+    if(!accountNumber) {
+      throw new Error('Invalid account number');
+    }
+
+    const requestPayload = {
+      ChequeBookTracking_Request: {
+        Body: {
+          Payload: {
+            AccountNumber: accountNumber
+          }
+        }
+      }
+    }
+
+    const apiInteractionId = await this.getInteractionId();
+
+    const bankInteraction = await this.prisma.bankInteractions.create({
+      data: {
+        sessionId: sessionId,
+        bankName: BankName.INDIAN_BANK,
+        interactionType: InteractionType.CHEQUE_BOOK_STATUS,
+      }
+    });
+    const headers = this.constructRequestHeaders(apiInteractionId)
+
+    // TODO: Update endpoint when exposed by the bank
+    const endpoint = `/cheque-service/v1/eq-chkbk-sts`;
+
+    try {
+      const response = await axios.post(bankUrl + endpoint, requestPayload, {
+        headers: headers,
+        httpsAgent: new https.Agent({ rejectUnauthorized: false })
+      })
+      const responseHeaders = response.headers;
+      await this.prisma.bankInteractions.update({
+        where: {
+          id: bankInteraction.id
+        },
+        data: {
+          metadata: {
+            'x-api-interaction-id': apiInteractionId,
+            'ib-gwy-id': responseHeaders['ib-gwy-id'],
+          }
+        }
+      });
+      if(response.data.ErrorResponse) {
+        const errDesc = response.data.ErrorResponse.additionalinfo?.excepText + ' - ' + response.data.ErrorResponse.additionalinfo?.excepMetaData
+        return {
+          error: true,
+          message: errDesc
+        }
+      }
+      const mainResponse = response.data.ChequeBookTracking_Response.Body.Payload;
+      if(mainResponse.Status = 'SUCCESS') {
+        const trackingList = mainResponse?.TrackingList
+        if(trackingList.length) {
+          const trackingDetail = trackingList[0];
+          const name = trackingDetail.Name;
+          const trackingId = trackingDetail.TrackingID;
+          const bookingDate = trackingDetail.BookingDate;
+          return {
+            error: false,
+            name: name,
+            trackingId: trackingId,
+            bookingDate: bookingDate
+          }
+        }
+      }
+      return {
+        error: true,
+        message: 'Cheque book status not found'
+      }
+    } catch (error) {
+      console.log("Error while getting cheque book balance: ", error.response?.data ?? error.message)
       throw new Error(error.response?.data ?? error.message);
     }
   }
