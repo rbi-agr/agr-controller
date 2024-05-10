@@ -22,6 +22,7 @@ export class LoanAccountStatus {
 
     async preprocessData(headers, reqData) {
         try {
+            //check if session exists
             const sessionId = reqData.session_id
 
             let session = await this.prisma.sessions.findUnique({
@@ -30,8 +31,95 @@ export class LoanAccountStatus {
                 },
             })
 
-            let response = await this.states(reqData)
+            let languageDetected;
 
+            const languageDetectedresponse = await PostRequest(reqData.message.text, `${process.env.BASEURL}/ai/language-detect`)
+
+            if (languageDetectedresponse.error) {
+                const exitResponse = [{
+                    status: "Internal Server Error",
+                    message: "Error in language detection",
+                    end_connection: false
+                }]
+                return exitResponse
+            }
+            languageDetected = languageDetectedresponse?.language
+
+            if (languageDetected !== 'en') {
+                if (languageDetected === 'hi' || languageDetected === 'or' || languageDetected === 'ori') {
+                    //convert the message to english
+                    const translatedmessage = await PostRequestforTranslation(reqData.message.text, languageDetected, "en", `${process.env.BASEURL}/ai/language-translate`)
+
+                    if (!translatedmessage.error) {
+                        //Convert the language to englidh into the reqdata
+                        reqData = { ...reqData, message: { "text": translatedmessage.translated } }
+                    }
+                    else {
+                        return [{
+                            status: "Internal Server Error",
+                            "message": "Something went wrong with language translation",
+                            "end_connection": false
+                        }]
+                    }
+                } else {
+                    //throw error stating to change the message language (User to enter the query)
+                    const lang_detected = [{
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        "message": "Please enter you query in english, hindi or odia",
+                        "options": [],
+                        "end_connection": false,
+                        "prompt": "text_message",
+                        "metadata": {}
+                    }]
+                    // const msg = 'Please enter you query in english, hindi or odia'
+                    //return proper formatted response
+
+                    return lang_detected
+                }
+            }
+            //Check lang from adya
+            if (session && session?.languageByAdya !== languageDetected) {
+                languageDetected = session.languageByAdya
+            } else if (reqData?.metadata?.language && reqData.metadata.language !== languageDetected) {
+                //Case 0
+                languageDetected = reqData.metadata.language
+            }
+
+            let response = await this.states(reqData)
+            // Check if the language detected is "en"
+            let messageTranslation = ""
+
+            const updatedSession = await this.prisma.sessions.findUnique({
+                where: {
+                    sessionId: reqData.session_id
+                }
+            })
+            if (languageDetected !== "en") {
+                //convert the message to Language detected and return
+                //Translator API
+
+                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id)
+                console.log("translatedresponse", translatedresponse)
+                response = translatedresponse
+            }
+
+            //Store messages in db
+            await this.prisma.messages.create({
+                data: {
+                    sessionId: reqData.session_id,
+                    userId: session.userId,
+                    sender: "user",
+                    message: reqData.message.text || "",
+                    messageTranslation: "",
+                    languageDetected: languageDetected || "",
+                    promptType: "text_message",
+                    options: [],
+                    timeStamp: new Date()
+                }
+            })
+
+            //2. Store the response from chatbot
             response?.forEach(async (e: any) => {
                 await this.prisma.messages.create({
                     data: {
@@ -39,8 +127,8 @@ export class LoanAccountStatus {
                         userId: 'db5084e1-babf-4a83-953f-f14b1f9a9e89',
                         sender: "chatbot",
                         message: e?.message || "",
-                        messageTranslation: "",
-                        languageDetected: "",
+                        messageTranslation: messageTranslation || "",
+                        languageDetected: languageDetected || "",
                         promptType: e?.prompt || "",
                         options: e?.options || [],
                         timeStamp: new Date()
@@ -85,12 +173,6 @@ export class LoanAccountStatus {
             const loanAccBalResponse = await this.banksService.getLoanAccountBalance(reqData.session_id, loanAccBalReq, BankName.INDIAN_BANK)
             console.log('Loan account response ', loanAccBalResponse)
             if (loanAccBalResponse.error) {
-                // await this.prisma.sessions.update({
-                //     where: { sessionId: reqData.session_id },
-                //     data: {
-                //         state: 20
-                //     }
-                // })
                 return [{
                     status: "Internal Server Error",
                     message: `I received the following error from the bank: ${loanAccBalResponse.message}`,
