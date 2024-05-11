@@ -4,10 +4,13 @@ import { BankName } from '@prisma/client';
 import { TransactionsRequestDto, TransactionsResponseDto } from './dto/transactions.dto';
 import { ComplaintRequestDto, ComplaintResponseDto } from './dto/complaint.dto';
 import { LoanAccountBalanceRequestDto } from './dto/loanbalance.dto';
+import { LoggerService } from "src/logger/logger.service";
+import * as Sentry from '@sentry/node'
 
 @Injectable()
 export class BanksService {
     constructor(
+        private readonly logger : LoggerService,
         private indianBankService: IndianBankService
     ) {}
 
@@ -38,6 +41,8 @@ export class BanksService {
         try {
             return await this.indianBankService.createNarrations(body)
         } catch(error) {
+            Sentry.captureException("Create New Narrations Error")
+            this.logger.error("Create New Narrations Error:",error)
             throw new Error(error.response?.data ?? error.message);
         }
     }
@@ -46,6 +51,9 @@ export class BanksService {
         try {
             return await this.indianBankService.getAllNarrations()
         } catch(error) {
+            Sentry.captureException(error)
+            Sentry.captureException("Fetching All Narrations Error")
+            this.logger.error("Fetching All Narrations Error:",error)
             throw new Error(error.response?.data ?? error.message);
         }
     }

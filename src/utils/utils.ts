@@ -1,4 +1,5 @@
 import axios from "axios";
+import * as Sentry from '@sentry/node'
 
 export async function getCorrespondingNarration(bankNarration: any, narrationList: string[]) {
     const userprompt = `narration from bank: "${bankNarration}", list of narrations: ${narrationList}`
@@ -35,6 +36,8 @@ export async function getDataFromLLM(userPrompt: string, task: string) {
         const response = await axios.post(`${process.env.BASEURL}`,requestBody)
         return response.data;
     } catch (error) {
+        Sentry.captureException("LLM Data Fetching Error")
+        this.logger.error("LLM Data Fetching Error:", error)
         return { statusCode: 400, message: 'Error in fetching data from mistral AI', error: error }
     }
 
@@ -55,7 +58,8 @@ export async function callMistralAI(message) {
         // console.log(mistralResponse)
         return mistralResponse.data
     } catch(error) {
-        this.logger.error('Error ', error)
+        Sentry.captureException("AI API error")
+        this.logger.error('AI API error:', error)
         return { status:"Internal Server Error", message: 'Something went wrong'}
     }
 }
@@ -70,7 +74,8 @@ export async function PostRequest(message: String,apiUrl: any) :Promise<any> {
         console.log('lan res ', response.data)
         return response.data
     } catch (error) {
-        this.logger.error('Error in calling this API', error)
+        Sentry.captureException("POST Request Utility Error")
+        this.logger.error('POST Request Utility Error:', error)
         return { statusCode: 400, message: 'Error in calling this API', error: error }
     }
 }
@@ -85,8 +90,8 @@ export async function PostRequestforTranslation(message: String,source: String, 
         const response = await axios.post(apiUrl,requestBody)
         return response.data
     } catch (error) {
-        console.log(error)
-        this.logger.error('Error in calling this API', error)
+        Sentry.captureException("Translation POST Request Utility Error")
+        this.logger.error('Translation POST Request Utility Error:', error)
         return { statusCode: 400, message: 'Error in calling this API', error: error }
     }
 }
@@ -130,7 +135,8 @@ export async function validstate(prevst: any, nextst: any) {
         }
         return { statusCode: 404, message: 'States not provided. Please provide valid state' }
     } catch (error) {
-        this.logger.error('Error in checking this move ', error)
+        Sentry.captureException("State Validation Error")
+        this.logger.error('State Validation Error:', error)
         return { statusCode: 400, message: 'Error in this move', error: error }
     }
 }
@@ -145,7 +151,8 @@ export async function PostRequestforTransactionDates(message: String,apiUrl: any
         const response = await axios.post(apiUrl,requestBody)
         return response.data
     } catch (error) {
-        this.logger.error('Error in checking this move ', error)
+        Sentry.captureException("Transactions Dates POST Request Utility Error")
+        this.logger.error('Transactions Dates POST Request Utility Error:', error)
         return { statusCode: 400, message: 'Error in this move', error: error }
     }
 }
@@ -189,7 +196,8 @@ export async function addRatingOverall(rating: number, sessionid: string): Promi
         }
     }
     catch (error) {
-        this.logger.error('Error ', error)
+        Sentry.captureException("Add Rating Utility Error")
+        this.logger.error('Add Rating Utility Error:', error)
         return { status:"Internal Server Error", message: 'Something went wrong'}
     }
 }
@@ -223,6 +231,8 @@ export async function translatedResponse(response, languageDetected, sessionId){
                                 }
                                 else
                                 {
+                                    Sentry.captureException("Message Translation API Error")
+                                    this.logger.error("Message Translation API Error:", translatedoptionresp.error)
                                     await this.prisma.sessions.update({
                                         where: { sessionId },
                                         data: {
@@ -251,11 +261,12 @@ export async function translatedResponse(response, languageDetected, sessionId){
                         translatedfinalresponse.push({...currentmessage,message:messageTranslation,options:translatedoption})
                         continue;
                     }
-                console.log("Here")
-                
-                translatedfinalresponse.push({...currentmessage,message:messageTranslation})
+                    console.log("Here")
+                    translatedfinalresponse.push({...currentmessage,message:messageTranslation})
                 }
                 else {
+                    Sentry.captureException("Message Translation API Error")
+                    this.logger.error("Message Translation API Error:", messageTranslationresp.error)
                     await this.prisma.sessions.update({
                         where: { sessionId },
                         data: {
@@ -279,6 +290,8 @@ export async function translatedResponse(response, languageDetected, sessionId){
             }
             return translatedfinalresponse
     } catch (error) {
+        Sentry.captureException("Language Translation Utility Error")
+        this.logger.error("Language Translation Utility Error:",error)
         await this.prisma.sessions.update({
             where: { sessionId },
             data: {
