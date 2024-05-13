@@ -2,10 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { CreateAiProcessingDto } from './dto/create-ai-processing.dto';
 import { UpdateAiProcessingDto } from './dto/update-ai-processing.dto';
 import { PrismaService } from "src/prisma/prisma.service";
+import { LoggerService } from "../logger/logger.service"
+import * as Sentry from '@sentry/node'
 
 @Injectable()
 export class AiProcessingService {
   constructor(
+    private readonly logger : LoggerService,
     private prisma: PrismaService
 ) { }
   create(createAiProcessingDto: CreateAiProcessingDto) {
@@ -62,7 +65,8 @@ export class AiProcessingService {
           message: "Session not found"
         }
     } catch(error) {
-      console.log('error in swtiching language ', error)
+      Sentry.captureException("AI Service Error: Switching Language Error")
+      this.logger.error("AI Service Error: Switching Language Error",error)
       return { status: "Internal Server Error",
       message: "Language could not be updated updated"}
     }

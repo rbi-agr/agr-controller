@@ -8,6 +8,7 @@ import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
 import { BankName } from "@prisma/client";
 import { response } from "express";
 import { BanksService } from "src/banks/banks.service";
+import * as Sentry from '@sentry/node'
 
 @Injectable()
 export class NeftRtgsStatus {
@@ -45,6 +46,8 @@ export class NeftRtgsStatus {
                 //Update the language detected in Adya
                 
                 if(languageDetectedresponse.error){
+                    Sentry.captureException("NEFT/RTGS Status Error: Preprocess Language Detection Error")
+                    this.logger.error("NEFT/RTGS Status Error: Preprocess Language Detection Error:",languageDetectedresponse.error)
                     const exitResponse =  [{
                         status: "Internal Server Error",
                         message: "Error in language detection",
@@ -65,6 +68,8 @@ export class NeftRtgsStatus {
                             reqData ={...reqData,message:{"text":translatedmessage.translated}}
                         }
                         else{
+                            Sentry.captureException("NEFT/RTGS Status Error: Preprocess Language Translation Error")
+                            this.logger.error("NEFT/RTGS Status Error: Preprocess Language Translation Error:",translatedmessage.error)
                             return[{
                                 status: "Internal Server Error",
                                 "message": "Something went wrong with language translation",
@@ -223,7 +228,8 @@ export class NeftRtgsStatus {
             })
             return response
         } catch (error) {
-            this.logger.error('error occured in state manager ', error)
+            Sentry.captureException("NEFT/RTGS Status Error: Preprocess Error")
+            this.logger.error('NEFT/RTGS Status Error: Preprocess Error:', error)
             return [{
                 status: "Internal Server Error",
                 message: "Something went wrong. Please try again later",
@@ -244,7 +250,8 @@ export class NeftRtgsStatus {
         try {
             this.logger.info('Inside states')
         }  catch (error) {
-            this.logger.error('error occured in state manager ', error)
+            Sentry.captureException("NEFT/RTGS Status Error: State Manager Error")
+            this.logger.error('NEFT/RTGS Status Error: State Manager Error:', error)
             return [{
                 status: "Internal Server Error",
                 message: "Something went wrong. Please try again later",

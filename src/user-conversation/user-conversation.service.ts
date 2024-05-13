@@ -2,6 +2,7 @@ import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSo
 import { Socket } from 'socket.io';
 import { RuleEngine } from './rule-engine';
 import { LoggerService } from 'src/logger/logger.service';
+import * as Sentry from '@sentry/node'
 
 @WebSocketGateway({
   cors: {
@@ -44,12 +45,17 @@ export class UserConversationService {
     console.log(fres)
     
     //4.emit the response
-    for(let resObj of fres){
-      client.emit('response', resObj)
-
-      if(resObj.end_connection) {
-        await this.closeConnection(sessionId)
+    try{
+      for(let resObj of fres){
+        client.emit('response', resObj)
+  
+        if(resObj.end_connection) {
+          await this.closeConnection(sessionId)
+        }
       }
+    }catch(error){
+      this.logger.error("User Conversation Error: Response Object Error:",error)
+      Sentry.captureException("User Conversation Error: Response Object Error")
     }
   }
 
@@ -58,7 +64,8 @@ export class UserConversationService {
       const fres = await this.ruleEngine.preprocessDataForMultipleUseCases(headers, req)
       return fres
     } catch (error) {
-      this.logger.error('error occured in state manager ', error)
+      Sentry.captureException("User Conversation Error: Preprocess Error")
+      this.logger.error('User Conversation Error: Preprocess Error:', error)
       return error
     }
   }

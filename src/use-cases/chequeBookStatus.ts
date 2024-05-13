@@ -10,6 +10,7 @@ import { response } from "express";
 import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 import * as constants from "../utils/constants"
+import * as Sentry from '@sentry/node'
 import { ChequeBookStatusRequestDto } from "src/banks/dto/chequeBook.dto";
 
 @Injectable()
@@ -33,15 +34,9 @@ export class ChequeBookStatus {
 
             let languageDetected;
 
-
             const languageDetectedresponse = await PostRequest(reqData.message.text, `${process.env.BASEURL}/ai/language-detect`)
-            // const languageDetectedresponse = {
-            //     language: 'en',
-            //     error: null
-            // }
-            //Update the language detected in Adya
-
             if (languageDetectedresponse.error) {
+                Sentry.captureException("Cheque Book Status Error: Preprocess Language Translation Error")
                 const exitResponse = [{
                     status: "Internal Server Error",
                     message: "Error in language detection",
@@ -49,41 +44,43 @@ export class ChequeBookStatus {
                 }]
                 return exitResponse
             }
-            languageDetected = languageDetectedresponse?.language
-
-
-            if (languageDetected !== 'en') {
-                if (languageDetected === 'hi' || languageDetected === 'or' || languageDetected === 'ori') {
-                    //convert the message to english
-                    const translatedmessage = await PostRequestforTranslation(reqData.message.text, languageDetected, "en", `${process.env.BASEURL}/ai/language-translate`)
-
-                    if (!translatedmessage.error) {
-                        //Convert the language to englidh into the reqdata
-                        reqData = { ...reqData, message: { "text": translatedmessage.translated } }
-                    }
-                    else {
-                        return [{
-                            status: "Internal Server Error",
-                            "message": "Something went wrong with language translation",
-                            "end_connection": false
+            languageDetected = languageDetectedresponse?.language             
+                
+                if(languageDetected !== 'en') {
+                    if(languageDetected === 'hi' || languageDetected === 'or'|| languageDetected === 'ori'){
+                        //convert the message to english
+                        const translatedmessage = await PostRequestforTranslation(reqData.message.text,languageDetected,"en",`${process.env.BASEURL}/ai/language-translate`)
+                        
+                        if(!translatedmessage.error){
+                            //Convert the language to englidh into the reqdata
+                            reqData ={...reqData,message:{"text":translatedmessage.translated}}
+                        }
+                        else{
+                            Sentry.captureException("Cheque Book Status Error: Preprocess Language Translation Error")
+                            this.logger.error("Cheque Book Status Error: Preprocess Language Translation Error:",translatedmessage.error)
+                            return[{
+                                status: "Internal Server Error",
+                                "message": "Something went wrong with language translation",
+                                "end_connection": false
+                            }]
+                        }
+                    }else {
+                        //throw error stating to change the message language (User to enter the query)
+                        const lang_detected=[{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": "Please enter you query in english, hindi or odia",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
                         }]
+                        // const msg = 'Please enter you query in english, hindi or odia'
+                        //return proper formatted response
+                        
+                        return lang_detected
+                        }
                     }
-                } else {
-                    //throw error stating to change the message language (User to enter the query)
-                    const lang_detected = [{
-                        status: "Success",
-                        session_id: reqData.session_id,
-                        "message": "Please enter you query in english, hindi or odia",
-                        "options": [],
-                        "end_connection": false,
-                        "prompt": "text_message",
-                        "metadata": {}
-                    }]
-                    // const msg = 'Please enter you query in english, hindi or odia'
-                    //return proper formatted response
-                    return lang_detected
-                }
-            }
             //Check lang from adya
             if (session && session?.languageByAdya !== languageDetected) {
                 languageDetected = session.languageByAdya
@@ -144,7 +141,8 @@ export class ChequeBookStatus {
             })
             return response
         } catch (error) {
-            this.logger.error('error occured in state manager ', error)
+            Sentry.captureException("Cheque Book Status Error: Preprocess Error")
+            this.logger.error('Cheque Book Status Error: Preprocess Error:', error)
             return [{
                 status: "Internal Server Error",
                 message: "Something went wrong. Please try again later",

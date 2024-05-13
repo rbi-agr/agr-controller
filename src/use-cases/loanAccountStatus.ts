@@ -11,6 +11,7 @@ import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 import * as constants from "../utils/constants"
 import { LoanAccountBalanceRequestDto } from "src/banks/dto/loanbalance.dto";
+import * as Sentry from '@sentry/node'
 
 @Injectable()
 export class LoanAccountStatus {
@@ -137,7 +138,8 @@ export class LoanAccountStatus {
             })
             return response
         } catch (error) {
-            this.logger.error('error occured in state manager ', error)
+            Sentry.captureException("Loan Account Status Error: Preprocess Error")
+            this.logger.error('Loan Account Status Error: Preprocess Error', error)
             return [{
                 status: "Internal Server Error",
                 message: "Something went wrong. Please try again later",
@@ -173,6 +175,15 @@ export class LoanAccountStatus {
             const loanAccBalResponse = await this.banksService.getLoanAccountBalance(reqData.session_id, loanAccBalReq, BankName.INDIAN_BANK)
             console.log('Loan account response ', loanAccBalResponse)
             if (loanAccBalResponse.error) {
+                Sentry.captureException("Loan Account Status Error: Fetching Loan Account Balance Error")
+                //this.logger.error("Loan Account Status Error: Fetching Loan Account Balance Error:", loanAccBalResponse.error)
+
+                // await this.prisma.sessions.update({
+                //     where: { sessionId: reqData.session_id },
+                //     data: {
+                //         state: 20
+                //     }
+                // })
                 return [{
                     status: "Internal Server Error",
                     message: `I received the following error from the bank: ${loanAccBalResponse.message}`,
@@ -220,7 +231,8 @@ export class LoanAccountStatus {
             return fres
 
         } catch (error) {
-            this.logger.error('error occured in state manager ', error)
+            Sentry.captureException("Loan Account Status Error: State Manager Error")
+            this.logger.error('Loan Account Status Error: State Manager Error:', error)
             return [{
                 status: "Internal Server Error",
                 message: "Something went wrong. Please try again later",

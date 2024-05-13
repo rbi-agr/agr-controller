@@ -7,6 +7,7 @@ import { ExcessBankCharges } from "../use-cases/excessBankCharges"
 import { LoanAccountStatus } from "src/use-cases/loanAccountStatus";
 import { NeftRtgsStatus } from "src/use-cases/neftRtgsStatus";
 import { ChequeBookStatus } from "src/use-cases/chequeBookStatus";
+import * as Sentry from '@sentry/node'
 
 @Injectable()
 export class RuleEngine {
@@ -39,6 +40,8 @@ export class RuleEngine {
                 const message = reqData.message.text
                 const languageDetectedresponse = await PostRequest(message, `${process.env.BASEURL}/ai/language-detect`)
                 if (languageDetectedresponse.error) {
+                    Sentry.captureException("Rule Engine Error: Language Detection API Error")
+                    this.logger.error("Rule Engine Error: Language Detection API Error:", languageDetectedresponse.error)
                     const exitResponse = [{
                         status: "Internal Server Error",
                         message: "Error in language detection",
@@ -59,6 +62,8 @@ export class RuleEngine {
                             reqData = { ...reqData, message: { "text": translatedmessage.translated } }
                         }
                         else {
+                            Sentry.captureException("Rule Engine Error: Language Translation API Error")
+                            this.logger.error("Rule Engine Error: Language Translation API Error:",translatedmessage.error)
                             return [{
                                 status: "Internal Server Error",
                                 "message": "Something went wrong with language translation",
@@ -191,7 +196,8 @@ export class RuleEngine {
             }
             return responses
         } catch (error) {
-            this.logger.error('error occured in state manager ', error)
+            Sentry.captureException("Rule Engine Error: Multi Use-Case Preprocess Error")
+            this.logger.error('Rule Engine Error: Multi Use-Case Preprocess Error:', error)
             return error
         }
     }
