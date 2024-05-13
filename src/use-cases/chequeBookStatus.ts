@@ -11,6 +11,7 @@ import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 import * as constants from "../utils/constants"
 import * as Sentry from '@sentry/node'
+import { ChequeBookStatusRequestDto } from "src/banks/dto/chequeBook.dto";
 
 @Injectable()
 export class ChequeBookStatus {
@@ -251,6 +252,38 @@ export class ChequeBookStatus {
     async states(reqData, languageDetected, state) {
         try {
             this.logger.info('Inside states')
+
+            const cheqBkStatusReq: ChequeBookStatusRequestDto = {
+                accountNumber: reqData.metadata.accountNumber,
+            }
+
+            const cheqBkStatusResponse = await this.banksService.chequeBookStatus(reqData.session_id, cheqBkStatusReq, BankName.INDIAN_BANK)
+            console.log('Cheque book response ', cheqBkStatusResponse)
+            if (cheqBkStatusResponse.error) {
+                // await this.prisma.sessions.update({
+                //     where: { sessionId: reqData.session_id },
+                //     data: {
+                //         state: 20
+                //     }
+                // })
+                return [{
+                    status: "Internal Server Error",
+                    message: `I received the following error from the bank: ${cheqBkStatusResponse.message}`,
+                    end_connection: false
+                }, {
+                    status: "Success",
+                    session_id: reqData.session_id,
+                    message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                    options: ['Yes, end the conversation'],
+                    end_connection: false,
+                    prompt: "option_selection",
+                    metadata: {}
+                }]
+            }
+            const name = cheqBkStatusResponse.name;
+            const trackingId = cheqBkStatusResponse.trackingId;
+            const bookingDate = cheqBkStatusResponse.bookingDate;
+
         }  catch (error) {
             Sentry.captureException("Check Book Status Error: Error in state manager")
             this.logger.error('Check Book Status Error: Error in state manager:', error)

@@ -6,6 +6,7 @@ import { ComplaintRequestDto, ComplaintResponseDto } from './dto/complaint.dto';
 import { LoanAccountBalanceRequestDto } from './dto/loanbalance.dto';
 import { LoggerService } from "src/logger/logger.service";
 import * as Sentry from '@sentry/node'
+import { ChequeBookStatusRequestDto } from './dto/chequeBook.dto';
 
 @Injectable()
 export class BanksService {
@@ -34,6 +35,13 @@ export class BanksService {
         switch(bankName) {
             case BankName.INDIAN_BANK:
                 return this.indianBankService.getLoanAccountBalance(sessionId, data);
+        }
+    }
+
+    async chequeBookStatus(sessionId: string, data: ChequeBookStatusRequestDto, bankName: BankName) {
+        switch(bankName) {
+            case BankName.INDIAN_BANK:
+                return this.indianBankService.chequeBookStatus(sessionId, data);
         }
     }
 
