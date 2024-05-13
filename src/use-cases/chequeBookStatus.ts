@@ -10,6 +10,7 @@ import { response } from "express";
 import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 import * as constants from "../utils/constants"
+import * as Sentry from '@sentry/node'
 import { ChequeBookStatusRequestDto } from "src/banks/dto/chequeBook.dto";
 
 @Injectable()
@@ -48,6 +49,8 @@ export class ChequeBookStatus {
                 //Update the language detected in Adya
                 
                 if(languageDetectedresponse.error){
+                    Sentry.captureException("Cheque Book Status Error: Preprocess Language Detection Error")
+                    this.logger.error("Cheque Book Status Error: Preprocess Language Detection Error:",languageDetectedresponse.error)
                     const exitResponse =  [{
                         status: "Internal Server Error",
                         message: "Error in language detection",
@@ -68,6 +71,8 @@ export class ChequeBookStatus {
                             reqData ={...reqData,message:{"text":translatedmessage.translated}}
                         }
                         else{
+                            Sentry.captureException("Cheque Book Status Error: Preprocess Language Translation Error")
+                            this.logger.error("Cheque Book Status Error: Preprocess Language Translation Error:",translatedmessage.error)
                             return[{
                                 status: "Internal Server Error",
                                 "message": "Something went wrong with language translation",
@@ -226,7 +231,8 @@ export class ChequeBookStatus {
             })
             return response
         } catch (error) {
-            this.logger.error('error occured in state manager ', error)
+            Sentry.captureException("Cheque Book Status Error: Preprocess Error")
+            this.logger.error('Cheque Book Status Error: Preprocess Error:', error)
             return [{
                 status: "Internal Server Error",
                 message: "Something went wrong. Please try again later",
@@ -279,7 +285,8 @@ export class ChequeBookStatus {
             const bookingDate = cheqBkStatusResponse.bookingDate;
 
         }  catch (error) {
-            this.logger.error('error occured in state manager ', error)
+            Sentry.captureException("Check Book Status Error: Error in state manager")
+            this.logger.error('Check Book Status Error: Error in state manager:', error)
             return [{
                 status: "Internal Server Error",
                 message: "Something went wrong. Please try again later",

@@ -8,6 +8,7 @@ import { BankName } from "@prisma/client";
 import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 import * as constants from "../utils/constants"
+import * as Sentry from '@sentry/node'
 
 @Injectable()
 export class ExcessBankCharges {
@@ -46,6 +47,8 @@ export class ExcessBankCharges {
                 //Update the language detected in Adya
                 
                 if(languageDetectedresponse.error){
+                    Sentry.captureException("Excess Bank Charges Error: Preprocess Language Detection Error")
+                    this.logger.error("Excess Bank Charges Error: Preprocess Language Detection Error:",languageDetectedresponse.error)
                     const exitResponse =  [{
                         status: "Internal Server Error",
                         message: "Error in language detection",
@@ -66,6 +69,8 @@ export class ExcessBankCharges {
                             reqData ={...reqData,message:{"text":translatedmessage.translated}}
                         }
                         else{
+                            Sentry.captureException("Excess Bank Charges Error: Preprocess Language Translation Error")
+                            this.logger.error("Excess Bank Charges Error: Preprocess Language Translation Error:",translatedmessage.error)
                             return[{
                                 status: "Internal Server Error",
                                 "message": "Something went wrong with language translation",
@@ -224,7 +229,8 @@ export class ExcessBankCharges {
             })
             return response
         } catch (error) {
-            this.logger.error('error occured in state manager ', error)
+            Sentry.captureException("Excess Bank Charges: Preprocess Error Occured")
+            this.logger.error('Excess Bank Charges: Preprocess Error Occured:', error)
             return [{
                 status: "Internal Server Error",
                 message: "Something went wrong. Please try again later",
@@ -539,6 +545,8 @@ export class ExcessBankCharges {
                     try {
                         const transactionsResponse = await this.banksService.fetchTransactions(sessionId, transactionsReqData, BankName.INDIAN_BANK)
                         if(transactionsResponse.error) {
+                            Sentry.captureException("Excess Bank Charges Error: Fetch Transactions Error: Error Response from Bank API")
+                            //this.logger.error("Excess Bank Charges Error: Fetch Transactions Error: Error Response from Bank API:", transactionsResponse.error )
                             await this.prisma.sessions.update({
                                 where: { sessionId: reqData.session_id },
                                 data: {
@@ -626,7 +634,8 @@ export class ExcessBankCharges {
                         }]
                         return transaction_success
                     } catch(error) {
-                        console.log('error in fetching transactions: ', error)
+                        Sentry.captureException("Excess Bank Charges: Fetch Transaction Error")
+                        console.log('Excess Bank Charges: Fetch Transaction Error:', error)
                         this.logger.error('error occured in state manager ', error)
                         const intentFailRes = [{
                             status: "Internal Server Error",
@@ -791,7 +800,8 @@ export class ExcessBankCharges {
                             const narrationsList = bankNarrations.map(bankNarration => bankNarration.narration)
                             const narrationResponse = await getCorrespondingNarration(state7TransactionNarration, narrationsList)
                             if(narrationResponse.error){
-                                this.logger.error('Error in fetching narration from Mistral AI: ', narrationResponse.error)
+                                Sentry.captureException("Excess Bank Charges Error:Fetching Narration Error")
+                                this.logger.error('Excess Bank Charges Error:Fetching Narration Error:', narrationResponse.error)
                                 const exitResponse =  [{
                                     status: "Internal Server Error",
                                     message: "Internal Server Error. Please try again later",
@@ -847,7 +857,8 @@ export class ExcessBankCharges {
                         const educatingMessageResponse = await getEduMsg(correspondingNarration, accountType, state7TransactionAmount.split('.')[0])
                         console.log("Educatingresponse........................",educatingMessageResponse)
                         if(educatingMessageResponse.error){
-                            this.logger.error('Error in fetching educating message from Mistral AI: ', educatingMessageResponse.error)
+                            Sentry.captureException("Excess Bank Charges Error: Fetching Educating Message Error")
+                            this.logger.error('Excess Bank Charges Error: Fetching Educating Message Error:', educatingMessageResponse.error)
                             const exitResponse =  [{
                                 status: "Internal Server Error",
                                 message: "Internal Server Error. Please try again later",
@@ -1194,6 +1205,8 @@ export class ExcessBankCharges {
                     try {
                         const ticketResponse = await this.banksService.registerComplaint(sessionId, complaintRequestData, BankName.INDIAN_BANK)
                         if(ticketResponse.error) {
+                            Sentry.captureException("Excess Bank Charges: Register Complaint Error")
+                            //this.logger.error("Excess Bank Charges: Register Complaint Error:", ticketResponse.error)
                             return [{
                                 status: "Internal Server Error",
                                 message: `I received the following error from the bank: ${ticketResponse.message}`,
@@ -1243,7 +1256,8 @@ export class ExcessBankCharges {
 
                         return ticketRes
                     } catch (error) {
-                        this.logger.error('Error in raising ticket: ', error)
+                        Sentry.captureException("Excess Bank Charges: Register Complaint Error")
+                        this.logger.error('Excess Bank Charges: Register Complaint Error:', error)
                         return [{
                             status: "Internal Server Error",
                             message: "Error in raising ticket",
@@ -1511,7 +1525,8 @@ export class ExcessBankCharges {
             }
             return msg
         } catch (error) {
-            this.logger.error('error occured in state manager ', error)
+            Sentry.captureException("Excess Bank Charges: Error in State Manager")
+            this.logger.error('Excess Bank Charges: Error in State Manager:', error)
             await this.prisma.sessions.update({
                 where: { sessionId: reqData.session_id },
                 data: { state: 20 }
