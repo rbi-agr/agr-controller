@@ -180,7 +180,7 @@ export class NeftRtgsStatus {
                 //convert the message to Language detected and return
                 //Translator API
                 
-                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id)
+                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id, this.prisma)
                 console.log("translatedresponse",translatedresponse)
                 response=translatedresponse
             }

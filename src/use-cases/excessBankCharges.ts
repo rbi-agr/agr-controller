@@ -9,6 +9,7 @@ import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 import * as constants from "../utils/constants"
 import { getTemplateResponse } from "./templatization";
+import { getPrismaErrorStatusAndMessage } from "src/utils/handleErrors";
 
 @Injectable()
 export class ExcessBankCharges {
@@ -182,7 +183,7 @@ export class ExcessBankCharges {
                 //convert the message to Language detected and return
                 //Translator API
                 
-                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id)
+                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id, this.prisma)
                 console.log("translatedresponse",translatedresponse)
                 response=translatedresponse
             }
@@ -845,7 +846,7 @@ export class ExcessBankCharges {
                         const accountNumber = state7Session.bankAccountNumber;
                         const accountType = accountNumber.substring(0, 2);
                         
-                        const educatingMessageResponse = await getTemplateResponse(correspondingNarration, accountType, state7TransactionAmount.split('.')[0], languageDetected, this.prisma);
+                        const educatingMessageResponse = await getTemplateResponse(correspondingNarration, accountType, parseInt(state7TransactionAmount.split('.')[0]), languageDetected, this.prisma);
 
                         console.log("Educatingresponse........................",educatingMessageResponse)
                         if(educatingMessageResponse.error){
@@ -1525,7 +1526,11 @@ export class ExcessBankCharges {
             }
             return msg
         } catch (error) {
+            const {errorMessage, statusCode} = getPrismaErrorStatusAndMessage(error);
+
             this.logger.error('error occured in state manager ', error)
+            console.log("errorMessage: ", errorMessage);
+            console.log("statusCode: ", statusCode);
             await this.prisma.sessions.update({
                 where: { sessionId: reqData.session_id },
                 data: { state: 20 }

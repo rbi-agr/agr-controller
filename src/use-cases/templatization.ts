@@ -23,7 +23,7 @@ export async function getTemplateResponse(bankNarration: any, accountType: strin
             const template1 = await prisma.templates.findFirst({
                 where: {
                     narration: bankNarration.narration,
-                    language,
+                    // language,
                     accountType
                 },
                 select: {
@@ -39,7 +39,7 @@ export async function getTemplateResponse(bankNarration: any, accountType: strin
             const template2 = await prisma.templates.findFirst({
                 where: {
                     narration: bankNarration.narration,
-                    language,
+                    // language,
                     amount
                 },
                 select: {
@@ -54,7 +54,7 @@ export async function getTemplateResponse(bankNarration: any, accountType: strin
             const template3 = await prisma.templates.findFirst({
                 where: {
                     narration: bankNarration.narration,
-                    language,
+                    // language,
                     accountType,
                     amount
                 },
