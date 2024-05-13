@@ -5,13 +5,16 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Transaction, TransactionsRequestDto, TransactionsResponseDto } from '../dto/transactions.dto';
 import { ComplaintRequestDto, ComplaintResponseDto } from '../dto/complaint.dto';
 import { LoanAccountBalanceRequestDto, LoanAccountBalanceResponseDto } from '../dto/loanbalance.dto';
+import { LoggerService } from "src/logger/logger.service";
 import * as constants from '../utils/bankConstants';
 import { ChequeBookStatusRequestDto, ChequeBookStatusResponseDto } from '../dto/chequeBook.dto';
 import * as https from 'https'
+import * as Sentry from '@sentry/node'
 
 @Injectable()
 export class IndianBankService {
   constructor(
+    private readonly logger : LoggerService,
     private prisma: PrismaService,
   ) {}
 
@@ -20,6 +23,8 @@ export class IndianBankService {
     const bankUrl = constants.indianBankUrl;
     console.log("Indian bank url: ", bankUrl)
     if (!bankUrl) {
+      Sentry.captureException("Fetch Transactions Error: Missing Bank URL")
+      this.logger.info("Fetch Transactions Error: Missing Bank URL")
       throw new Error('Bank URL not found');
     }
     console.log("transactionsDto: ", transactionsDto)
@@ -39,8 +44,9 @@ export class IndianBankService {
       endpoint = `/statement/v1/eq-dtxn-chrg`;
     }
     const accountNumber = parseInt(transactionsDto.accountNumber.split('-')[1]);
-    console.log("accountNumber: ", accountNumber)
     if(!accountNumber) {
+      Sentry.captureException("Fetch Transactions Error: Invalid Account Number")
+      this.logger.info("Fetch Transactions Error: Invalid Account Number")
       throw new Error('Invalid account number');
     }
 
@@ -85,6 +91,8 @@ export class IndianBankService {
       });
       console.log("response.data: ", response.data)
       if(response.data.ErrorResponse) {
+        Sentry.captureException("Fetch Transactions Error: Error Response from Bank API")
+        this.logger.error("Fetch Transactions Error: Error Response from Bank API:",response.data.ErrorResponse)
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
         return {
           error: true,
@@ -112,7 +120,8 @@ export class IndianBankService {
       }
 
     } catch (error) {
-      console.log("Error while fetching transactions: ", error.response?.data ?? error.message)
+      Sentry.captureException("Fetch Transactions Error")
+      this.logger.error("Fetch Transactions Error:",error)
       throw new Error(error.response?.data ?? error.message);
     }
   }
@@ -121,6 +130,8 @@ export class IndianBankService {
 
     const bankUrl = constants.indianBankUrl;
     if (!bankUrl) {
+      Sentry.captureException("Register Complaint Error: Missing Bank URL")
+      this.logger.info("Register Complaint Error: Missing Bank URL")
       throw new Error('Bank URL not found');
     }
     console.log("Indian bank url: ", bankUrl)
@@ -211,7 +222,8 @@ export class IndianBankService {
           ticketNumber: ticketNumber
       }
     } catch (error) {
-      console.log("Error while registering complaint: ", error.response?.data ?? error.message)
+      Sentry.captureException("Register Complaint Error")
+      this.logger.error("Register Complaint Error:",error)
       throw new Error(error.response?.data ?? error.message);
     }
   }
@@ -221,11 +233,15 @@ export class IndianBankService {
 
     const bankUrl = constants.indianBankUrl;
     if (!bankUrl) {
+      Sentry.captureException("Fetch Loan Account Balance Error: Missing Bank URL")
+      this.logger.info("Fetch Loan Account Balance Error: Missing Bank URL")
       throw new Error('Bank URL not found');
     }
 
     const accountNumber = parseInt(accountDto.accountNumber.split('-')[1]);
     if(!accountNumber) {
+      Sentry.captureException("Fetch Loan Account Balance Error: Invalid Account Number")
+      this.logger.info("Fetch Loan Account Balance Error: Invalid Account Number")
       throw new Error('Invalid account number');
     }
 
@@ -264,7 +280,8 @@ export class IndianBankService {
         }
       });
       if(response.data.ErrorResponse) {
-        console.log("response.data.ErrorResponse: ", response.data.ErrorResponse)
+        Sentry.captureException("Fetch Loan Account Balance Error: Error Response from Bank API")
+        this.logger.error("Fetch Loan Account Balance Error: Error Response from Bank API:",response.data.ErrorResponse)
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
         return {
           error: true,
@@ -277,6 +294,8 @@ export class IndianBankService {
       console.log("Payload: ", accResponse)
 
       if(!accResponse) {
+        Sentry.captureException("Fetch Loan Account Balance Error: Invalid Account Number")
+        this.logger.info("Fetch Loan Account Balance Error: Invalid Account Number")
         return {
           error: true,
           message: 'Invalid account number'
@@ -290,7 +309,8 @@ export class IndianBankService {
       }
 
     } catch (error) {
-      console.log("Error while getting loan account balance: ", error.response?.data ?? error.message)
+      Sentry.captureException("Fetch Loan Account Balance Error")
+      this.logger.error("Fetch Loan Account Balance Error:",error)
       throw new Error(error.response?.data ?? error.message);
     }
   }
@@ -415,6 +435,8 @@ export class IndianBankService {
       if(key == 'Override-Flag' || key == 'Recovery-Flag' || key == 'HealthCheck')
         continue;
       if (!headers[key]) {
+        Sentry.captureException(`Header ${key} not found`)
+        this.logger.info(`Header ${key} not found`)
         throw new Error(`Header ${key} not found`);
       }
     }
@@ -431,6 +453,8 @@ export class IndianBankService {
         }
       })
     } catch (error){
+      Sentry.captureException("Create New Narrations Error")
+      this.logger.error("Create New Narrations Error:",error)
       throw new Error(error.response?.data ?? error.message);
     }
   }
@@ -439,6 +463,8 @@ export class IndianBankService {
     try {
       return await this.prisma.bankNarrations.findMany()
     } catch (error){
+      Sentry.captureException("Fetching All Narrations Error")
+      this.logger.error("Fetching All Narrations Error:",error)
       throw new Error(error.response?.data ?? error.message);
     }
   }
