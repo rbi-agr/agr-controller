@@ -1,4 +1,5 @@
 import axios from "axios";
+import { PrismaService } from "src/prisma/prisma.service";
 import * as Sentry from '@sentry/node'
 
 export async function getCorrespondingNarration(bankNarration: any, narrationList: string[]) {
@@ -37,7 +38,7 @@ export async function getDataFromLLM(userPrompt: string, task: string) {
         return response.data;
     } catch (error) {
         Sentry.captureException("LLM Data Fetching Error")
-        this.logger.error("LLM Data Fetching Error:", error)
+        console.error("LLM Data Fetching Error:", error)
         return { statusCode: 400, message: 'Error in fetching data from mistral AI', error: error }
     }
 
@@ -59,7 +60,7 @@ export async function callMistralAI(message) {
         return mistralResponse.data
     } catch(error) {
         Sentry.captureException("AI API error")
-        this.logger.error('AI API error:', error)
+        console.error('AI API error:', error)
         return { status:"Internal Server Error", message: 'Something went wrong'}
     }
 }
@@ -75,7 +76,7 @@ export async function PostRequest(message: String,apiUrl: any) :Promise<any> {
         return response.data
     } catch (error) {
         Sentry.captureException("POST Request Utility Error")
-        this.logger.error('POST Request Utility Error:', error)
+        console.error('POST Request Utility Error:', error)
         return { statusCode: 400, message: 'Error in calling this API', error: error }
     }
 }
@@ -86,19 +87,19 @@ export async function PostRequestforTranslation(message: String,source: String, 
             target: target,
             text: message,
           };
-        this.logger.info('API for Post Request for Translation')
+        console.log('API for Post Request for Translation')
         const response = await axios.post(apiUrl,requestBody)
         return response.data
     } catch (error) {
         Sentry.captureException("Translation POST Request Utility Error")
-        this.logger.error('Translation POST Request Utility Error:', error)
+        console.error('Translation POST Request Utility Error:', error)
         return { statusCode: 400, message: 'Error in calling this API', error: error }
     }
 }
 
 export async function validstate(prevst: any, nextst: any) {
     try {
-        this.logger.info('check valid state')
+        console.log('check valid state')
         if (prevst && nextst) {
             const flowArray = [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -136,7 +137,7 @@ export async function validstate(prevst: any, nextst: any) {
         return { statusCode: 404, message: 'States not provided. Please provide valid state' }
     } catch (error) {
         Sentry.captureException("State Validation Error")
-        this.logger.error('State Validation Error:', error)
+        console.error('State Validation Error:', error)
         return { statusCode: 400, message: 'Error in this move', error: error }
     }
 }
@@ -147,28 +148,28 @@ export async function PostRequestforTransactionDates(message: String,apiUrl: any
             userprompt: message,
             task:"fetch me the start date and end date in format(mm-dd-yyyy example) in json format like:{'transaction_startdate': 'ISODate', 'transaction_enddate': 'ISODate'}"
           };
-        this.logger.info('API for Post Request for TransactionDates')
+        console.log('API for Post Request for TransactionDates')
         const response = await axios.post(apiUrl,requestBody)
         return response.data
     } catch (error) {
         Sentry.captureException("Transactions Dates POST Request Utility Error")
-        this.logger.error('Transactions Dates POST Request Utility Error:', error)
+        console.error('Transactions Dates POST Request Utility Error:', error)
         return { statusCode: 400, message: 'Error in this move', error: error }
     }
 }
 
-export async function addRatingOverall(rating: number, sessionid: string): Promise<any>{
+export async function addRatingOverall(rating: number, sessionid: string, prisma: PrismaService): Promise<any>{
     try{
-        this.logger.info("API for overall rating")
+        console.log("API for overall rating")
         if(sessionid && rating){
-            const existing_session = await this.prisma.sessions.findUnique({
+            const existing_session = await prisma.sessions.findUnique({
                 where:{
                     sessionId: sessionid
                 }
             })
             if(existing_session)
             {
-                await this.prisma.sessions.update({
+                await prisma.sessions.update({
                     where:{
                         sessionId: sessionid
                     },
@@ -197,7 +198,7 @@ export async function addRatingOverall(rating: number, sessionid: string): Promi
     }
     catch (error) {
         Sentry.captureException("Add Rating Utility Error")
-        this.logger.error('Add Rating Utility Error:', error)
+        console.error('Add Rating Utility Error:', error)
         return { status:"Internal Server Error", message: 'Something went wrong'}
     }
 }
@@ -208,13 +209,13 @@ export function formatDate(date: Date): string {
     return formattedDate.replace(/(\d+)(st|nd|rd|th)/, '$1'); // Remove suffix from day
 }
 
-export async function translatedResponse(response, languageDetected, sessionId){
+export async function translatedResponse(response, languageDetected, sessionId, prisma: PrismaService){
     try {
         let translatedfinalresponse=[]
             for(let e=0; e<response.length; e++)
             {
                 let currentmessage = response[e]
-                let messageTranslationresp= await this.PostRequestforTranslation(currentmessage.message,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
+                let messageTranslationresp= await PostRequestforTranslation(currentmessage.message,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
                 
                 if(!messageTranslationresp.error){
                     console.log("Translated",messageTranslationresp.translated)
@@ -224,7 +225,7 @@ export async function translatedResponse(response, languageDetected, sessionId){
                         for(let o=0; o<currentmessage.options.length; o++){
                             let op = currentmessage.options[o]
                             if(!op.includes('|')) {
-                                let translatedoptionresp = await this.PostRequestforTranslation(op,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
+                                let translatedoptionresp = await PostRequestforTranslation(op,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
                                 console.log("Translatedoption", translatedoptionresp)
                                 if(!translatedoptionresp.error){
                                     translatedoption.push(translatedoptionresp.translated)
@@ -232,7 +233,7 @@ export async function translatedResponse(response, languageDetected, sessionId){
                                 else
                                 {
                                     Sentry.captureException("Message Translation API Error")
-                                    this.logger.error("Message Translation API Error:", translatedoptionresp.error)
+                                    console.error("Message Translation API Error:", translatedoptionresp.error)
                                     await this.prisma.sessions.update({
                                         where: { sessionId },
                                         data: {
@@ -266,7 +267,7 @@ export async function translatedResponse(response, languageDetected, sessionId){
                 }
                 else {
                     Sentry.captureException("Message Translation API Error")
-                    this.logger.error("Message Translation API Error:", messageTranslationresp.error)
+                    console.error("Message Translation API Error:", messageTranslationresp.error)
                     await this.prisma.sessions.update({
                         where: { sessionId },
                         data: {
@@ -291,7 +292,7 @@ export async function translatedResponse(response, languageDetected, sessionId){
             return translatedfinalresponse
     } catch (error) {
         Sentry.captureException("Language Translation Utility Error")
-        this.logger.error("Language Translation Utility Error:",error)
+        console.error("Language Translation Utility Error:",error)
         await this.prisma.sessions.update({
             where: { sessionId },
             data: {
