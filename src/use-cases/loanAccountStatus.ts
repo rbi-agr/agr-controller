@@ -32,51 +32,53 @@ export class LoanAccountStatus {
                 },
             })
 
-            let languageDetected;
+            let languageDetected = reqData.metadata?.language;
+            if(languageDetected !== 'en') {
 
-            const languageDetectedresponse = await PostRequest(reqData.message.text, `${process.env.BASEURL}/ai/language-detect`)
+                const languageDetectedresponse = await PostRequest(reqData.message.text, `${process.env.BASEURL}/ai/language-detect`)
 
-            if (languageDetectedresponse.error) {
-                const exitResponse = [{
-                    status: "Internal Server Error",
-                    message: "Error in language detection",
-                    end_connection: false
-                }]
-                return exitResponse
-            }
-            languageDetected = languageDetectedresponse?.language
-
-            if (languageDetected !== 'en') {
-                if (languageDetected === 'hi' || languageDetected === 'or' || languageDetected === 'ori') {
-                    //convert the message to english
-                    const translatedmessage = await PostRequestforTranslation(reqData.message.text, languageDetected, "en", `${process.env.BASEURL}/ai/language-translate`)
-
-                    if (!translatedmessage.error) {
-                        //Convert the language to englidh into the reqdata
-                        reqData = { ...reqData, message: { "text": translatedmessage.translated } }
-                    }
-                    else {
-                        return [{
-                            status: "Internal Server Error",
-                            "message": "Something went wrong with language translation",
-                            "end_connection": false
-                        }]
-                    }
-                } else {
-                    //throw error stating to change the message language (User to enter the query)
-                    const lang_detected = [{
-                        status: "Success",
-                        session_id: reqData.session_id,
-                        "message": "Please enter you query in english, hindi or odia",
-                        "options": [],
-                        "end_connection": false,
-                        "prompt": "text_message",
-                        "metadata": {}
+                if (languageDetectedresponse.error) {
+                    const exitResponse = [{
+                        status: "Internal Server Error",
+                        message: "Error in language detection",
+                        end_connection: false
                     }]
-                    // const msg = 'Please enter you query in english, hindi or odia'
-                    //return proper formatted response
+                    return exitResponse
+                }
+                languageDetected = languageDetectedresponse?.language
 
-                    return lang_detected
+                if (languageDetected !== 'en') {
+                    if (languageDetected === 'hi' || languageDetected === 'or' || languageDetected === 'ori') {
+                        //convert the message to english
+                        const translatedmessage = await PostRequestforTranslation(reqData.message.text, languageDetected, "en", `${process.env.BASEURL}/ai/language-translate`)
+
+                        if (!translatedmessage.error) {
+                            //Convert the language to englidh into the reqdata
+                            reqData = { ...reqData, message: { "text": translatedmessage.translated } }
+                        }
+                        else {
+                            return [{
+                                status: "Internal Server Error",
+                                "message": "Something went wrong with language translation",
+                                "end_connection": false
+                            }]
+                        }
+                    } else {
+                        //throw error stating to change the message language (User to enter the query)
+                        const lang_detected = [{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            "message": "Please enter you query in english, hindi or odia",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata": {}
+                        }]
+                        // const msg = 'Please enter you query in english, hindi or odia'
+                        //return proper formatted response
+
+                        return lang_detected
+                    }
                 }
             }
             //Check lang from adya

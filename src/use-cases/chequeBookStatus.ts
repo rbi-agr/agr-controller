@@ -32,19 +32,20 @@ export class ChequeBookStatus {
                 },
             })
 
-            let languageDetected;
+            let languageDetected = reqData.metadata?.language;
+            if(languageDetected !== 'en') {
 
-            const languageDetectedresponse = await PostRequest(reqData.message.text, `${process.env.BASEURL}/ai/language-detect`)
-            if (languageDetectedresponse.error) {
-                Sentry.captureException("Cheque Book Status Error: Preprocess Language Translation Error")
-                const exitResponse = [{
-                    status: "Internal Server Error",
-                    message: "Error in language detection",
-                    end_connection: false
-                }]
-                return exitResponse
-            }
-            languageDetected = languageDetectedresponse?.language             
+                const languageDetectedresponse = await PostRequest(reqData.message.text, `${process.env.BASEURL}/ai/language-detect`)
+                if (languageDetectedresponse.error) {
+                    Sentry.captureException("Cheque Book Status Error: Preprocess Language Translation Error")
+                    const exitResponse = [{
+                        status: "Internal Server Error",
+                        message: "Error in language detection",
+                        end_connection: false
+                    }]
+                    return exitResponse
+                }
+                languageDetected = languageDetectedresponse?.language             
                 
                 if(languageDetected !== 'en') {
                     if(languageDetected === 'hi' || languageDetected === 'or'|| languageDetected === 'ori'){
@@ -79,8 +80,9 @@ export class ChequeBookStatus {
                         //return proper formatted response
                         
                         return lang_detected
-                        }
                     }
+                }
+            }
             //Check lang from adya
             if (session && session?.languageByAdya !== languageDetected) {
                 languageDetected = session.languageByAdya

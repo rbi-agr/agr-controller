@@ -32,59 +32,58 @@ export class RuleEngine {
                     sessionId: sessionId,
                 },
             })
-
             let ruleResponse
 
             if (!session) {
                 //detect language
                 const message = reqData.message.text
-                const languageDetectedresponse = await PostRequest(message, `${process.env.BASEURL}/ai/language-detect`)
-                if (languageDetectedresponse.error) {
-                    Sentry.captureException("Rule Engine Error: Language Detection API Error")
-                    this.logger.error("Rule Engine Error: Language Detection API Error:", languageDetectedresponse.error)
-                    const exitResponse = [{
-                        status: "Internal Server Error",
-                        message: "Error in language detection",
-                        end_connection: false
-                    }]
-                    return exitResponse
-                }
-                let languageDetected = languageDetectedresponse?.language
 
-
-                if (languageDetected !== 'en') {
-                    if (languageDetected === 'hi' || languageDetected === 'or' || languageDetected === 'ori') {
-                        //convert the message to english
-                        const translatedmessage = await PostRequestforTranslation(reqData.message.text, languageDetected, "en", `${process.env.BASEURL}/ai/language-translate`)
-
-                        if (!translatedmessage.error) {
-                            //Convert the language to englidh into the reqdata
-                            reqData = { ...reqData, message: { "text": translatedmessage.translated } }
-                        }
-                        else {
-                            Sentry.captureException("Rule Engine Error: Language Translation API Error")
-                            this.logger.error("Rule Engine Error: Language Translation API Error:",translatedmessage.error)
-                            return [{
-                                status: "Internal Server Error",
-                                "message": "Something went wrong with language translation",
-                                "end_connection": false
-                            }]
-                        }
-                    } else {
-                        //throw error stating to change the message language (User to enter the query)
-                        const lang_detected = [{
-                            status: "Success",
-                            session_id: reqData.session_id,
-                            "message": "Please enter you query in english, hindi or odia",
-                            "options": [],
-                            "end_connection": false,
-                            "prompt": "text_message",
-                            "metadata": {}
+                const languageByAdya = reqData.metadata?.language
+                let languageDetected = languageByAdya
+                if (languageByAdya !== 'en') {
+                    const languageDetectedresponse = await PostRequest(message, `${process.env.BASEURL}/ai/language-detect`)
+                    if (languageDetectedresponse.error) {
+                        Sentry.captureException("Rule Engine Error: Language Detection API Error")
+                        this.logger.error("Rule Engine Error: Language Detection API Error:", languageDetectedresponse.error)
+                        const exitResponse = [{
+                            status: "Internal Server Error",
+                            message: "Error in language detection",
+                            end_connection: false
                         }]
-                        // const msg = 'Please enter you query in english, hindi or odia'
-                        //return proper formatted response
+                        return exitResponse
+                    }
+                    languageDetected = languageDetectedresponse?.language
+                    if (languageDetected !== 'en') {
+                        if (languageDetected === 'hi' || languageDetected === 'or' || languageDetected === 'ori') {
+                            //convert the message to english
+                            const translatedmessage = await PostRequestforTranslation(reqData.message.text, languageDetected, "en", `${process.env.BASEURL}/ai/language-translate`)
 
-                        return lang_detected
+                            if (!translatedmessage.error) {
+                                //Convert the language to englidh into the reqdata
+                                reqData = { ...reqData, message: { "text": translatedmessage.translated } }
+                            }
+                            else {
+                                Sentry.captureException("Rule Engine Error: Language Translation API Error")
+                                this.logger.error("Rule Engine Error: Language Translation API Error:",translatedmessage.error)
+                                return [{
+                                    status: "Internal Server Error",
+                                    "message": "Something went wrong with language translation",
+                                    "end_connection": false
+                                }]
+                            }
+                        } else {
+                        //throw error stating to change the message language (User to enter the query)
+                            const lang_detected = [{
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                "message": "Please enter you query in english, hindi or odia",
+                                "options": [],
+                                "end_connection": false,
+                                "prompt": "text_message",
+                                "metadata": {}
+                            }]
+                            return lang_detected
+                        }
                     }
                 }
                 // call 1st intent classifier that classifies the use case
@@ -134,7 +133,6 @@ export class RuleEngine {
                     })
                 }
 
-                const languageByAdya = reqData.metadata.language
 
                 const createdSession = await this.prisma.sessions.create({
                     data: {
@@ -156,25 +154,38 @@ export class RuleEngine {
             } else {
                 useCase = session.useCase
                 //add retries here
-                if(session.retriesLeft>0 && !useCase){
-                    //call rule-engine to get the useCase and decrease the number of retry
-                    //if use case isnt found decrease the number of retry and return asking to retry
-                    ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
-                    if(ruleResponse.error) {
-                        ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/rule-engine`)
-                    } else {
-                        ruleResponse = {
-                            useCase: "OTHERS"
+                if(!useCase) {
+                    if(session.retriesLeft > 0) {
+                        //call rule-engine to get the useCase and decrease the number of retry
+                        //if use case isnt found decrease the number of retry and return asking to retry
+                        ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
+                        if(ruleResponse.error) {
+                            ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/rule-engine`)
+                        } else {
+                            ruleResponse = {
+                                useCase: "OTHERS"
+                            }
                         }
+                        useCase = ruleResponse.useCase
+                        await this.prisma.sessions.update({
+                            data: {
+                                retriesLeft: session.retriesLeft - 1,
+                            },
+                            where: {
+                                sessionId: reqData.session_id,
+                            },
+                        })
+                    } else {
+                        const closeConnectionRes = [{
+                            status: "Success",
+                            session_id: sessionId,
+                            message: "You have reached you maximum retries limit. Please try again after some time. Thank You!",
+                            options: [],
+                            end_connection: true,
+                            prompt: "text_message"
+                        }]
+                        return closeConnectionRes
                     }
-                    await this.prisma.sessions.update({
-                        data: {
-                          retriesLeft: session.retriesLeft - 1,
-                        },
-                        where: {
-                          sessionId: reqData.session_id,
-                        },
-                      })
                 }
             }
 
