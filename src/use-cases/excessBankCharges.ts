@@ -603,6 +603,28 @@ export class ExcessBankCharges {
                                 return this.states(reqData, languageDetected, 5)
                             }
                         }
+
+                        let transactionmsg
+                        let endConnection = false
+                        transactions.map(transaction => {
+                            if(!transaction.transactionDate) {
+                                transactionmsg = "Transaction Date is empty"
+                                endConnection = true
+                            } else if(!transaction.transactionNarration) {
+                                transactionmsg = "Transaction narration is empty"
+                                endConnection = true
+                            } else if(!transaction.transactionType) {
+                                transactionmsg = "Transaction type is empty"
+                                endConnection = true
+                            } else if(transaction.transactionNarration.includes('*')) {
+                                transactionmsg = "Transaction narration contains special charaters"
+                                endConnection = true
+                            }
+                        })
+                        if(endConnection) {
+                            await this.endTransaciton(transactionmsg, sessionId)
+                        }
+
                         const transactionsData = transactions.map(transaction => {
                             return {
                                 sessionId: sessionId,
@@ -760,6 +782,19 @@ export class ExcessBankCharges {
                     const transaction = reqData.message.text;
                     const state7TransactionNarration = transaction.split('|')[1];
                     const state7TransactionAmount = transaction.split('|')[2];
+
+                    let transactionmsg
+                    let endConnection = false
+                        if(!state7TransactionNarration) {
+                            transactionmsg = "Transaction narration is empty"
+                            endConnection = true
+                        } else if(state7TransactionNarration.includes('*')) {
+                            transactionmsg = "Transaction narration contains special charaters"
+                            endConnection = true
+                        }
+                    if(endConnection) {
+                        return await this.endTransaciton(transactionmsg, reqData.session_id)
+                    }
 
                     if(state7TransactionNarration && state7TransactionNarration.length > 0) {
 
@@ -1564,6 +1599,22 @@ export class ExcessBankCharges {
                 metadata: {}
             }]
         }
+    }
+
+    async endTransaciton(msg, sessionId){
+        await this.prisma.sessions.update({
+            where: { sessionId: sessionId },
+            data: { state: 20 }
+        })
+        return [{
+            status: "Success",
+            session_id: sessionId,
+            "message": `${msg}`,
+            "options": [],
+            "end_connection": true,
+            "prompt": "text_message",
+            "metadata": {}
+        }] 
     }
 
 }
