@@ -196,9 +196,7 @@ export class ChequeBookStatus {
             const trackingId = cheqBkStatusResponse.trackingId;
             const bookingDate = cheqBkStatusResponse.bookingDate;
 
-            const response = `Name: ${name}\n
-                                Tracking Id: ${trackingId}\n
-                                Booking Date: ${bookingDate}`
+            const response = `Name: ${name}\nTracking Id: ${trackingId}\nBooking Date: ${bookingDate}`
 
             const fres = [{
                 status: "Success",
