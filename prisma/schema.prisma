@@ -113,3 +113,12 @@ model BankNarrations {
 
 //naration-educative text
 //helperText             String
+
+model Templates {
+  id             Int        @id @default(autoincrement())
+  narration      String
+  accountType    String?
+  amount         Int?
+  language       String
+  template       String[]   
+}

@@ -8,6 +8,8 @@ import { BankName } from "@prisma/client";
 import { BanksService } from "src/banks/banks.service";
 import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
 import * as constants from "../utils/constants"
+import { getTemplateResponse } from "./templatization";
+import { getPrismaErrorStatusAndMessage } from "src/utils/handleErrors";
 import * as Sentry from '@sentry/node'
 
 @Injectable()
@@ -186,7 +188,7 @@ export class ExcessBankCharges {
                 //convert the message to Language detected and return
                 //Translator API
                 
-                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id)
+                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id, this.prisma)
                 console.log("translatedresponse",translatedresponse)
                 response=translatedresponse
             }
@@ -889,7 +891,8 @@ export class ExcessBankCharges {
                         const accountNumber = state7Session.bankAccountNumber;
                         const accountType = accountNumber.substring(0, 2);
                         
-                        const educatingMessageResponse = await getEduMsg(correspondingNarration, accountType, state7TransactionAmount.split('.')[0])
+                        const educatingMessageResponse = await getTemplateResponse(correspondingNarration, accountType, parseInt(state7TransactionAmount.split('.')[0]), languageDetected, this.prisma);
+
                         console.log("Educatingresponse........................",educatingMessageResponse)
                         if(educatingMessageResponse.error){
                             Sentry.captureException("Excess Bank Charges Error: Fetching Educating Message Error")
@@ -915,38 +918,50 @@ export class ExcessBankCharges {
                             })
                             return exitResponse
                         }
-                        const educatingMessage = JSON.parse(educatingMessageResponse.message.content);
-                                                        
-                        // const educatingMessage = correspondingNarration.natureOfCharge
-                        const edumsg = `Reason:-\n ${educatingMessage.response.reason}`
-                        console.log(edumsg)
-                        let moreinfo = educatingMessage.response.prevention_methods
-                        let additionalInfoString = 'Additional information:-\n'
-                        for(let m=0; m<moreinfo.length; m++) {
-                            additionalInfoString += '- '+moreinfo[m] + '\n'
+                        let educatingRes = [];
+                        if(educatingMessageResponse.message?.content) {
+                            const educatingMessage = JSON.parse(educatingMessageResponse.message.content);
+                                                            
+                            // const educatingMessage = correspondingNarration.natureOfCharge
+                            const edumsg = `Reason:-\n ${educatingMessage.response.reason}`
+                            console.log(edumsg)
+                            let moreinfo = educatingMessage.response.prevention_methods
+                            let additionalInfoString = 'Additional information:-\n'
+                            for(let m=0; m<moreinfo.length; m++) {
+                                additionalInfoString += '- '+moreinfo[m] + '\n'
+                            }
+                            educatingRes = [{
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                message: edumsg,
+                                options: [],
+                                end_connection: false,
+                                prompt: "text_message",
+                                metadata: {}
+                            }]
+                            educatingRes.push({
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                message: additionalInfoString,
+                                options: [],
+                                end_connection: false,
+                                prompt: "text_message",
+                                metadata: {}
+                            })
+                        } else {
+                            // template response
+                            for(let msg of educatingMessageResponse) {
+                                educatingRes.push({
+                                    status: "Success",
+                                    session_id: reqData.session_id,
+                                    message: msg,
+                                    options: [],
+                                    end_connection: false,
+                                    prompt: "text_message",
+                                    metadata: {}
+                                })
+                            }
                         }
-                        
-                        
-                        const educatingRes = [{
-                            status: "Success",
-                            session_id: reqData.session_id,
-                            message: edumsg,
-                            options: [],
-                            end_connection: false,
-                            prompt: "text_message",
-                            metadata: {}
-                        }]
-
-                        educatingRes.push({
-                            status: "Success",
-                            session_id: reqData.session_id,
-                            message: additionalInfoString,
-                            options: [],
-                            end_connection: false,
-                            prompt: "text_message",
-                            metadata: {}
-                        })
-
                         educatingRes.push({
                             status: "Success",
                             session_id: reqData.session_id,
@@ -1560,6 +1575,10 @@ export class ExcessBankCharges {
             }
             return msg
         } catch (error) {
+            const {errorMessage, statusCode} = getPrismaErrorStatusAndMessage(error);
+
+            console.log("errorMessage: ", errorMessage);
+            console.log("statusCode: ", statusCode);
             Sentry.captureException("Excess Bank Charges: Error in State Manager")
             this.logger.error('Excess Bank Charges: Error in State Manager:', error)
             await this.prisma.sessions.update({

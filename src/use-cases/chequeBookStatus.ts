@@ -102,10 +102,10 @@ export class ChequeBookStatus {
             if (languageDetected !== "en") {
                 //convert the message to Language detected and return
                 //Translator API
-
-                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id)
-                console.log("translatedresponse", translatedresponse)
-                response = translatedresponse
+                
+                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id, this.prisma)
+                console.log("translatedresponse",translatedresponse)
+                response=translatedresponse
             }
 
             //Store messages in db
