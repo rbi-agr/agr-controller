@@ -100,7 +100,7 @@ export class LoanAccountStatus {
                 //convert the message to Language detected and return
                 //Translator API
 
-                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id)
+                let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id, this.prisma)
                 console.log("translatedresponse", translatedresponse)
                 response = translatedresponse
             }
@@ -201,9 +201,7 @@ export class LoanAccountStatus {
             const totalOutstanding = loanAccBalResponse.totalOutstanding
             const principalOutstanding = loanAccBalResponse.principalOutstanding
             const interestPaid = loanAccBalResponse.interestPaid
-            const response = `Total Out-Standing: ${totalOutstanding}\n
-                Principal Out-Standing: ${principalOutstanding}\n
-                Interest Paid: ${interestPaid}`
+            const response = `Total Out-Standing: ${totalOutstanding}\nPrincipal Out-Standing: ${principalOutstanding}\nInterest Paid: ${interestPaid}`
             
             const fres = [{
                 status: "Success",
