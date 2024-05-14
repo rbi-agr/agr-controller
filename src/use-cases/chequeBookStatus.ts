@@ -33,7 +33,7 @@ export class ChequeBookStatus {
             })
 
             let languageDetected = reqData.metadata?.language;
-            if(languageDetected !== 'en') {
+            if (languageDetected !== 'en') {
 
                 const languageDetectedresponse = await PostRequest(reqData.message.text, `${process.env.BASEURL}/ai/language-detect`)
                 if (languageDetectedresponse.error) {
@@ -45,40 +45,40 @@ export class ChequeBookStatus {
                     }]
                     return exitResponse
                 }
-                languageDetected = languageDetectedresponse?.language             
-                
-                if(languageDetected !== 'en') {
-                    if(languageDetected === 'hi' || languageDetected === 'or'|| languageDetected === 'ori'){
+                languageDetected = languageDetectedresponse?.language
+
+                if (languageDetected !== 'en') {
+                    if (languageDetected === 'hi' || languageDetected === 'or' || languageDetected === 'ori') {
                         //convert the message to english
-                        const translatedmessage = await PostRequestforTranslation(reqData.message.text,languageDetected,"en",`${process.env.BASEURL}/ai/language-translate`)
-                        
-                        if(!translatedmessage.error){
+                        const translatedmessage = await PostRequestforTranslation(reqData.message.text, languageDetected, "en", `${process.env.BASEURL}/ai/language-translate`)
+
+                        if (!translatedmessage.error) {
                             //Convert the language to englidh into the reqdata
-                            reqData ={...reqData,message:{"text":translatedmessage.translated}}
+                            reqData = { ...reqData, message: { "text": translatedmessage.translated } }
                         }
-                        else{
+                        else {
                             Sentry.captureException("Cheque Book Status Error: Preprocess Language Translation Error")
-                            this.logger.error("Cheque Book Status Error: Preprocess Language Translation Error:",translatedmessage.error)
-                            return[{
+                            this.logger.error("Cheque Book Status Error: Preprocess Language Translation Error:", translatedmessage.error)
+                            return [{
                                 status: "Internal Server Error",
                                 "message": "Something went wrong with language translation",
                                 "end_connection": false
                             }]
                         }
-                    }else {
+                    } else {
                         //throw error stating to change the message language (User to enter the query)
-                        const lang_detected=[{
+                        const lang_detected = [{
                             status: "Success",
                             session_id: reqData.session_id,
                             "message": "Please enter you query in english, hindi or odia",
                             "options": [],
                             "end_connection": false,
                             "prompt": "text_message",
-                            "metadata":{}
+                            "metadata": {}
                         }]
                         // const msg = 'Please enter you query in english, hindi or odia'
                         //return proper formatted response
-                        
+
                         return lang_detected
                     }
                 }
@@ -92,7 +92,7 @@ export class ChequeBookStatus {
             }
 
 
-            let response = await this.states(reqData)
+            let response = await this.states(reqData, session.state)
             // Check if the language detected is "en"
             let messageTranslation = ""
 
@@ -104,10 +104,10 @@ export class ChequeBookStatus {
             if (languageDetected !== "en") {
                 //convert the message to Language detected and return
                 //Translator API
-                
+
                 let translatedresponse = await translatedResponse(response, languageDetected, reqData.session_id, this.prisma)
-                console.log("translatedresponse",translatedresponse)
-                response=translatedresponse
+                console.log("translatedresponse", translatedresponse)
+                response = translatedresponse
             }
 
             //Store messages in db
@@ -161,69 +161,121 @@ export class ChequeBookStatus {
         }
     }
 
-    async states(reqData) {
+    async states(reqData, state) {
         try {
             this.logger.info('Inside states')
+            switch (state) {
+                case 0:
+                    const fres = [{
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        message: "Have you applied for cheque book?",
+                        options: ["Yes, I have", "No, I haven't"],
+                        end_connection: false,
+                        prompt: "option_selection"
+                    }]
+                    await this.prisma.sessions.update({
+                        where: { sessionId: reqData.session_id },
+                        data: {
+                            state: 1
+                        }
+                    })
+                    return fres
 
-            const sessionId = reqData.session_id
-            const session = await this.prisma.sessions.findUnique({
-                where: {
-                    sessionId: sessionId,
-                },
-            })
-            const st = session.state
+                case 1:
+                    const message = reqData.message.text
+                    if (message.toLowerCase().includes("yes")) {
+                        const sessionId = reqData.session_id
+                        const session = await this.prisma.sessions.findUnique({
+                            where: {
+                                sessionId: sessionId,
+                            },
+                        })
+                        const st = session.state
 
-            const cheqBkStatusReq: ChequeBookStatusRequestDto = {
-                accountNumber: reqData.metadata.accountNumber,
+                        const cheqBkStatusReq: ChequeBookStatusRequestDto = {
+                            accountNumber: reqData.metadata.accountNumber,
+                        }
+
+                        const cheqBkStatusResponse = await this.banksService.chequeBookStatus(reqData.session_id, cheqBkStatusReq, BankName.INDIAN_BANK)
+                        console.log('Cheque book response ', cheqBkStatusResponse)
+                        if (cheqBkStatusResponse.error) {
+                            return [{
+                                status: "Internal Server Error",
+                                message: `I received the following error from the bank: ${cheqBkStatusResponse.message}`,
+                                end_connection: false
+                            }, {
+                                status: "Success",
+                                session_id: reqData.session_id,
+                                message: "Please refresh to restart the conversation or select yes to end the conversation.",
+                                options: ['Yes, end the conversation'],
+                                end_connection: true,
+                                prompt: "option_selection",
+                                metadata: {}
+                            }]
+                        }
+                        const name = cheqBkStatusResponse.name;
+                        const trackingId = cheqBkStatusResponse.trackingId;
+                        const bookingDate = cheqBkStatusResponse.bookingDate;
+
+                        const response = `Name: ${name}\nTracking Id: ${trackingId}\nBooking Date: ${bookingDate}`
+
+                        const fres = [{
+                            status: "Success",
+                            session_id: sessionId,
+                            message: response,
+                            options: [],
+                            end_connection: false,
+                            prompt: "text_message"
+                        }, {
+                            status: "Success",
+                            session_id: sessionId,
+                            message: "Thank You!",
+                            options: [],
+                            end_connection: true,
+                            prompt: "text_message"
+                        }
+                        ]
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 99
+                            }
+                        })
+
+                        return fres
+                    } else {
+                        const elseres = [{
+                            status: "Success",
+                            session_id: reqData.session_id,
+                            message: "Please apply for cheque book after logging into internet banking services.",
+                            options: [],
+                            end_connection: false,
+                            prompt: "text"
+                        }]
+                        await this.prisma.sessions.update({
+                            where: { sessionId: reqData.session_id },
+                            data: {
+                                state: 99
+                            }
+                        })
+                        return elseres
+                    }
+                    break;
+                    case 99:
+                        this.logger.info('inside case 99')
+                    const closeConnectionRes = [{
+                        status: "Success",
+                        session_id: reqData.session_id,
+                        message: "Thank You!",
+                        options: [],
+                        end_connection: true,
+                        prompt: "text_message"
+                    }]
+                    return closeConnectionRes
             }
 
-            const cheqBkStatusResponse = await this.banksService.chequeBookStatus(reqData.session_id, cheqBkStatusReq, BankName.INDIAN_BANK)
-            console.log('Cheque book response ', cheqBkStatusResponse)
-            if (cheqBkStatusResponse.error) {
-                return [{
-                    status: "Internal Server Error",
-                    message: `I received the following error from the bank: ${cheqBkStatusResponse.message}`,
-                    end_connection: false
-                }, {
-                    status: "Success",
-                    session_id: reqData.session_id,
-                    message: "Please refresh to restart the conversation or select yes to end the conversation.",
-                    options: ['Yes, end the conversation'],
-                    end_connection: false,
-                    prompt: "option_selection",
-                    metadata: {}
-                }]
-            }
-            const name = cheqBkStatusResponse.name;
-            const trackingId = cheqBkStatusResponse.trackingId;
-            const bookingDate = cheqBkStatusResponse.bookingDate;
 
-            const response = `Name: ${name}\nTracking Id: ${trackingId}\nBooking Date: ${bookingDate}`
-
-            const fres = [{
-                status: "Success",
-                session_id: sessionId,
-                message: response,
-                options: [],
-                end_connection: false,
-                prompt: "text_message"
-            }, {
-                status: "Success",
-                session_id: sessionId,
-                message: "Thank You!",
-                options: [],
-                end_connection: true,
-                prompt: "text_message"
-            }
-            ]
-            await this.prisma.sessions.update({
-                where: { sessionId: reqData.session_id },
-                data: {
-                    state: 99
-                }
-            })
-
-            return fres
 
         } catch (error) {
             this.logger.error('error occured in state manager ', error)

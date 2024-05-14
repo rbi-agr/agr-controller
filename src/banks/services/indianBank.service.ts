@@ -390,6 +390,11 @@ export class IndianBankService {
             trackingId: trackingId,
             bookingDate: bookingDate
           }
+        } else {
+          return {
+            error: true,
+            message: "No cheque book status found. Please make sure you have applied for a cheque book"
+          } 
         }
       }
       return {
