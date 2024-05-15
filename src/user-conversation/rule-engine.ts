@@ -102,7 +102,7 @@ export class RuleEngine {
 
 
                 //call sentiment-analysis
-                const sentimentResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/sentiment-analysis`)
+                // const sentimentResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/sentiment-analysis`)
 
                 //create session
                 const metaData = reqData.metadata
@@ -145,8 +145,8 @@ export class RuleEngine {
                         initialQuery: message,
                         languageByAdya: languageByAdya,
                         useCase: useCase,
-                        intialSentiment: sentimentResponse.sentiment_label,
-                        intialSentimentScore: sentimentResponse.sentiment_score,
+                        intialSentiment: '',
+                        intialSentimentScore: '',
                         retriesLeft: 3
                     }
                 })
