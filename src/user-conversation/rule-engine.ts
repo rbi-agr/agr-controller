@@ -146,7 +146,7 @@ export class RuleEngine {
                         languageByAdya: languageByAdya,
                         useCase: useCase,
                         intialSentiment: '',
-                        intialSentimentScore: '',
+                        intialSentimentScore: 0.0,
                         retriesLeft: 3
                     }
                 })
