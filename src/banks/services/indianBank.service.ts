@@ -49,7 +49,7 @@ export class IndianBankService {
       this.logger.info("Fetch Transactions Error: Invalid Account Number")
       return {
         error: true,
-        message: 'Invalid account number',
+        message: 'The account number you have selected is invalid. Please try again with a valid account number',
         transactions: []
       }
     }
@@ -214,14 +214,17 @@ export class IndianBankService {
       console.log("response.data: ", response.data)
       if(response.data.ErrorResponse) {
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
+        this.logger.error("Register Complaint Error: Error Response from Bank API:",errDesc)
+        Sentry.captureException(`Register Complaint Error: ${errDesc}`)
         return {
           error: true,
-          message: errDesc,
         }
       }
       const responseData = response.data.CGRSRegistration_Response?.Body?.Payload?.data;
       const errorStatusDetail = responseData?.status_detail;
       if(errorStatusDetail.includes('Invalid Complaint Category')) {
+        this.logger.error("Register Complaint Error: Error Response from Bank API:",responseData)
+        Sentry.captureException(`Register Complaint Error: ${responseData}`)
         return {
           error: true,
           message: 'I could not raise a ticket since your complaint category is invalid. Please try again later'
@@ -230,6 +233,8 @@ export class IndianBankService {
       const ticketNumber = responseData?.Ticket_Number;
       console.log("ticketNumber: ", ticketNumber)
       if(!ticketNumber) {
+        this.logger.error("Register Complaint Error: Error Response from Bank API:",responseData)
+        Sentry.captureException(`Register Complaint Error: ${responseData}`)
         return {
           error: true,
           message: 'Something went wrong while registering complaint',
@@ -262,7 +267,7 @@ export class IndianBankService {
       this.logger.info("Fetch Loan Account Balance Error: Invalid Account Number")
       return {
         error: true,
-        message: 'Invalid account number'
+        message: 'The account number you have selected is invalid. Please try again with a valid account number'
       }
     }
 
@@ -324,7 +329,7 @@ export class IndianBankService {
         this.logger.info("Fetch Loan Account Balance Error: Invalid Account Number")
         return {
           error: true,
-          message: 'Invalid account number'
+          message: 'The account number you have selected is invalid. Please try again with a valid account number'
         }
       }
       return {
@@ -353,7 +358,7 @@ export class IndianBankService {
     if(!accountNumber) {
       return {
         error: true,
-        message: 'Invalid account number'
+        message: 'The account number you have selected is invalid. Please try again with a valid account number'
       }
     }
 
@@ -400,6 +405,7 @@ export class IndianBankService {
       });
       if(response.data.ErrorResponse) {
         this.logger.error("Cheque Book Status Error: Error Response from Bank API:",response.data.ErrorResponse.additionalinfo)
+        Sentry.captureException(`Cheque Book Status Error: Error Response from Bank API ${response.data.ErrorResponse.additionalinfo}`)
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepMetaData
         let errorMessage = undefined;
         if(errDesc.includes("Mandatory Field 'AccountNumber' is missing")) {
@@ -407,7 +413,7 @@ export class IndianBankService {
         }
         return {
           error: true,
-          message: errDesc
+          message: errorMessage
         }
       }
       const mainResponse = response.data.ChequeBookTracking_Response.Body.Payload;
@@ -425,6 +431,7 @@ export class IndianBankService {
             bookingDate: bookingDate
           }
         } else {
+          this.logger.info(`Cheque book tracking list is empty. Response: ${mainResponse}`)
           return {
             error: true,
             message: "No cheque book status found. Please make sure you have applied for a cheque book"
