@@ -2,16 +2,12 @@
 import { Injectable } from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
-import axios from "axios";
-import { formatDate, getComplaintDetails, getCorrespondingNarration, getEduMsg, PostRequest, PostRequestforTransactionDates, PostRequestforTranslation, translatedResponse, validstate } from "../utils/utils";
-import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
+import { PostRequest, PostRequestforTranslation, translatedResponse } from "../utils/utils";
 import { BankName } from "@prisma/client";
-import { response } from "express";
 import { BanksService } from "src/banks/banks.service";
-import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
-import * as constants from "../utils/constants"
 import { LoanAccountBalanceRequestDto } from "src/banks/dto/loanbalance.dto";
 import * as Sentry from '@sentry/node'
+import { getPrismaErrorStatusAndMessage } from "src/utils/handleErrors";
 
 @Injectable()
 export class LoanAccountStatus {
@@ -231,8 +227,9 @@ export class LoanAccountStatus {
             return fres
 
         } catch (error) {
+            const errorStatus = getPrismaErrorStatusAndMessage(error)
             Sentry.captureException("Loan Account Status Error: State Manager Error")
-            this.logger.error('Loan Account Status Error: State Manager Error:', error)
+            this.logger.error('Loan Account Status Error: State Manager Error:', errorStatus.errorMessage)
             return [{
                 status: "Internal Server Error",
                 message: "Something went wrong. Please try again later",
