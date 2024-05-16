@@ -791,7 +791,7 @@ export class ExcessBankCharges {
                         if(!state7TransactionNarration) {
                             transactionmsg = "Transaction narration is empty"
                             endConnection = true
-                        } else if(state7TransactionNarration.includes('*') || state7TransactionNarration.includes(' ')) {
+                        } else if(state7TransactionNarration.includes('*')) {
                             transactionmsg = "Transaction narration contains special charaters"
                             endConnection = true
                         }
