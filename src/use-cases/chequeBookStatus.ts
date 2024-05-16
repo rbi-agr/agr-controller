@@ -2,16 +2,12 @@
 import { Injectable } from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
-import axios from "axios";
-import { formatDate, getComplaintDetails, getCorrespondingNarration, getEduMsg, PostRequest, PostRequestforTransactionDates, PostRequestforTranslation, translatedResponse, validstate } from "../utils/utils";
-import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
+import { PostRequest, PostRequestforTranslation, translatedResponse } from "../utils/utils";
 import { BankName } from "@prisma/client";
-import { response } from "express";
 import { BanksService } from "src/banks/banks.service";
-import { ComplaintRequestDto } from "src/banks/dto/complaint.dto";
-import * as constants from "../utils/constants"
 import * as Sentry from '@sentry/node'
 import { ChequeBookStatusRequestDto } from "src/banks/dto/chequeBook.dto";
+import { getPrismaErrorStatusAndMessage } from "src/utils/handleErrors";
 
 @Injectable()
 export class ChequeBookStatus {
@@ -278,7 +274,8 @@ export class ChequeBookStatus {
 
 
         } catch (error) {
-            this.logger.error('error occured in state manager ', error)
+            const errorStatus = getPrismaErrorStatusAndMessage(error)
+            this.logger.error('error occured in state manager ', errorStatus.errorMessage)
             return [{
                 status: "Internal Server Error",
                 message: "Something went wrong. Please try again later",

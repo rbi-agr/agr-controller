@@ -659,9 +659,10 @@ export class ExcessBankCharges {
                         }]
                         return transaction_success
                     } catch(error) {
+                        const errorStatus3 = getPrismaErrorStatusAndMessage(error)
                         Sentry.captureException("Excess Bank Charges: Fetch Transaction Error")
-                        console.log('Excess Bank Charges: Fetch Transaction Error:', error)
-                        this.logger.error('error occured in state manager ', error)
+                        console.log('Excess Bank Charges: Fetch Transaction Error:', errorStatus3.errorMessage)
+                        this.logger.error('error occured in state manager ', errorStatus3.errorMessage)
                         const intentFailRes = [{
                             status: "Internal Server Error",
                             message: "Something went wrong with Bank Servers. Please try again later",

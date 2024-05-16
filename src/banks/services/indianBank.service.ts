@@ -47,7 +47,11 @@ export class IndianBankService {
     if(!accountNumber) {
       Sentry.captureException("Fetch Transactions Error: Invalid Account Number")
       this.logger.info("Fetch Transactions Error: Invalid Account Number")
-      throw new Error('Invalid account number');
+      return {
+        error: true,
+        message: 'Invalid account number',
+        transactions: []
+      }
     }
 
     const requestPayload = {
@@ -122,7 +126,7 @@ export class IndianBankService {
     } catch (error) {
       Sentry.captureException("Fetch Transactions Error")
       this.logger.error("Fetch Transactions Error:",error)
-      throw new Error(error.response?.data ?? error.message);
+      throw new Error(error);
     }
   }
 
@@ -242,7 +246,10 @@ export class IndianBankService {
     if(!accountNumber) {
       Sentry.captureException("Fetch Loan Account Balance Error: Invalid Account Number")
       this.logger.info("Fetch Loan Account Balance Error: Invalid Account Number")
-      throw new Error('Invalid account number');
+      return {
+        error: true,
+        message: 'Invalid account number'
+      }
     }
 
     const requestPayload = {
@@ -311,7 +318,7 @@ export class IndianBankService {
     } catch (error) {
       Sentry.captureException("Fetch Loan Account Balance Error")
       this.logger.error("Fetch Loan Account Balance Error:",error)
-      throw new Error(error.response?.data ?? error.message);
+      throw new Error(error);
     }
   }
 
@@ -325,7 +332,10 @@ export class IndianBankService {
 
     const accountNumber = chequebookDto.accountNumber.split('-')[1];
     if(!accountNumber) {
-      throw new Error('Invalid account number');
+      return {
+        error: true,
+        message: 'Invalid account number'
+      }
     }
 
     const requestPayload = {
@@ -370,7 +380,8 @@ export class IndianBankService {
         }
       });
       if(response.data.ErrorResponse) {
-        const errDesc = response.data.ErrorResponse.additionalinfo?.excepText + ' - ' + response.data.ErrorResponse.additionalinfo?.excepMetaData
+        this.logger.error("Cheque Book Status Error: Error Response from Bank API:",response.data.ErrorResponse.additionalinfo)
+        const errDesc = response.data.ErrorResponse.additionalinfo?.excepMetaData
         return {
           error: true,
           message: errDesc
