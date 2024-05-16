@@ -182,9 +182,10 @@ export class LoanAccountStatus {
                 //         state: 20
                 //     }
                 // })
+                const failMessage = loanAccBalResponse.message ?? "I could not fetch your loan account balance. Please try again later."
                 return [{
                     status: "Internal Server Error",
-                    message: `I received the following error from the bank: ${loanAccBalResponse.message}`,
+                    message: failMessage,
                     end_connection: false
                 }, {
                     status: "Success",

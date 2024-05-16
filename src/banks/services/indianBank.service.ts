@@ -98,9 +98,15 @@ export class IndianBankService {
         Sentry.captureException("Fetch Transactions Error: Error Response from Bank API")
         this.logger.error("Fetch Transactions Error: Error Response from Bank API:",response.data.ErrorResponse)
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
+
+        let errorMessage = undefined;
+        if(errDesc.includes('INVALID ACCOUNT NUMBER')) {
+          errorMessage = 'The account number you have selected is invalid. Please try again with a valid account number'
+        }
+        
         return {
           error: true,
-          message: errDesc,
+          message: errorMessage,
           transactions: []
         }
       }
@@ -213,7 +219,15 @@ export class IndianBankService {
           message: errDesc,
         }
       }
-      const ticketNumber = response.data.CGRSRegistration_Response?.Body?.Payload?.data?.Ticket_Number;
+      const responseData = response.data.CGRSRegistration_Response?.Body?.Payload?.data;
+      const errorStatusDetail = responseData?.status_detail;
+      if(errorStatusDetail.includes('Invalid Complaint Category')) {
+        return {
+          error: true,
+          message: 'I could not raise a ticket since your complaint category is invalid. Please try again later'
+        }
+      }
+      const ticketNumber = responseData?.Ticket_Number;
       console.log("ticketNumber: ", ticketNumber)
       if(!ticketNumber) {
         return {
@@ -290,9 +304,14 @@ export class IndianBankService {
         Sentry.captureException("Fetch Loan Account Balance Error: Error Response from Bank API")
         this.logger.error("Fetch Loan Account Balance Error: Error Response from Bank API:",response.data.ErrorResponse)
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
+        
+        let errorMessage = undefined;
+        if(errDesc.includes('INVALID CHECK DIGIT')) {
+          errorMessage = 'The account number you have selected is invalid. Please try again with a valid account number with correct number of digits'
+        }
         return {
           error: true,
-          message: errDesc
+          message: errorMessage
         }
       }
       const mainResponse = response.data.LoanAcctEnq_Response
@@ -382,6 +401,10 @@ export class IndianBankService {
       if(response.data.ErrorResponse) {
         this.logger.error("Cheque Book Status Error: Error Response from Bank API:",response.data.ErrorResponse.additionalinfo)
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepMetaData
+        let errorMessage = undefined;
+        if(errDesc.includes("Mandatory Field 'AccountNumber' is missing")) {
+          errorMessage = 'You have not selected an account number. Please try again with a valid account number'
+        }
         return {
           error: true,
           message: errDesc
@@ -410,7 +433,7 @@ export class IndianBankService {
       }
       return {
         error: true,
-        message: 'Cheque book status not found'
+        message: 'No cheque book status found. Please make sure you have applied for a cheque book'
       }
     } catch (error) {
       console.log("Error while getting cheque book balance: ", error.response?.data ?? error.message)

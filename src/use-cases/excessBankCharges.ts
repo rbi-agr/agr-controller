@@ -556,9 +556,10 @@ export class ExcessBankCharges {
                                     state: 20
                                 }
                             })
+                            const failMessage3 = transactionsResponse.message ?? "I could not fetch transactions from the bank. Please ensure you have selected the valid bank account number and try again."
                             return [{
                                 status: "Internal Server Error",
-                                message: `I received the following error from the bank: ${transactionsResponse.message}`,
+                                message: failMessage3,
                                 end_connection: false
                             }, {
                                 status: "Success",
@@ -1259,9 +1260,10 @@ export class ExcessBankCharges {
                         if(ticketResponse.error) {
                             Sentry.captureException("Excess Bank Charges: Register Complaint Error")
                             //this.logger.error("Excess Bank Charges: Register Complaint Error:", ticketResponse.error)
+                            const failMessage12 = ticketResponse.message ?? "I could not raise a ticket with the bank. Please try again later."
                             return [{
                                 status: "Internal Server Error",
-                                message: `I received the following error from the bank: ${ticketResponse.message}`,
+                                message: failMessage12,
                                 end_connection: true
                             }]
                         }
