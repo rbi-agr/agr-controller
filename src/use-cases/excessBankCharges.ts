@@ -790,7 +790,7 @@ export class ExcessBankCharges {
                         if(!state7TransactionNarration) {
                             transactionmsg = "Transaction narration is empty"
                             endConnection = true
-                        } else if(state7TransactionNarration.includes('*')) {
+                        } else if(state7TransactionNarration.includes('*') || state7TransactionNarration.includes(' ')) {
                             transactionmsg = "Transaction narration contains special charaters"
                             endConnection = true
                         }
@@ -1467,13 +1467,23 @@ export class ExcessBankCharges {
                     } else if (state17Message && state17Message.toLowerCase().includes('no')) {
                         state17NextState = 18;
                     }
-                    else
-                    {
-                        return [{
-                            status: "Bad Request",
-                            message: "Invalid Query",
-                            end_connection: false
-                    }]
+                    else {
+                        await this.prisma.sessions.update({
+                            data: {
+                              retriesLeft: reqData.session_id.retriesLeft - 1,
+                            },
+                            where: {
+                              sessionId: reqData.session_id,
+                            },
+                          })
+                          return [{
+                            "success": "true",
+                            "message":"I apologize, but I didn't quite understand that. Could you please rephrase your query?",
+                            "options": [],
+                            "end_connection": false,
+                            "prompt": "text_message",
+                            "metadata":{}
+                        }]
                     }
                     await this.prisma.sessions.update({
                         where: {
