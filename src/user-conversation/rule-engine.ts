@@ -32,7 +32,6 @@ export class RuleEngine {
                     sessionId: sessionId,
                 },
             })
-            let ruleResponse
 
             if (!session) {
                 //detect language
@@ -89,16 +88,7 @@ export class RuleEngine {
                 // call 1st intent classifier that classifies the use case
                 //mocking the response here
 
-                ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
-                if(ruleResponse.error) {
-                    ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/rule-engine`)
-                } else {
-                    ruleResponse = {
-                        useCase: "OTHERS"
-                    }
-                }
-                
-                useCase = ruleResponse.useCase
+                useCase = await this.checkUseCase(reqData.message.text)
 
 
                 //call sentiment-analysis
@@ -154,22 +144,16 @@ export class RuleEngine {
             } else {
                 useCase = session.useCase
                 //add retries here
-                if(!useCase) {
+                if(!useCase || useCase == 'Other') {
                     if(session.retriesLeft > 0) {
                         //call rule-engine to get the useCase and decrease the number of retry
                         //if use case isnt found decrease the number of retry and return asking to retry
-                        ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/intent-classifier`)
-                        if(ruleResponse.error) {
-                            ruleResponse = await PostRequest(reqData.message.text,`${process.env.BASEURL}/ai/rule-engine`)
-                        } else {
-                            ruleResponse = {
-                                useCase: "OTHERS"
-                            }
-                        }
-                        useCase = ruleResponse.useCase
+                        useCase = await this.checkUseCase(reqData.message.text)
+
                         await this.prisma.sessions.update({
                             data: {
                                 retriesLeft: session.retriesLeft - 1,
+                                useCase: useCase,
                             },
                             where: {
                                 sessionId: reqData.session_id,
@@ -189,9 +173,20 @@ export class RuleEngine {
                 }
             }
 
+            if(useCase == 'Other') {
+                return [{
+                    "success": "true",
+                    "message":"I apologize, but I didn't quite understand that. Could you please rephrase your question?",
+                    "options": [],
+                    "end_connection": false,
+                    "prompt": "text_message",
+                    "metadata":{}
+                }]
+            }
+
             let responses
             switch (useCase) {
-                case "OTHERS":
+                case "EXCESS_BANK_CHARGES":
                     responses = await this.exchessBankChargesService.preprocessData(headers, reqData)
                     break;
                 case "LOAN_ENQUIRY":
@@ -211,5 +206,18 @@ export class RuleEngine {
             this.logger.error('Rule Engine Error: Multi Use-Case Preprocess Error:', error)
             return error
         }
+    }
+
+    async checkUseCase(text) {
+        let ruleResponse = await PostRequest(text, `${process.env.BASEURL}/ai/intent-classifier`)
+        if (ruleResponse.error) {
+            ruleResponse = await PostRequest(text, `${process.env.BASEURL}/ai/rule-engine`)
+        } else {
+            ruleResponse = {
+                useCase: "EXCESS_BANK_CHARGES"
+            }
+        }
+
+        return ruleResponse.useCase
     }
 }
