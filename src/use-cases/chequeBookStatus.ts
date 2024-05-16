@@ -196,9 +196,10 @@ export class ChequeBookStatus {
                         const cheqBkStatusResponse = await this.banksService.chequeBookStatus(reqData.session_id, cheqBkStatusReq, BankName.INDIAN_BANK)
                         console.log('Cheque book response ', cheqBkStatusResponse)
                         if (cheqBkStatusResponse.error) {
+                            const failMessage1 = cheqBkStatusResponse.message ?? 'No cheque book status found. Please make sure you have selected a valid bank account number and have applied for a cheque book'
                             return [{
                                 status: "Internal Server Error",
-                                message: `I received the following error from the bank: ${cheqBkStatusResponse.message}`,
+                                message: failMessage1,
                                 end_connection: false
                             }, {
                                 status: "Success",
