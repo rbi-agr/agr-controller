@@ -1,34 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { UserConversationService } from './user-conversation.service';
-import { CreateUserConversationDto } from './dto/create-user-conversation.dto';
-import { UpdateUserConversationDto } from './dto/update-user-conversation.dto';
+import { Body, Controller, Post } from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { addRatingOverall } from 'src/utils/utils';
 
-@Controller('user-conversation')
+@Controller('chat')
 export class UserConversationController {
-  constructor(private readonly userConversationService: UserConversationService) {}
+    constructor( private prisma: PrismaService ) { }
 
-  @Post()
-  create(@Body() createUserConversationDto: CreateUserConversationDto) {
-    return this.userConversationService.create(createUserConversationDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.userConversationService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userConversationService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserConversationDto: UpdateUserConversationDto) {
-    return this.userConversationService.update(+id, updateUserConversationDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userConversationService.remove(+id);
-  }
+    @Post('rating')
+    addRating(@Body() body: {rating: number, sessionid: string} ){
+        const { rating, sessionid } = body;
+        return addRatingOverall(rating,sessionid, this.prisma)
+    }
 }

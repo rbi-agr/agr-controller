@@ -1,26 +1,68 @@
 import { Injectable } from '@nestjs/common';
-import { CreateBankDto } from './dto/create-bank.dto';
-import { UpdateBankDto } from './dto/update-bank.dto';
+import { IndianBankService } from './services/indianBank.service';
+import { BankName } from '@prisma/client';
+import { TransactionsRequestDto, TransactionsResponseDto } from './dto/transactions.dto';
+import { ComplaintRequestDto, ComplaintResponseDto } from './dto/complaint.dto';
+import { LoanAccountBalanceRequestDto } from './dto/loanbalance.dto';
+import { LoggerService } from "src/logger/logger.service";
+import * as Sentry from '@sentry/node'
+import { ChequeBookStatusRequestDto } from './dto/chequeBook.dto';
 
 @Injectable()
 export class BanksService {
-  create(createBankDto: CreateBankDto) {
-    return 'This action adds a new bank';
-  }
+    constructor(
+        private readonly logger : LoggerService,
+        private indianBankService: IndianBankService
+    ) {}
 
-  findAll() {
-    return `This action returns all banks`;
-  }
+    async fetchTransactions(sessionId: string, data: TransactionsRequestDto, bankName: BankName): Promise<TransactionsResponseDto> {
 
-  findOne(id: number) {
-    return `This action returns a #${id} bank`;
-  }
+        switch(bankName) {
+            case BankName.INDIAN_BANK:
+                return this.indianBankService.fetchTransactions(sessionId, data);
+        }
+    }
 
-  update(id: number, updateBankDto: UpdateBankDto) {
-    return `This action updates a #${id} bank`;
-  }
+    async registerComplaint(sessionId: string, data: ComplaintRequestDto, bankName: BankName): Promise<ComplaintResponseDto> {
 
-  remove(id: number) {
-    return `This action removes a #${id} bank`;
-  }
+        switch(bankName) {
+            case BankName.INDIAN_BANK:
+                return this.indianBankService.registerComplaint(sessionId, data);
+        }
+    }
+
+    async getLoanAccountBalance(sessionId: string, data: LoanAccountBalanceRequestDto, bankName: BankName) {
+        switch(bankName) {
+            case BankName.INDIAN_BANK:
+                return this.indianBankService.getLoanAccountBalance(sessionId, data);
+        }
+    }
+
+    async chequeBookStatus(sessionId: string, data: ChequeBookStatusRequestDto, bankName: BankName) {
+        switch(bankName) {
+            case BankName.INDIAN_BANK:
+                return this.indianBankService.chequeBookStatus(sessionId, data);
+        }
+    }
+
+    async createNarrationsForIndianBank(body) {
+        try {
+            return await this.indianBankService.createNarrations(body)
+        } catch(error) {
+            Sentry.captureException("Create New Narrations Error")
+            this.logger.error("Create New Narrations Error:",error)
+            throw new Error(error.response?.data ?? error.message);
+        }
+    }
+
+    async getAllNarations() {
+        try {
+            return await this.indianBankService.getAllNarrations()
+        } catch(error) {
+            Sentry.captureException(error)
+            Sentry.captureException("Fetching All Narrations Error")
+            this.logger.error("Fetching All Narrations Error:",error)
+            throw new Error(error.response?.data ?? error.message);
+        }
+    }
 }

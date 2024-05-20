@@ -31,4 +31,9 @@ export class AiProcessingController {
   remove(@Param('id') id: string) {
     return this.aiProcessingService.remove(+id);
   }
+
+  @Post('switchLanguage')
+  switchLanguage(@Body() body) {
+    return this.aiProcessingService.switchLanguage(body.language, body.session_id)
+  }
 }

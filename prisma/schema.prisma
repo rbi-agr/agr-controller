@@ -4,28 +4,121 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
+enum BankName {
+  INDIAN_BANK
+}
+
+enum InteractionType {
+  TRANSACTIONS
+  COMPLAINT_REGISTRATION
+  LOAN_ACCOUNT_BALANCE
+  CHEQUE_BOOK_STATUS
+}
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "postgres"
   url      = env("DATABASE_URL")
 }
 
-
-model User {
-  id    Int     @default(autoincrement()) @id
-  email String  @unique
-  name  String?
-  posts Post[]
+model Token {
+  id     String @id @default(uuid()) @db.Uuid
+  token  String
+  bankId String
 }
 
-model Post {
-  id        Int      @default(autoincrement()) @id
-  title     String
-  content   String?
-  published Boolean? @default(false)
-  author    User?    @relation(fields: [authorId], references: [id])
-  authorId  Int?
+model Users {
+  id               String     @id @default(uuid()) @db.Uuid
+  phoneNumber      String     @unique //try making this as pk
+  languageDetected String
+  sessions         Sessions[]
+}
+
+model Sessions {
+  id                       String               @id @default(uuid()) @db.Uuid
+  sessionId                String               @unique @db.Uuid
+  userId                   String               @db.Uuid
+  user                     Users                @relation(fields: [userId], references: [id])
+  useCase                  String?
+  ticketRaised             Boolean              @default(false)
+  ticketId                 String?
+  ticketRaisedTime         DateTime?
+  state                    Int                  @default(0)
+  languageByAdya           String?
+  retriesLeft              Int?
+  ratings                  Int?
+  experienceRating         Int?
+  bankAccountNumber        String
+  startDate                DateTime?
+  endDate                  DateTime?
+  complaintCategoryId      Int?
+  complaintCategory        String?
+  complaintCategoryType    String?
+  complaintCategorySubType String?
+  initialQuery             String
+  selectedTransactionId    String?
+  intialSentiment          String?
+  intialSentimentScore     Decimal?
+  finalSentiment           String?
+  finalSentimentScore      Decimal?
+  bankInteractions         BankInteractions[]
+  transactions             TransactionDetails[]
+}
+
+model Messages {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @db.Uuid
+  sessionId          String   @db.Uuid
+  languageDetected   String
+  sender             String
+  message            String
+  messageTranslation String
+  audioFile          String?
+  promptType         String //enum
+  options            String[] //optional
+  timeStamp          DateTime
+}
+
+model TransactionDetails {
+  id                   String   @id @default(uuid()) @db.Uuid
+  sessionId            String   @db.Uuid
+  session              Sessions @relation(fields: [sessionId], references: [sessionId])
+  transactionId        String?
+  amount               String?
+  transactionType      String
+  transactionTimeBank  DateTime
+  transactionNarration String
+  isEducated           Boolean  @default(false)
+}
+
+model BankInteractions {
+  id              String          @id @default(uuid()) @db.Uuid
+  sessionId       String          @db.Uuid
+  session         Sessions        @relation(fields: [sessionId], references: [sessionId])
+  bankName        BankName
+  interactionType InteractionType
+  timestamp       DateTime        @default(now())
+  metadata        Json?
+}
+
+model BankNarrations {
+  id             String @id @default(uuid()) @db.Uuid
+  narration      String
+  natureOfCharge String
+  details        String
+}
+
+//naration-educative text
+//helperText             String
+
+model Templates {
+  id             Int        @id @default(autoincrement())
+  narration      String
+  accountType    String?
+  amount         Int?
+  language       String
+  template       String[]   
 }
