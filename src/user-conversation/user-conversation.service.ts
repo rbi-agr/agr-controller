@@ -3,6 +3,7 @@ import { Socket } from 'socket.io';
 import { RuleEngine } from './rule-engine';
 import { LoggerService } from 'src/logger/logger.service';
 import * as Sentry from '@sentry/node'
+import { getPrismaErrorStatusAndMessage } from 'src/utils/handleErrors';
 
 @WebSocketGateway({
   cors: {
@@ -54,7 +55,8 @@ export class UserConversationService {
         }
       }
     }catch(error){
-      this.logger.error("User Conversation Error: Response Object Error:",error)
+      const errorStatus = getPrismaErrorStatusAndMessage(error)
+      this.logger.error("User Conversation Error: Response Object Error:", errorStatus.errorMessage)
       Sentry.captureException("User Conversation Error: Response Object Error")
     }
   }

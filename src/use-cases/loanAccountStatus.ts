@@ -55,7 +55,7 @@ export class LoanAccountStatus {
                         else {
                             return [{
                                 status: "Internal Server Error",
-                                "message": "Something went wrong with language translation",
+                                "message": "I am having trouble translating your query. Please make sure the query is correctly typed and try again",
                                 "end_connection": false
                             }]
                         }
@@ -140,7 +140,7 @@ export class LoanAccountStatus {
             this.logger.error('Loan Account Status Error: Preprocess Error', error)
             return [{
                 status: "Internal Server Error",
-                message: "Something went wrong. Please try again later",
+                message: "I'm sorry, something went wrong on my end",
                 end_connection: false
             }, {
                 status: "Success",
@@ -233,7 +233,7 @@ export class LoanAccountStatus {
             this.logger.error('Loan Account Status Error: State Manager Error:', errorStatus.errorMessage)
             return [{
                 status: "Internal Server Error",
-                message: "Something went wrong. Please try again later",
+                message: "I'm sorry, something went wrong on my end",
                 end_connection: false
             }, {
                 status: "Success",

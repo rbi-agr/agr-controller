@@ -242,7 +242,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
                                     })
                                     return [{
                                         status: "Internal Server Error",
-                                        "message": "Something went wrong with language translation",
+                                        "message": "I'm sorry, something went wrong on my end",
                                         end_connection: false
                                     }, {
                                         status: "Success",
@@ -276,7 +276,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
                     })
                     return [{
                         status: "Internal Server Error",
-                        "message": "Something went wrong with language translation",
+                        "message": "I'm sorry, something went wrong on my end",
                         end_connection: false
                     }, {
                         status: "Success",
@@ -301,7 +301,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
         })
         return [{
             status: "Internal Server Error",
-            "message": "Something went wrong with language translation",
+            "message": "I'm sorry, something went wrong on my end",
             end_connection: false
         }, {
             status: "Success",
