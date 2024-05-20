@@ -67,7 +67,7 @@ export class RuleEngine {
                                 this.logger.error("Rule Engine Error: Language Translation API Error:",translatedmessage.error)
                                 return [{
                                     status: "Internal Server Error",
-                                    "message": "Something went wrong with language translation",
+                                    "message": "I am having trouble translating your query. Please make sure the query is correctly typed and try again",
                                     "end_connection": false
                                 }]
                             }

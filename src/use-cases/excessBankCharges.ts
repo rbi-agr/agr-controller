@@ -75,7 +75,7 @@ export class ExcessBankCharges {
                             this.logger.error("Excess Bank Charges Error: Preprocess Language Translation Error:",translatedmessage.error)
                             return[{
                                 status: "Internal Server Error",
-                                "message": "Something went wrong with language translation",
+                                "message": "I am having trouble translating your query. Please make sure the query is correctly typed and try again",
                                 "end_connection": false
                             }]
                         }
@@ -236,7 +236,7 @@ export class ExcessBankCharges {
             console.log('error in state manager: ', error.message)
             return [{
                 status: "Internal Server Error",
-                message: "Something went wrong. Please try again later",
+                message: "I'm sorry, something went wrong on my end",
                 end_connection: false
             }, {
                 status: "Success",
@@ -666,7 +666,7 @@ export class ExcessBankCharges {
                         this.logger.error('error occured in state manager ', errorStatus3.errorMessage)
                         const intentFailRes = [{
                             status: "Internal Server Error",
-                            message: "Something went wrong with Bank Servers. Please try again later",
+                            message: "I could not fetch transactions from the bank. Please try again later.",
                             end_connection: false
                         }, {
                             status: "Success",
@@ -834,7 +834,6 @@ export class ExcessBankCharges {
                             if(transactionNarrationLower.includes(bankNarrationLower)) {
                                 correspondingNarration = bankNarration
                             }
-                        
                         })
                         if(!correspondingNarration) {
                             const narrationsList = bankNarrations.map(bankNarration => bankNarration.narration)
@@ -842,9 +841,9 @@ export class ExcessBankCharges {
                             if(narrationResponse.error){
                                 Sentry.captureException("Excess Bank Charges Error:Fetching Narration Error")
                                 this.logger.error('Excess Bank Charges Error:Fetching Narration Error:', narrationResponse.error)
-                                const exitResponse =  [{
+                                const exitResponse = [{
                                     status: "Internal Server Error",
-                                    message: "Internal Server Error. Please try again later",
+                                    message: "Sorry, something went wrong while finding the cause for this transaction. Please try again later",
                                     end_connection: false
                                 }, {
                                     status: "Success",
@@ -863,8 +862,13 @@ export class ExcessBankCharges {
                                 })
                                 return exitResponse
                             }
-                            correspondingNarration = JSON.parse(JSON.stringify(narrationResponse.message.content));
-                            if(correspondingNarration === "No match found") {
+                            try {
+                                correspondingNarration = JSON.parse(JSON.stringify(narrationResponse.message.content));
+                            } catch (error) {
+                                this.logger.error('Excess Bank Charges Error: Parsing Narration Error:', error)
+                                correspondingNarration = "No match found";
+                            }
+                            if(correspondingNarration === "No match found" || !narrationsList.includes(correspondingNarration)) {
                                 const educatingFailRes = [{
                                     status: "Internal Server Error",
                                     message: "Sorry, We could not find the cause for this transaction. Please try later",
@@ -900,9 +904,9 @@ export class ExcessBankCharges {
                         if(educatingMessageResponse.error){
                             Sentry.captureException("Excess Bank Charges Error: Fetching Educating Message Error")
                             this.logger.error('Excess Bank Charges Error: Fetching Educating Message Error:', educatingMessageResponse.error)
-                            const exitResponse =  [{
+                            const exitResponse = [{
                                 status: "Internal Server Error",
-                                message: "Internal Server Error. Please try again later",
+                                message: "Sorry, something went wrong while finding the cause for this transaction. Please try again later",
                                 end_connection: false
                             }, {
                                 status: "Success",
@@ -1136,7 +1140,7 @@ export class ExcessBankCharges {
                         return [{
                             status: "Success",
                             session_id: reqData.session_id,
-                            message: "Something went wrong. Please select Yes to end the conversation.",
+                            message: "I'm sorry, something went wrong on my end. Please select Yes to end the conversation.",
                             options: ['Yes, end the conversation'],
                             end_connection: false,
                             prompt: "option_selection",
@@ -1591,7 +1595,7 @@ export class ExcessBankCharges {
             })
             return [{
                 "status": "Internal Server Error",
-                message: "Something went wrong. Please try again later",
+                message: "I'm sorry, something went wrong on my end",
                 end_connection: false
             },{
                 status: "Success",

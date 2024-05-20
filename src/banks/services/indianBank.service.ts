@@ -99,15 +99,16 @@ export class IndianBankService {
         this.logger.error("Fetch Transactions Error: Error Response from Bank API:",response.data.ErrorResponse)
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
 
-        let errorMessage = undefined;
-        if(errDesc.includes('INVALID ACCOUNT NUMBER')) {
-          errorMessage = 'The account number you have selected is invalid. Please try again with a valid account number'
-        }
-        
-        return {
-          error: true,
-          message: errorMessage,
-          transactions: []
+        if(!errDesc.includes('NO TRANSACTION')) {
+          let errorMessage = undefined;
+          if(errDesc.includes('INVALID ACCOUNT NUMBER')) {
+            errorMessage = 'The account number you have selected is invalid. Please try again with a valid account number'
+          }
+          return {
+            error: true,
+            message: errorMessage,
+            transactions: []
+          }
         }
       }
       const mainResponse = response.data.LoanMainStatement_Response ?? response.data.MainStatement_Response
@@ -237,7 +238,7 @@ export class IndianBankService {
         Sentry.captureException(`Register Complaint Error: ${responseData}`)
         return {
           error: true,
-          message: 'Something went wrong while registering complaint',
+          message: 'I could not raise a ticket. Please try again later',
         }
       }
       return {
