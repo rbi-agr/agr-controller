@@ -211,6 +211,8 @@ export class RuleEngine {
     async checkUseCase(text) {
         let ruleResponse = await PostRequest(text, `${process.env.BASEURL}/ai/intent-classifier`)
         if (ruleResponse.error) {
+            Sentry.captureException("Check Use Case Error")
+            this.logger.error("Check Use Case Error", ruleResponse.error)
             ruleResponse = await PostRequest(text, `${process.env.BASEURL}/ai/rule-engine`)
         } else {
             ruleResponse = {

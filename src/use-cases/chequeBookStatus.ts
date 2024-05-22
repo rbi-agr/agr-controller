@@ -34,6 +34,7 @@ export class ChequeBookStatus {
                 const languageDetectedresponse = await PostRequest(reqData.message.text, `${process.env.BASEURL}/ai/language-detect`)
                 if (languageDetectedresponse.error) {
                     Sentry.captureException("Cheque Book Status Error: Preprocess Language Translation Error")
+                    this.logger.error("Cheque Book Status Error: Preprocess Language Translation Error", languageDetectedresponse.error)
                     const exitResponse = [{
                         status: "Internal Server Error",
                         message: "Error in language detection",
