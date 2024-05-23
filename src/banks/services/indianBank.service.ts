@@ -44,6 +44,7 @@ export class IndianBankService {
       endpoint = `/statement/v1/eq-dtxn-chrg`;
     }
     const accountNumber = parseInt(transactionsDto.accountNumber.split('-')[1]);
+    console.log("accountNumber: ", accountNumber)
     if(!accountNumber) {
       Sentry.captureException("Fetch Transactions Error: Invalid Account Number")
       this.logger.info("Fetch Transactions Error: Invalid Account Number")
@@ -131,6 +132,7 @@ export class IndianBankService {
       }
 
     } catch (error) {
+      console.log("Error while fetching transactions: ", error.response?.data ?? error.message)
       Sentry.captureException("Fetch Transactions Error")
       this.logger.error("Fetch Transactions Error:",error)
       throw new Error(error);
@@ -246,6 +248,7 @@ export class IndianBankService {
           ticketNumber: ticketNumber
       }
     } catch (error) {
+      console.log("Error while registering complaint: ", error.response?.data ?? error.message)
       Sentry.captureException("Register Complaint Error")
       this.logger.error("Register Complaint Error:",error)
       throw new Error(error.response?.data ?? error.message);
@@ -307,6 +310,7 @@ export class IndianBankService {
         }
       });
       if(response.data.ErrorResponse) {
+        console.log("response.data.ErrorResponse: ", response.data.ErrorResponse)
         Sentry.captureException("Fetch Loan Account Balance Error: Error Response from Bank API")
         this.logger.error("Fetch Loan Account Balance Error: Error Response from Bank API:",response.data.ErrorResponse)
         const errDesc = response.data.ErrorResponse.additionalinfo?.excepText
@@ -341,6 +345,7 @@ export class IndianBankService {
       }
 
     } catch (error) {
+      console.log("Error while getting loan account balance: ", error.response?.data ?? error.message)
       Sentry.captureException("Fetch Loan Account Balance Error")
       this.logger.error("Fetch Loan Account Balance Error:",error)
       throw new Error(error);
