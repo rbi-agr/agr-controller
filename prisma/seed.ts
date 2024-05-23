@@ -77,7 +77,7 @@ async function main() {
         data: {
             "narration": "CHG FOR ATM ONUS DEP",
             "natureOfCharge": "Cash deposit charges through ATM/cash recyclers(BNA)",
-            "details": "ATM/BNA Cash Deposit Transaction Service Charges (effective from 01.12.2023):\n\nOnus Cash Deposit Transaction - SB Account:\n\nUp to 5 transactions/month: Free\nBeyond 5 transactions/month: ₹25 per transaction\nOnus Cash Deposit Transaction - CA Account:\n\n₹10 per transaction"
+            "details": "ATM/BNA Cash Deposit Transaction Service Charges (effective from 01.12.2023):\n\nOnus Cash Deposit Transaction - SB Account:\n\nUp to 5 transactions/month: Free\nBeyond 5 transactions/month: ₹30 per transaction\nOnus Cash Deposit Transaction - CA Account:\n\n₹10 per transaction"
         }
     })
     console.log('narration 24', narration10)
@@ -201,10 +201,10 @@ async function main() {
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Savings Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 15 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 14 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities. 
 
-You are charged Rs. 21 for each transaction after free transactions.`
+You are charged Rs. 25 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "CHG FOR ONUS WDL",
@@ -258,10 +258,10 @@ You are charged Rs. 10 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Savings Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 15 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 14 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities. 
 
-You are charged Rs. 21 for each transaction after free transactions.`
+You are charged Rs. 25 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "ATM WDL CHARGES",
@@ -315,10 +315,10 @@ You are charged Rs. 10 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Savings Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 15 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 14 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities. 
 
-You are charged Rs. 21 for each transaction after free transactions.`
+You are charged Rs. 25 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "ATM ENQ CHARGES",
@@ -481,6 +481,30 @@ Transaction Decline due to Insufficient Balance:
         //     ],
         }, {
             narration: "ATM AMC CHGS",
+            amount: 118,
+            language: "en",
+            template: [
+                `A charge of ₹ 118 was deducted from your account as Annual Maintenance Charge (AMC) for your ATM Card issued by the bank. An AMC of ₹ 118 is charged from 2nd year post issuance for the following cards:
+Classic RuPay cards (other than PMJDY), RuPay IBDigi cards, Domestic Mastercards including ePurse cards, Visa Classic cards
+
+AMC Charges for the above cards in the 1st year is free`
+            ],
+        // }, {
+        //     narration: "ATM AMC CHGS",
+        //     amount: 200,
+        //     language: "od",
+        //     template: [
+        //         `ବ୍ଯ଼ାଙ୍କ ଦ୍ୱାରା ଜାରି କରାଯାଇଥିବା ଆପଣଙ୍କ ଏଟିଏମ୍ କାର୍ଡ ପାଇଁ ବାର୍ଷିକ ରକ୍ଷଣାବେକ୍ଷଣ ଶୁଳ୍କ (ଏ. ଏମ୍. ସି.) ଭାବରେ ଆପଣଙ୍କ ଆକାଉଣ୍ଟରୁ 200 ଟଙ୍କା ଶୁଳ୍କ କଟାଯାଇଥିଲା। 2ଯ଼ ବର୍ଷ ଜାରି ହେବା ପରେ ନିମ୍ନଲିଖିତ କାର୍ଡଗୁଡ଼ିକ ପାଇଁ ଏ. ଏମ୍. ସି. ରୁ 200 ଟଙ୍କା ଆଦାଯ଼ କରାଯାଇଥାଏଃ କ୍ଲାସିକ୍ ରୁପେ କାର୍ଡ (ପି. ଏମ୍. ଜେ. ଡି. ୱାଇ. ବ୍ଯ଼ତୀତ), ରୁପେ ଆଇ. ବି. ଡି. ଜି. କାର୍ଡ, ଇ-ନର୍ସ କାର୍ଡ ସମେତ ଘରୋଇ ମାଷ୍ଟର କାର୍ଡ, ଭିସା କ୍ଲାସିକ୍ କାର୍ଡ, ପ୍ରଥମ ବର୍ଷରେ ଉପରୋକ୍ତ କାର୍ଡଗୁଡ଼ିକ ପାଇଁ ଏ. ଏମ୍. ସି. ଦେଯ଼ ମାଗଣାରେ ଆଦାଯ଼ କରାଯାଇଥାଏ।`
+        //     ],
+        // }, {
+        //     narration: "ATM AMC CHGS",
+        //     amount: 200,
+        //     language: "hi",
+        //     template: [
+        //         `बैंक द्वारा जारी आपके एटीएम कार्ड के लिए वार्षिक रखरखाव शुल्क (ए. एम. सी.) के रूप में आपके खाते से ₹200 का शुल्क काट लिया गया था। निम्नलिखित कार्डों के लिए जारी होने के दूसरे वर्ष के बाद से 200 रुपये का ए. एम. सी. शुल्क लिया जाता हैः क्लासिक रुपे कार्ड (पी. एम. जे. डी. वाई. के अलावा), रुपे आई. बी. डिगी कार्ड, ई-नर्स कार्ड सहित घरेलू मास्टर कार्ड, वीजा क्लासिक कार्ड ए. एम. सी. पहले वर्ष में उपरोक्त कार्डों के लिए शुल्क निःशुल्क है।`
+        //     ],
+        }, {
+            narration: "ATM AMC CHGS",
             amount: 200,
             language: "en",
             template: [
@@ -629,6 +653,78 @@ AMC Charges for the above card in the 1st year is free`
             language: "en",
             template: [
                 `A charge of ₹ 25 per month is deducted for non maintenance of minimum balance with a shortfall of 11% to 25% in average monthly balance in your Savings Account`
+            ],
+        // }, {
+        //     narration: "MIN BAL CHGS",
+        //     amount: 25,
+        //     accountType: "SB",
+        //     language: "od",
+        //     template: [
+        //         `ଆପଣଙ୍କ ସଞ୍ଚଯ଼ ଖାତାରେ ହାରାହାରି ମାସିକ ଜମା ରାଶିରେ 11 ପ୍ରତିଶତରୁ 25 ପ୍ରତିଶତ ହ୍ରାସ ସହିତ ସର୍ବନିମ୍ନ ଜମା ରାଶିର ରକ୍ଷଣାବେକ୍ଷଣ ନକଲେ ମାସିକ 25 ଟଙ୍କା ଶୁଳ୍କ କାଟି ଦିଆଯାଏ।`
+        //     ],
+        // }, {
+        //     narration: "MIN BAL CHGS",
+        //     amount: 25,
+        //     accountType: "SB",
+        //     language: "hi",
+        //     template: [
+        //         `आपके बचत खाते में औसत मासिक शेष राशि में 11 प्रतिशत से 25 प्रतिशत की कमी के साथ न्यूनतम शेष राशि का रखरखाव न करने पर प्रति माह 25 रुपये का शुल्क काटा जाता है।`
+        //     ],
+        }, {
+            narration: "MIN BAL CHGS",
+            amount: 36,
+            accountType: "SB",
+            language: "en",
+            template: [
+                `A charge of ₹ 36 per month is deducted for non maintenance of minimum balance with a shortfall of 11% to 25% in average monthly balance in your Savings Account`
+            ],
+        // }, {
+        //     narration: "MIN BAL CHGS",
+        //     amount: 25,
+        //     accountType: "SB",
+        //     language: "od",
+        //     template: [
+        //         `ଆପଣଙ୍କ ସଞ୍ଚଯ଼ ଖାତାରେ ହାରାହାରି ମାସିକ ଜମା ରାଶିରେ 11 ପ୍ରତିଶତରୁ 25 ପ୍ରତିଶତ ହ୍ରାସ ସହିତ ସର୍ବନିମ୍ନ ଜମା ରାଶିର ରକ୍ଷଣାବେକ୍ଷଣ ନକଲେ ମାସିକ 25 ଟଙ୍କା ଶୁଳ୍କ କାଟି ଦିଆଯାଏ।`
+        //     ],
+        // }, {
+        //     narration: "MIN BAL CHGS",
+        //     amount: 25,
+        //     accountType: "SB",
+        //     language: "hi",
+        //     template: [
+        //         `आपके बचत खाते में औसत मासिक शेष राशि में 11 प्रतिशत से 25 प्रतिशत की कमी के साथ न्यूनतम शेष राशि का रखरखाव न करने पर प्रति माह 25 रुपये का शुल्क काटा जाता है।`
+        //     ],
+        }, {
+            narration: "MIN BAL CHGS",
+            amount: 24,
+            accountType: "SB",
+            language: "en",
+            template: [
+                `A charge of ₹ 24 per month is deducted for non maintenance of minimum balance with a shortfall of 11% to 25% in average monthly balance in your Savings Account`
+            ],
+        // }, {
+        //     narration: "MIN BAL CHGS",
+        //     amount: 25,
+        //     accountType: "SB",
+        //     language: "od",
+        //     template: [
+        //         `ଆପଣଙ୍କ ସଞ୍ଚଯ଼ ଖାତାରେ ହାରାହାରି ମାସିକ ଜମା ରାଶିରେ 11 ପ୍ରତିଶତରୁ 25 ପ୍ରତିଶତ ହ୍ରାସ ସହିତ ସର୍ବନିମ୍ନ ଜମା ରାଶିର ରକ୍ଷଣାବେକ୍ଷଣ ନକଲେ ମାସିକ 25 ଟଙ୍କା ଶୁଳ୍କ କାଟି ଦିଆଯାଏ।`
+        //     ],
+        // }, {
+        //     narration: "MIN BAL CHGS",
+        //     amount: 25,
+        //     accountType: "SB",
+        //     language: "hi",
+        //     template: [
+        //         `आपके बचत खाते में औसत मासिक शेष राशि में 11 प्रतिशत से 25 प्रतिशत की कमी के साथ न्यूनतम शेष राशि का रखरखाव न करने पर प्रति माह 25 रुपये का शुल्क काटा जाता है।`
+        //     ],
+        }, {
+            narration: "MIN BAL CHGS",
+            amount: 14,
+            accountType: "SB",
+            language: "en",
+            template: [
+                `A charge of ₹ 14 per month is deducted for non maintenance of minimum balance with a shortfall of 11% to 25% in average monthly balance in your Savings Account`
             ],
         // }, {
         //     narration: "MIN BAL CHGS",
