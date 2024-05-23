@@ -201,10 +201,10 @@ async function main() {
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Savings Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 14 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 14 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities. 
 
-You are charged Rs. 25 for each transaction after free transactions.`
+You will be charged Rs. 25 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "CHG FOR ONUS WDL",
@@ -230,9 +230,9 @@ You are charged Rs. 25 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Current Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 6 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 6 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities.
-You are charged Rs. 10 for each transaction after free transactions.`
+You will be charged Rs. 10 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "CHG FOR ONUS WDL",
@@ -258,10 +258,10 @@ You are charged Rs. 10 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Savings Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 14 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 14 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities. 
 
-You are charged Rs. 25 for each transaction after free transactions.`
+You will be charged Rs. 25 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "ATM WDL CHARGES",
@@ -287,9 +287,9 @@ You are charged Rs. 25 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Current Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 6 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 6 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities.
-You are charged Rs. 10 for each transaction after free transactions.`
+You will be charged Rs. 10 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "ATM WDL CHARGES",
@@ -315,10 +315,10 @@ You are charged Rs. 10 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Savings Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 14 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 14 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities. 
 
-You are charged Rs. 25 for each transaction after free transactions.`
+You will be charged Rs. 25 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "ATM ENQ CHARGES",
@@ -344,9 +344,9 @@ You are charged Rs. 25 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Current Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 6 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 6 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities.
-You are charged Rs. 10 for each transaction after free transactions.`
+You will be charged Rs. 10 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "ATM ENQ CHARGES",
