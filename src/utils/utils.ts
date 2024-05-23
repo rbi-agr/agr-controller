@@ -4,7 +4,7 @@ import * as Sentry from '@sentry/node'
 
 export async function getCorrespondingNarration(bankNarration: any, narrationList: string[]) {
     const userprompt = `narration from bank: "${bankNarration}", list of narrations: ${narrationList}`
-    const task = `this is the user query: Get me the corresponding narration from the list of narrations: ${narrationList} that matches the narration from bank: "${bankNarration}". If no match is found, return "No match found"`
+    const task = `this is the user query: Get me the corresponding narration from the list of narrations: ${narrationList} that matches the narration from bank: "${bankNarration}". If no match is found, return "No match found". Do not add any other message or direction or description. Give the response strictly in the format asked. `
     const mistralResponse =  await callMistralAI(task)
     console.log('mistralResponse ', mistralResponse)
     return mistralResponse

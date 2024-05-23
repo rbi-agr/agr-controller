@@ -25,7 +25,7 @@ export class UserConversationService {
     //1. extract input data
     this.logger.info(body)
     const data = JSON.parse(JSON.stringify(body))
-    // console.log('client socket ', clientSocket)
+    console.log('request data ', data)
     const headers = clientSocket.handshake.headers
     // console.log('headers ', headers) 
     // const clientId: string = String(headers.client_id)
@@ -47,7 +47,7 @@ export class UserConversationService {
     //4.emit the response
     try{
       for(let resObj of fres){
-        this.logger.info(resObj)
+        console.log('res', resObj)
         client.emit('response', resObj)
   
         if(resObj.end_connection) {

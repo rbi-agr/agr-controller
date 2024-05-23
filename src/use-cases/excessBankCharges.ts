@@ -864,6 +864,7 @@ export class ExcessBankCharges {
                             }
                             try {
                                 correspondingNarration = JSON.parse(JSON.stringify(narrationResponse.message.content));
+                                console.log("correspondingNarration", correspondingNarration)
                             } catch (error) {
                                 this.logger.error('Excess Bank Charges Error: Parsing Narration Error:', error)
                                 correspondingNarration = "No match found";
