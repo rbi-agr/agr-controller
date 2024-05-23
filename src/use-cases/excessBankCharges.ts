@@ -819,7 +819,7 @@ export class ExcessBankCharges {
                                 sessionId: reqData.session_id
                             },
                             data: {
-                                selectedTransactionId: transactionDetails.id
+                                selectedTransactionId: transactionDetails?.id
                             }
                         })
 

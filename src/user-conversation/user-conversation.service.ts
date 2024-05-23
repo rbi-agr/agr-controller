@@ -47,6 +47,7 @@ export class UserConversationService {
     //4.emit the response
     try{
       for(let resObj of fres){
+        this.logger.info(resObj)
         client.emit('response', resObj)
   
         if(resObj.end_connection) {
