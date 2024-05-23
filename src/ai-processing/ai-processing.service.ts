@@ -65,6 +65,7 @@ export class AiProcessingService {
           message: "Session not found"
         }
     } catch(error) {
+      console.log('error in swtiching language ', error)
       Sentry.captureException("AI Service Error: Switching Language Error")
       this.logger.error("AI Service Error: Switching Language Error",error)
       return { status: "Internal Server Error",
