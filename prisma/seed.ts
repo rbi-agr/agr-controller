@@ -21,7 +21,46 @@ async function main() {
         data: {
             "narration": "CHG FOR ONUS WDL",
             "natureOfCharge": "Charges for cash withdrawal per transaction in Indian bank ATMs and other bank ATMs for SB and CA",
-            "details": "Indian Bank ATM:\n\nUp to 5 transactions per month, including financial & non-financial:\nSavings Account (SB) and Current Account (CA): Free\nExceeding free transactions per month:\nSB: ₹15\nCA: ₹6\nOther Banks ATM (Domestic):\n\nMetro ATMs*: Up to 3 transactions per month:\nFree\nNon-Metro ATMs: Up to 5 transactions per month:\nSB: Free\nCA: Free\nFor transactions exceeding free transactions in a month:\nSB: ₹21\nCA: ₹10\n*Note: Metro ATMs refer to ATMs located in metropolitan cities, while non-Metro ATMs are those located outside metropolitan cities."
+            "details": `Savings Bank Account (SB) Charges:
+
+Indian Bank ATM Charges:
+Up to 5 transactions per month (including financial & non-financial): Free
+Exceeding free transactions per month: ₹15
+
+Savings Bank Account (SB) Charges:
+Other Banks ATM (Domestic) Charges:
+Metro ATMs*:
+Up to 3 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹21
+Non-Metro ATMs: ₹21
+Non-Metro ATMs:
+Up to 5 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹21
+Non-Metro ATMs: ₹21
+
+Current Account (CA) Charges:
+
+Indian Bank ATM Charges:
+Up to 5 transactions per month (including financial & non-financial): Free
+Exceeding free transactions per month: ₹6
+
+Current Account (CA) Charges:
+
+Other Banks ATM (Domestic) Charges:
+Metro ATMs*:
+Up to 3 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹10
+Non-Metro ATMs: ₹10
+Non-Metro ATMs:
+Up to 5 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹10
+Non-Metro ATMs: ₹10
+
+*Note: Metro ATMs refer to ATMs located in metropolitan cities, while non-Metro ATMs are those located outside metropolitan cities.`
         }
     })
     console.log('narration 24', narration3)
@@ -29,7 +68,46 @@ async function main() {
         data: {
             "narration": "ATM WDL CHARGES",
             "natureOfCharge": "Charges for cash withdrawal per transaction in Indian bank ATMs and other bank ATMs for SB and CA",
-            "details": "Indian Bank ATM:\n\nUp to 5 transactions per month, including financial & non-financial:\nSavings Account (SB) and Current Account (CA): Free\nExceeding free transactions per month:\nSB: ₹15\nCA: ₹6\nOther Banks ATM (Domestic):\n\nMetro ATMs*: Up to 3 transactions per month:\nFree\nNon-Metro ATMs: Up to 5 transactions per month:\nSB: Free\nCA: Free\nFor transactions exceeding free transactions in a month:\nSB: ₹21\nCA: ₹10\n*Note: Metro ATMs refer to ATMs located in metropolitan cities, while non-Metro ATMs are those located outside metropolitan cities."
+            "details": `Savings Bank Account (SB) Charges:
+
+Indian Bank ATM Charges:
+Up to 5 transactions per month (including financial & non-financial): Free
+Exceeding free transactions per month: ₹15
+
+Savings Bank Account (SB) Charges:
+Other Banks ATM (Domestic) Charges:
+Metro ATMs*:
+Up to 3 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹21
+Non-Metro ATMs: ₹21
+Non-Metro ATMs:
+Up to 5 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹21
+Non-Metro ATMs: ₹21
+
+Current Account (CA) Charges:
+
+Indian Bank ATM Charges:
+Up to 5 transactions per month (including financial & non-financial): Free
+Exceeding free transactions per month: ₹6
+
+Current Account (CA) Charges:
+
+Other Banks ATM (Domestic) Charges:
+Metro ATMs*:
+Up to 3 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹10
+Non-Metro ATMs: ₹10
+Non-Metro ATMs:
+Up to 5 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹10
+Non-Metro ATMs: ₹10
+
+*Note: Metro ATMs refer to ATMs located in metropolitan cities, while non-Metro ATMs are those located outside metropolitan cities.`
         }
     })
     console.log('narration 24', narration4)
@@ -37,7 +115,46 @@ async function main() {
         data: {
             "narration": "ATM ENQ CHARGES",
             "natureOfCharge": "Charges for cash withdrawal per transaction in Indian bank ATMs and other bank ATMs for SB and CA",
-            "details": "Indian Bank ATM:\n\nUp to 5 transactions per month, including financial & non-financial:\nSavings Account (SB) and Current Account (CA): Free\nExceeding free transactions per month:\nSB: ₹15\nCA: ₹6\nOther Banks ATM (Domestic):\n\nMetro ATMs*: Up to 3 transactions per month:\nFree\nNon-Metro ATMs: Up to 5 transactions per month:\nSB: Free\nCA: Free\nFor transactions exceeding free transactions in a month:\nSB: ₹21\nCA: ₹10\n*Note: Metro ATMs refer to ATMs located in metropolitan cities, while non-Metro ATMs are those located outside metropolitan cities."
+            "details": `Savings Bank Account (SB) Charges:
+
+Indian Bank ATM Charges:
+Up to 5 transactions per month (including financial & non-financial): Free
+Exceeding free transactions per month: ₹15
+
+Savings Bank Account (SB) Charges:
+Other Banks ATM (Domestic) Charges:
+Metro ATMs*:
+Up to 3 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹21
+Non-Metro ATMs: ₹21
+Non-Metro ATMs:
+Up to 5 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹21
+Non-Metro ATMs: ₹21
+
+Current Account (CA) Charges:
+
+Indian Bank ATM Charges:
+Up to 5 transactions per month (including financial & non-financial): Free
+Exceeding free transactions per month: ₹6
+
+Current Account (CA) Charges:
+
+Other Banks ATM (Domestic) Charges:
+Metro ATMs*:
+Up to 3 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹10
+Non-Metro ATMs: ₹10
+Non-Metro ATMs:
+Up to 5 transactions per month: Free
+For transactions exceeding free transactions in a month:
+Metro ATMs*: ₹10
+Non-Metro ATMs: ₹10
+
+*Note: Metro ATMs refer to ATMs located in metropolitan cities, while non-Metro ATMs are those located outside metropolitan cities.`
         }
     })
     console.log('narration 24', narration5)
@@ -45,7 +162,19 @@ async function main() {
         data: {
             "narration": "ATM INSUFFICIENT FUNDS CHARGES",
             "natureOfCharge": "Withdrawal transaction decline due to insufficient balance through ATM/ BNAs",
-            "details": "\"Revised ATM/BNA Transaction Charges (effective from 01.12.2023):\n\nOnus Cash Deposit Transaction - SB Account:\n\nUp to 5 transactions/month: Free\nBeyond 5 transactions/month: ₹25 per transaction\nOnus Cash Deposit Transaction - CA Account:\n\n₹10 per transaction\nTransaction Decline due to Insufficient Balance:\n\n₹15 per transaction (applicable to both Onus and Issuer)\""
+            "details": `Savings Bank Account (SB) Charges:
+
+Onus Cash Deposit Transaction:
+Up to 5 transactions/month: Free
+Beyond 5 transactions/month: ₹25 per transaction
+Transaction Decline due to Insufficient Balance:
+₹15 per transaction (applicable to both Onus and Issuer)
+Current Account (CA) Charges:
+
+Onus Cash Deposit Transaction:
+₹10 per transaction
+Transaction Decline due to Insufficient Balance:
+₹15 per transaction (applicable to both Onus and Issuer)`
         }
     })
     console.log('narration 24', narration6)
@@ -53,7 +182,25 @@ async function main() {
         data: {
             "narration": "ATM _Card _Issuance_ Fe",
             "natureOfCharge": "Membership fee for ATM card",
-            "details": "Revised Debit Card Service Charges (effective from 01.11.2023):\n\nMembership Fee:\n\nRupay Platinum (Domestic & International), Visa Gold/Platinum, International Master Cards: ₹100\nMaster My Design Customised Image Card: ₹300\nRupay Select Debit Card: ₹1000\nAnnual Maintenance Charges (AMC):\n\nAMC for 1st year: Free\nAMC from 2nd year onwards:\nSenior Citizen card/cards for Visually Challenged/SHG/RuPay KCC/RuPay PMJDY cards: Free\nClassic Rupay cards (other than PMJDY), Rupay IBDigi cards, Domestic Mastercards including ePurse cards, Visa Classic cards: ₹200\nRuPay Platinum (Domestic/International), International MasterCard & Visa (Gold & Platinum) Cards: ₹300\nRuPay Debit Select Card: ₹1000"
+            "details": `Membership Fee:
+Rupay Platinum (Domestic & International), Visa Gold/Platinum, International Master Cards:
+Membership Fee: ₹100
+Master My Design Customised Image Card:
+Membership Fee: ₹300
+RuPay Select Debit Card:
+Membership Fee: ₹1000
+
+Annual Maintenance Charges (AMC):
+AMC for 1st year: Free
+AMC from 2nd year onwards:
+Senior Citizen card/cards for Visually Challenged/SHG/RuPay KCC/RuPay PMJDY cards:
+AMC: Free
+Classic Rupay cards (other than PMJDY), Rupay IBDigi cards, Domestic Mastercards including ePurse cards, Visa Classic cards:
+AMC: ₹200
+RuPay Platinum (Domestic/International), International MasterCard & Visa (Gold & Platinum) Cards:
+AMC: ₹300
+RuPay Debit Select Card:
+AMC: ₹1000`
         }
     })
     console.log('narration 24', narration7)
@@ -69,7 +216,23 @@ async function main() {
         data: {
             "narration": "ATM AMC CHGS",
             "natureOfCharge": "Annual Maintenance Charges ATM card",
-            "details": "Annual Maintenance Charges (AMC):\n\nAMC for 1st year: Free\nAMC from 2nd year onwards:\nSenior Citizen card/cards for Visually Challenged/SHG/RuPay KCC/RuPay PMJDY cards: Free\nClassic RuPay cards (other than PMJDY), RuPay IBDigi cards, Domestic Mastercards including ePurse cards, Visa Classic cards: ₹200\nRuPay Platinum (Domestic/International), International MasterCard & Visa (Gold & Platinum) Cards: ₹300\nRuPay Debit Select Card: ₹1000"
+            "details": `Free AMC from 2nd year onwards:
+Senior Citizen card/cards for Visually Challenged/SHG/RuPay KCC/RuPay PMJDY cards -  AMC : ₹0
+
+AMC from 2nd year onwards:
+Classic RuPay cards - AMC : ₹200
+
+AMC from 2nd year onwards:
+RuPay IBDigi cards - AMC: ₹200
+
+AMC from 2nd year onwards:
+Domestic Mastercards including ePurse cards - AMC : ₹200
+
+Visa Classic cards -  AMC: ₹200
+
+RuPay Platinum (Domestic/International)- AMC: ₹300
+International MasterCard & Visa (Gold & Platinum) Cards - AMC: ₹300
+RuPay Debit Select Card - AMC: ₹1000`
         }
     })
     console.log('narration 24', narration9)
@@ -149,7 +312,25 @@ async function main() {
         data: {
             "narration": "MIN BAL CHGS",
             "natureOfCharge": "Non maintenance of minimum balance charges in SB/ CA",
-            "details": "Charges for Non-Maintenance of Minimum Balance:\n\nIn Savings Account (SB):\n\nCharges based on the shortfall in the average monthly balance:\n76% - 100% shortfall: ₹100 per month\n51% - 75% shortfall: ₹75 per month\n26% - 50% shortfall: ₹50 per month\n11% - 25% shortfall: ₹25 per month\n1% - 10% shortfall: ₹10 per month\nExemptions: BSBDA/Small Accounts, accounts of Students, Pensioners (without cheque facility), and Inoperative accounts. Charges start from the 2nd month of opening the account.\nNon-Maintenance of Minimum Balance in Current Account (CA):\n\nFor non-maintenance of quarterly average balance:\nUrban/Metropolitan: ₹600 per quarter\nRural/Semi-urban: ₹350 per quarter\nProportionate charges to be applied for accounts opened or closed during the quarter."
+            "details": `In Savings Account (SB):
+
+Charges based on the shortfall in the average monthly balance:
+76% - 100% shortfall: ₹100 per month
+51% - 75% shortfall: ₹75 per month
+26% - 50% shortfall: ₹50 per month
+11% - 25% shortfall: ₹25 per month
+1% - 10% shortfall: ₹10 per month
+Exemptions: BSBDA/Small Accounts, accounts of Students, Pensioners (without cheque facility), and Inoperative accounts. Charges start from the 2nd month of opening the account.
+
+In Current Account (CA):
+For non-maintenance of quarterly average balance:
+Urban/Metropolitan: ₹600 per quarter
+Proportionate charges to be applied for accounts opened or closed during the quarter.
+
+In Current Account (CA): 
+For non-maintenance of quarterly average balance:
+Rural/Semi-urban: ₹350 per quarter
+Proportionate charges to be applied for accounts opened or closed during the quarter.`
         }
     })
     console.log('narration 24', narration19)
@@ -201,10 +382,10 @@ async function main() {
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Savings Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 14 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 14 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities. 
 
-You are charged Rs. 25 for each transaction after free transactions.`
+You will be charged Rs. 25 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "CHG FOR ONUS WDL",
@@ -230,9 +411,9 @@ You are charged Rs. 25 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Current Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 6 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 6 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities.
-You are charged Rs. 10 for each transaction after free transactions.`
+You will be charged Rs. 10 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "CHG FOR ONUS WDL",
@@ -258,10 +439,10 @@ You are charged Rs. 10 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Savings Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 14 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 14 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities. 
 
-You are charged Rs. 25 for each transaction after free transactions.`
+You will be charged Rs. 25 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "ATM WDL CHARGES",
@@ -287,9 +468,9 @@ You are charged Rs. 25 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Current Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 6 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 6 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities.
-You are charged Rs. 10 for each transaction after free transactions.`
+You will be charged Rs. 10 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "ATM WDL CHARGES",
@@ -315,10 +496,10 @@ You are charged Rs. 10 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Savings Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 14 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 14 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities. 
 
-You are charged Rs. 25 for each transaction after free transactions.`
+You will be charged Rs. 25 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "ATM ENQ CHARGES",
@@ -344,9 +525,9 @@ You are charged Rs. 25 for each transaction after free transactions.`
             language: "en",
             template: [
                 `The charge of ₹ \${amount} was incurred in your Current Account because you exceeded the free ATM transactions. The transactions include any withdrawal or enquiry.`,
-                `Upto 5 transactions are free with Indian Bank ATM. You are charged Rs. 6 for each transaction after free transactions.`,
+                `Upto 5 transactions are free with Indian Bank ATM. You will be charged Rs. 6 for each transaction after free transactions.`,
                 `Upto 3 transactions are free with other bank ATMs in metro cities and upto 5 transactions are free with other bank ATMs in non metro cities.
-You are charged Rs. 10 for each transaction after free transactions.`
+You will be charged Rs. 10 for each transaction after free transactions.`
             ],
         }, {
         //     narration: "ATM ENQ CHARGES",
