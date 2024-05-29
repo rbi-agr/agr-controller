@@ -215,6 +215,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
             for(let e=0; e<response.length; e++)
             {
                 let currentmessage = response[e]
+                languageDetected = languageDetected == 'hn' ? 'hi' : languageDetected
                 let messageTranslationresp= await PostRequestforTranslation(currentmessage.message,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
                 
                 if(!messageTranslationresp.error){
@@ -234,7 +235,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
                                 {
                                     Sentry.captureException("Message Translation API Error")
                                     console.error("Message Translation API Error:", translatedoptionresp.error)
-                                    await this.prisma.sessions.update({
+                                    await prisma.sessions.update({
                                         where: { sessionId },
                                         data: {
                                             state: 20
@@ -268,7 +269,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
                 else {
                     Sentry.captureException("Message Translation API Error")
                     console.error("Message Translation API Error:", messageTranslationresp.error)
-                    await this.prisma.sessions.update({
+                    await prisma.sessions.update({
                         where: { sessionId },
                         data: {
                             state: 20
@@ -293,7 +294,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
     } catch (error) {
         Sentry.captureException("Language Translation Utility Error")
         console.error("Language Translation Utility Error:",error)
-        await this.prisma.sessions.update({
+        await prisma.sessions.update({
             where: { sessionId },
             data: {
                 state: 20
