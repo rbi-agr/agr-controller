@@ -167,7 +167,7 @@ export class ChequeBookStatus {
                         status: "Success",
                         session_id: reqData.session_id,
                         message: "Have you applied for cheque book?",
-                        options: ["Yes, I have", "No, I haven't"],
+                        options: ["Yes, I have applied", "No, I haven't applied"],
                         end_connection: false,
                         prompt: "option_selection"
                     }]
@@ -191,7 +191,7 @@ export class ChequeBookStatus {
                         const st = session.state
 
                         const cheqBkStatusReq: ChequeBookStatusRequestDto = {
-                            accountNumber: reqData.metadata.accountNumber,
+                            accountNumber: session.bankAccountNumber,
                         }
 
                         const cheqBkStatusResponse = await this.banksService.chequeBookStatus(reqData.session_id, cheqBkStatusReq, BankName.INDIAN_BANK)
