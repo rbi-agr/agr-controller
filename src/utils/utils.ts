@@ -216,6 +216,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
             {
                 let currentmessage = response[e]
                 languageDetected = languageDetected == 'hn' ? 'hi' : languageDetected
+                languageDetected = languageDetected == 'od' ? 'or' : languageDetected
                 let messageTranslationresp= await PostRequestforTranslation(currentmessage.message,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
                 
                 if(!messageTranslationresp.error){
