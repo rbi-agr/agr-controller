@@ -167,7 +167,10 @@ export class IndianBankService {
     const transactionDateInFormat = complaintDto.transactionDate.toISOString().split('T')[0].split('-').reverse().join('-');
 
     // convert the account number to integer
-    const accountNumber = complaintDto.accountNumber.split('-')[1];
+    let accountNumber = complaintDto.accountNumber.split('-')[1];
+    if(accountNumber.length == 9) {
+      accountNumber = '0'+accountNumber
+    }
 
     const requestPayload = {
       CGRSRegistration_Request: {

@@ -34,6 +34,7 @@ export class ChequeBookStatus {
                 const languageDetectedresponse = await PostRequest(reqData.message.text, `${process.env.BASEURL}/ai/language-detect`)
                 if (languageDetectedresponse.error) {
                     Sentry.captureException("Cheque Book Status Error: Preprocess Language Translation Error")
+                    this.logger.error("Cheque Book Status Error: Preprocess Language Translation Error", languageDetectedresponse.error)
                     const exitResponse = [{
                         status: "Internal Server Error",
                         message: "Error in language detection",
@@ -166,7 +167,7 @@ export class ChequeBookStatus {
                         status: "Success",
                         session_id: reqData.session_id,
                         message: "Have you applied for cheque book?",
-                        options: ["Yes, I have", "No, I haven't"],
+                        options: ["Yes, I have applied", "No, I haven't applied"],
                         end_connection: false,
                         prompt: "option_selection"
                     }]
@@ -190,7 +191,7 @@ export class ChequeBookStatus {
                         const st = session.state
 
                         const cheqBkStatusReq: ChequeBookStatusRequestDto = {
-                            accountNumber: reqData.metadata.accountNumber,
+                            accountNumber: session.bankAccountNumber,
                         }
 
                         const cheqBkStatusResponse = await this.banksService.chequeBookStatus(reqData.session_id, cheqBkStatusReq, BankName.INDIAN_BANK)

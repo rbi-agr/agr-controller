@@ -23,9 +23,9 @@ export class UserConversationService {
   @SubscribeMessage('request')
   async handleMessage(@MessageBody() body: any, @ConnectedSocket() clientSocket: Socket) {
     //1. extract input data
-    console.log(body)
+    this.logger.info(body)
     const data = JSON.parse(JSON.stringify(body))
-    // console.log('client socket ', clientSocket)
+    console.log('request data ', data)
     const headers = clientSocket.handshake.headers
     // console.log('headers ', headers) 
     // const clientId: string = String(headers.client_id)
@@ -43,11 +43,11 @@ export class UserConversationService {
 
     //2. preprocess
     const fres = await this.preprocess(headers, data)
-    console.log(fres)
     
     //4.emit the response
     try{
       for(let resObj of fres){
+        console.log('res', resObj)
         client.emit('response', resObj)
   
         if(resObj.end_connection) {
@@ -77,9 +77,9 @@ export class UserConversationService {
     if (client) {
       client.disconnect();
       this.clients.delete(clientId);
-      console.log(`Connection closed for client ID: ${clientId}`);
+      this.logger.info(`Connection closed for client ID: ${clientId}`);
     } else {
-      console.log(`Client ID ${clientId} not found.`);
+      this.logger.info(`Client ID ${clientId} not found.`);
     }
   }
 

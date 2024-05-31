@@ -819,7 +819,7 @@ export class ExcessBankCharges {
                                 sessionId: reqData.session_id
                             },
                             data: {
-                                selectedTransactionId: transactionDetails.id
+                                selectedTransactionId: transactionDetails?.id
                             }
                         })
 
@@ -864,6 +864,7 @@ export class ExcessBankCharges {
                             }
                             try {
                                 correspondingNarration = JSON.parse(JSON.stringify(narrationResponse.message.content));
+                                console.log("correspondingNarration", correspondingNarration)
                             } catch (error) {
                                 this.logger.error('Excess Bank Charges Error: Parsing Narration Error:', error)
                                 correspondingNarration = "No match found";
@@ -1593,10 +1594,6 @@ export class ExcessBankCharges {
             }
             return msg
         } catch (error) {
-            const {errorMessage, statusCode} = getPrismaErrorStatusAndMessage(error);
-
-            console.log("errorMessage: ", errorMessage);
-            console.log("statusCode: ", statusCode);
             Sentry.captureException("Excess Bank Charges: Error in State Manager")
             this.logger.error('Excess Bank Charges: Error in State Manager:', error)
             await this.prisma.sessions.update({

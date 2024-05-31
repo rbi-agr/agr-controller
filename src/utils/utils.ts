@@ -4,7 +4,7 @@ import * as Sentry from '@sentry/node'
 
 export async function getCorrespondingNarration(bankNarration: any, narrationList: string[]) {
     const userprompt = `narration from bank: "${bankNarration}", list of narrations: ${narrationList}`
-    const task = `this is the user query: Get me the corresponding narration from the list of narrations: ${narrationList} that matches the narration from bank: "${bankNarration}". If no match is found, return "No match found"`
+    const task = `this is the user query: Get me the corresponding narration from the list of narrations: ${narrationList} that matches the narration from bank: "${bankNarration}". If no match is found, return "No match found". Do not add any other message or direction or description. Give the response strictly in the format asked. `
     const mistralResponse =  await callMistralAI(task)
     console.log('mistralResponse ', mistralResponse)
     return mistralResponse
@@ -14,7 +14,7 @@ export async function getCorrespondingNarration(bankNarration: any, narrationLis
 export async function getEduMsg(bankNarration: any, accountType: string, amount: number) {
     // const userprompt = `amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}}`
     // const task = `this is the user query: Get me the reason for the charges: amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}} and how I can prevent them based on amount, bank narration, nature of charge and details provided`
-    const task2 = `this is the context:- amount: ₹${amount}, bank account type: ${accountType},  narration: "${bankNarration.narration}",nature of charge: "${bankNarration.natureOfCharge}", details:{${bankNarration.details}}  task:- get me the reason of deduction and a list of ways for preventing them based on amount, bank narration, nature of charge and details provided. Make sure to give the response in the following stringified JSON format:- {"response":{"reason":<reason>, "prevention_methods": [<method 1>, <method 2>]}}. Make sure to keep the response crisp, and human friendly i.e conversational, and do not add any other message or direction or description. Give the response strictly in the format given`
+    const task2 = `this is the context:- amount: ₹${amount}, bank account type: ${accountType},  narration: "${bankNarration.narration}",nature of charge: "${bankNarration.natureOfCharge}", details:{${bankNarration.details}}. It is possible that an amount less than the actual charge could be charged because of the available bank account balance being less than the charges.  task:- get me the reason of deduction and a list of ways for preventing them based on amount, bank narration, nature of charge and details provided. Make sure to give the response in the following stringified JSON format:- {"response":{"reason":<reason>, "prevention_methods": [<method 1>, <method 2>]}}. Make sure to keep the response crisp, and human friendly i.e conversational, and do not add any other message or direction or description. Give the response strictly in the format given`
     const mistralResponse =  await callMistralAI(task2)
     console.log('mistralResponse ', mistralResponse)
     return mistralResponse
@@ -215,6 +215,8 @@ export async function translatedResponse(response, languageDetected, sessionId, 
             for(let e=0; e<response.length; e++)
             {
                 let currentmessage = response[e]
+                languageDetected = languageDetected == 'hn' ? 'hi' : languageDetected
+                languageDetected = languageDetected == 'od' ? 'or' : languageDetected
                 let messageTranslationresp= await PostRequestforTranslation(currentmessage.message,'en',languageDetected,`${process.env.BASEURL}/ai/language-translate`)
                 
                 if(!messageTranslationresp.error){
@@ -234,7 +236,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
                                 {
                                     Sentry.captureException("Message Translation API Error")
                                     console.error("Message Translation API Error:", translatedoptionresp.error)
-                                    await this.prisma.sessions.update({
+                                    await prisma.sessions.update({
                                         where: { sessionId },
                                         data: {
                                             state: 20
@@ -268,7 +270,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
                 else {
                     Sentry.captureException("Message Translation API Error")
                     console.error("Message Translation API Error:", messageTranslationresp.error)
-                    await this.prisma.sessions.update({
+                    await prisma.sessions.update({
                         where: { sessionId },
                         data: {
                             state: 20
@@ -293,7 +295,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
     } catch (error) {
         Sentry.captureException("Language Translation Utility Error")
         console.error("Language Translation Utility Error:",error)
-        await this.prisma.sessions.update({
+        await prisma.sessions.update({
             where: { sessionId },
             data: {
                 state: 20
