@@ -19,7 +19,7 @@ COPY . .
 RUN npx prisma generate
 
 # Run Prisma migrations
-RUN npx prisma migrate deploy
+# RUN npx prisma migrate deploy
 
 # Build NestJS files
 RUN npm run build
