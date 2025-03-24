@@ -1594,6 +1594,9 @@ export class ExcessBankCharges {
             }
             return msg
         } catch (error) {
+            const {errorMessage, statusCode} = getPrismaErrorStatusAndMessage(error);
+            console.log("errorMessage: ", errorMessage);
+            console.log("statusCode: ", statusCode);
             Sentry.captureException("Excess Bank Charges: Error in State Manager")
             this.logger.error('Excess Bank Charges: Error in State Manager:', error)
             await this.prisma.sessions.update({

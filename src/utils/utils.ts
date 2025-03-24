@@ -91,6 +91,7 @@ export async function PostRequestforTranslation(message: String,source: String, 
         const response = await axios.post(apiUrl,requestBody)
         return response.data
     } catch (error) {
+        console.log(error)
         Sentry.captureException("Translation POST Request Utility Error")
         console.error('Translation POST Request Utility Error:', error)
         return { statusCode: 400, message: 'Error in calling this API', error: error }
