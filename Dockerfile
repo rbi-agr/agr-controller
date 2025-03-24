@@ -1,10 +1,10 @@
-# Use Node.js version 14 as the base image
-FROM node:18-alpine
+# Use Node.js version 18 with Bullseye (Debian-based)
+FROM node:18-bullseye
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy package.json and package-lock.json (if available) to the container
+# Copy package.json and package-lock.json
 COPY package*.json ./
 
 RUN npm install
@@ -12,20 +12,20 @@ RUN npm install
 # Install Prisma globally
 RUN npm install -g prisma
 
-# Copy the rest of the application code to the container
+# Copy the rest of the application code
 COPY . .
 
-# COPY sample.env .env
-
 # Generate Prisma client
-RUN prisma generate
-RUN #prisma migrate deploy
+RUN npx prisma generate
 
-# Build nest file
+# Run Prisma migrations
+# RUN npx prisma migrate deploy
+
+# Build NestJS files
 RUN npm run build
 
-# Expose the port that the Nest.js application will run on
+# Expose port
 EXPOSE 3000
 
-# Command to run the Nest.js application
-CMD ["npm", "run", "start:prod"]
+# Start the application
+CMD ["npm", "run", "start:migrate:prod"]
