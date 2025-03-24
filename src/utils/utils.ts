@@ -316,3 +316,7 @@ export async function translatedResponse(response, languageDetected, sessionId, 
         }]
     }
 }
+
+export async function getAllSession(prisma) {
+    return await prisma.sessions.find()
+}

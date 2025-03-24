@@ -899,7 +899,9 @@ export class ExcessBankCharges {
                         const accountNumber = state7Session.bankAccountNumber;
                         const accountType = accountNumber.substring(0, 2);
                         
-                        const educatingMessageResponse = await getTemplateResponse(correspondingNarration, accountType, parseInt(state7TransactionAmount.split('.')[0]), languageDetected, this.prisma);
+                        // const educatingMessageResponse = await getTemplateResponse(correspondingNarration, accountType, parseInt(state7TransactionAmount.split('.')[0]), languageDetected, this.prisma);
+
+                        const educatingMessageResponse = await getEduMsg(correspondingNarration, accountType, parseInt(state7TransactionAmount.split('.')[0]));
 
                         console.log("Educatingresponse........................",educatingMessageResponse)
                         if(educatingMessageResponse.error){

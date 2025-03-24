@@ -1,20 +1,26 @@
-import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer  } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { RuleEngine } from './rule-engine';
 import { LoggerService } from 'src/logger/logger.service';
 import * as Sentry from '@sentry/node'
 import { getPrismaErrorStatusAndMessage } from 'src/utils/handleErrors';
+import { RolesGuard } from 'src/utils/roles.guard';
+import { Reflector } from '@nestjs/core';
+
 
 @WebSocketGateway({
   cors: {
     origin: '*',
   },
 })
+
 export class UserConversationService {
   private readonly clients: Map<string, Socket> = new Map();
   constructor(
     private readonly  logger: LoggerService,
-    private ruleEngine: RuleEngine
+    private ruleEngine: RuleEngine,
+    private readonly rolesGuard: RolesGuard, 
+    private reflector: Reflector
   ) { }
 
   @WebSocketServer()
@@ -38,6 +44,19 @@ export class UserConversationService {
       // If no client exists for the user, create a new one
       client = clientSocket;
       this.clients.set(sessionId, client);
+    }
+
+    const context = {
+      getHandler: () => this.handleMessage,
+      switchToWs: () => ({
+        getClient: () => client,
+      }),
+    };
+
+    const hasAccess = this.rolesGuard.canActivate(context as any);
+    if (!hasAccess) {
+      client.emit('error', { message: 'Access denied: insufficient role' });
+      return;
     }
     
 
