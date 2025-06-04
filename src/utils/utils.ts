@@ -87,6 +87,7 @@ export async function PostRequestforTranslation(message: String,source: String, 
             target: target,
             text: message,
           };
+        console.log(message)
         console.log('API for Post Request for Translation')
         const response = await axios.post(apiUrl,requestBody)
         return response.data
@@ -319,4 +320,24 @@ export async function translatedResponse(response, languageDetected, sessionId, 
 
 export async function getAllSession(prisma) {
     return await prisma.sessions.find()
+}
+
+
+export async function FetchTransactionDates(userQuery:String) {
+    const currentDate = new Date().toISOString().split('T')[0];
+    // const userprompt = `amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}}`
+    // const task = `this is the user query: Get me the reason for the charges: amount: ${amount}, narration: "${bankNarration.narration}", nature of charge: "${bankNarration.natureOfCharge}", details: {${bankNarration.details}} and how I can prevent them based on amount, bank narration, nature of charge and details provided`
+    const task2 = `You have been given the following user query: ${userQuery}. Today's date is ${currentDate}. Based on this query, determine if the user has mentioned any transaction dates. 
+
+            If the user includes relative terms like "today", "tomorrow", "yesterday", or "last week", convert them to actual calendar dates based on today's date.
+
+            Return the result strictly in this format (no extra text or line breaks):
+
+            {'start_date':'ISO Date', 'end_date':'ISO Date'}
+
+            If no dates are found, return:
+            {'start_date': null, 'end_date': null}`
+    const mistralResponse =  await callMistralAI(task2)
+    console.log('mistralResponse ', mistralResponse)
+    return mistralResponse
 }

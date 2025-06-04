@@ -2,7 +2,7 @@
 import { Injectable} from "@nestjs/common";
 import { LoggerService } from "src/logger/logger.service";
 import { PrismaService } from "src/prisma/prisma.service";
-import { formatDate, getComplaintDetails, getCorrespondingNarration, getEduMsg, PostRequest, PostRequestforTransactionDates, PostRequestforTranslation, translatedResponse, validstate } from "../utils/utils";
+import { FetchTransactionDates, formatDate, getComplaintDetails, getCorrespondingNarration, getEduMsg, PostRequest, PostRequestforTransactionDates, PostRequestforTranslation, translatedResponse, validstate } from "../utils/utils";
 import { TransactionsRequestDto } from "src/banks/dto/transactions.dto";
 import { BankName } from "@prisma/client";
 import { BanksService } from "src/banks/banks.service";
@@ -128,23 +128,26 @@ export class ExcessBankCharges {
             } else {
                 //add a retry in the db max 3 tries
                 if(session.retriesLeft<=0) {
-                    const intentFailRes = [{
-                        "status": "Bad Request",
-                        message: "Maximum retries limit reached. Please try again later.",
-                        end_connection: false
-                    }, {
+                    console.log("In retries>>>>>>>")
+                    let intentFailRes = [{
                         status: "Success",
-                        session_id: reqData.session_id,
-                        message: "Please refresh to restart the conversation or select yes to end the conversation.",
-                        options: ['Yes, end the conversation'],
-                        end_connection: false,
-                        prompt: "option_selection",
-                        metadata: {}
+                        session_id: sessionId,
+                        message: "You have reached you maximum retries limit. Please try again after some time. Thank You!",
+                        options: [],
+                        end_connection: true,
+                        prompt: "text_message"
                     }]
+                    if(languageDetected!=="en")
+                        {
+                            let translatedresponse = await translatedResponse(intentFailRes, languageDetected, reqData.session_id, this.prisma)
+                            console.log("translatedresponse",translatedresponse)
+                            intentFailRes=translatedresponse
+                        }
+                    
                     await this.prisma.sessions.update({
                         where: { sessionId: reqData.session_id },
                         data: {
-                            state: 20
+                            state: 99
                         }
                     })
                     return intentFailRes
@@ -167,11 +170,18 @@ export class ExcessBankCharges {
                 state = session.state
             }
             if(state == 99) {
-                const exitResponse =  [{
+                let exitResponse =  [{
                     status: "Bad Request",
                     message: "This session has already ended please start a new session if you have a query!",
                     end_connection: true
                 }]
+                if(languageDetected!=="en")
+                    {
+                        let translatedresponse = await translatedResponse(exitResponse, languageDetected, reqData.session_id, this.prisma)
+                        console.log("translatedresponse",translatedresponse)
+                        exitResponse=translatedresponse
+                    }
+                
                 return exitResponse
             }
             let response = await this.states(reqData, languageDetected, state)
@@ -334,7 +344,7 @@ export class ExcessBankCharges {
                             sessionId: reqData.session_id
                         }
                     })
-
+                    
                     // Recheck for valid query and end connection if retries are over
                     if(sessionForIntent && sessionForIntent.retriesLeft<=0) {
                         const intentFailRes = [{
@@ -434,7 +444,7 @@ export class ExcessBankCharges {
                         }
                         let reframeMsg
                         if(reqData.message.text.toLowerCase().includes('bank charges')) {
-                            reframeMsg = 'Please explain you query in detail'
+                            reframeMsg = 'Please explain your query in detail'
                         } else {
                             reframeMsg = 'Sorry I could not understand you. Please reframe you concern.'
                         }
@@ -448,7 +458,14 @@ export class ExcessBankCharges {
                             "metadata":{}
                         }]
                     }
-                        
+                    // Fetch transaction dates
+                    const mistralResponse = await FetchTransactionDates(reqData.message.text)
+                    const mistralContent = mistralResponse.message.content;
+
+                    // Convert single quotes to double quotes and parse JSON
+                    const dates_response = JSON.parse(
+                    mistralContent.replace(/'/g, '"')
+                    );
                     await this.prisma.sessions.update({
                         where:{sessionId:reqData.session_id},
                         data:{
@@ -457,7 +474,9 @@ export class ExcessBankCharges {
                             complaintCategory: intentResponse.category,
                             complaintCategoryType: intentResponse.type,
                             complaintCategorySubType: intentResponse.subtype,
-                            retriesLeft: 3
+                            retriesLeft: 3,
+                            startDate: dates_response?.start_date ? new Date(dates_response.start_date) : null,
+                            endDate: dates_response?.end_date ? new Date(dates_response.end_date) : null
                         }
                     })
                     const intentPassRes = await this.states(reqData, languageDetected, 2)
