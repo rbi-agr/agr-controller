@@ -26,6 +26,7 @@ export class RuleEngine {
             //check if session exists
             const sessionId = reqData.session_id
             let useCase
+            let languageDetected
 
             let session = await this.prisma.sessions.findUnique({
                 where: {
@@ -38,7 +39,7 @@ export class RuleEngine {
                 const message = reqData.message.text
 
                 const languageByAdya = reqData.metadata?.language
-                let languageDetected = languageByAdya
+                languageDetected = languageByAdya
                 if (languageByAdya !== 'en') {
                     const languageDetectedresponse = await PostRequest(message, `${process.env.BASEURL}/ai/language-detect`)
                     if (languageDetectedresponse.error) {
@@ -160,28 +161,60 @@ export class RuleEngine {
                             },
                         })
                     } else {
-                        const closeConnectionRes = [{
-                            status: "Success",
-                            session_id: sessionId,
-                            message: "You have reached you maximum retries limit. Please try again after some time. Thank You!",
-                            options: [],
-                            end_connection: true,
-                            prompt: "text_message"
-                        }]
-                        return closeConnectionRes
+                        
+                        const translatedmessage = await PostRequestforTranslation("You have reached you maximum retries limit. Please try again after some time. Thank You!", "en", languageDetected, `${process.env.BASEURL}/ai/language-translate`)
+                        
+                        if (!translatedmessage.error) {
+                            return [{
+                                status: "Success",
+                                session_id: sessionId,
+                                message: translatedmessage.translated,
+                                options: [],
+                                end_connection: true,
+                                prompt: "text_message"
+                            }]
+                        }
+                        else {
+                            Sentry.captureException("Rule Engine Error: Language Translation API Error")
+                            this.logger.error("Rule Engine Error: Language Translation API Error:",translatedmessage.error)
+                            return [{
+                                status: "Success",
+                                session_id: sessionId,
+                                message: "You have reached you maximum retries limit. Please try again after some time. Thank You!",
+                                options: [],
+                                end_connection: true,
+                                prompt: "text_message"
+                            }]
+                        }
+                        
+                        
                     }
                 }
             }
 
             if(useCase == 'Other') {
-                return [{
-                    "success": "true",
-                    "message":"I apologize, but I didn't quite understand that. Could you please rephrase your question?",
-                    "options": [],
-                    "end_connection": false,
-                    "prompt": "text_message",
-                    "metadata":{}
-                }]
+                const translatedmessage = await PostRequestforTranslation("I apologize, but I didn't quite understand that. Could you please rephrase your question?", "en", languageDetected, `${process.env.BASEURL}/ai/language-translate`)
+
+                if (!translatedmessage.error) {
+                    return [{
+                        "success": "true",
+                        "message":translatedmessage.translated,
+                        "options": [],
+                        "end_connection": false,
+                        "prompt": "text_message",
+                        "metadata":{}
+                    }]
+                }
+                else {
+                    Sentry.captureException("Rule Engine Error: Language Translation API Error")
+                    this.logger.error("Rule Engine Error: Language Translation API Error:",translatedmessage.error)
+                    return [{
+                        status: "Internal Server Error",
+                        "message": "I am having trouble translating your query. Please make sure the query is correctly typed and try again",
+                        "end_connection": false
+                    }]
+                }
+                
             }
 
             let responses
@@ -210,6 +243,7 @@ export class RuleEngine {
 
     async checkUseCase(text) {
         let ruleResponse = await PostRequest(text, `${process.env.BASEURL}/ai/intent-classifier`)
+        console.log(ruleResponse)
         if (ruleResponse.error) {
             Sentry.captureException("Check Use Case Error")
             this.logger.error("Check Use Case Error", ruleResponse.error)
