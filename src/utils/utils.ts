@@ -336,7 +336,8 @@ export async function FetchTransactionDates(userQuery:String) {
             {'start_date':'ISO Date', 'end_date':'ISO Date'}
 
             If no dates are found, return:
-            {'start_date': null, 'end_date': null}`
+            {'start_date': null, 'end_date': null}
+            Important: Output ONLY the JSON object with no explanation, no prefixes, no suffixes, and no newlines.`;
     const mistralResponse =  await callMistralAI(task2)
     console.log('mistralResponse ', mistralResponse)
     return mistralResponse

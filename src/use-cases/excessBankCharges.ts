@@ -509,7 +509,7 @@ export class ExcessBankCharges {
                             const fail_r1 = [{
                                 status: "Success",
                                 session_id: reqData.session_id,
-                                "message": "Do you remember the date of transaction?",
+                                "message": "When did the transaction happen—do you remember the date?",
                                 "options": ['Yes, I remember', "No, I don't remember"],
                                 "end_connection": false,
                                 "prompt": "option_selection",
@@ -671,7 +671,7 @@ export class ExcessBankCharges {
                         const transaction_success = [{
                             status: "Success",
                             session_id: reqData.session_id,
-                            "message": "Please confirm your transactions",
+                            "message": "Can you help me out by confirming your transactions?",
                             "options": transactionOptions,
                             "end_connection": false,
                             "prompt": "option_selection",
@@ -735,7 +735,7 @@ export class ExcessBankCharges {
                         const state4Response = [{
                             status: "Success",
                             session_id: reqData.session_id,
-                            "message": "Do you remember the date of transaction?",
+                            "message": "When did the transaction happen—do you remember the date?",
                             "options": ['Yes, I remember', "No, I don't remember"],
                             "end_connection": false,
                             "prompt": "option_selection",
